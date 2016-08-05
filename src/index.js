@@ -50,7 +50,7 @@ let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
 /** The default export is an alias of `render()`. */
 export default function renderToString(vnode, context, opts, inner) {
-	let { nodeName, attributes, children } = vnode || EMPTY;
+	let { nodeName, attributes, children } = toVNode(vnode);
 	context = context || {};
 	opts = opts || {};
 
@@ -183,6 +183,14 @@ export default function renderToString(vnode, context, opts, inner) {
 	}
 
 	return s;
+}
+
+function toVNode(vnode) {
+	if (!vnode) return EMPTY;
+
+	return vnode.hasOwnProperty('toJSON')
+		? vnode.toJSON()
+		: vnode;
 }
 
 function getComponentName(component) {
