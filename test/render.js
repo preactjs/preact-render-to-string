@@ -436,4 +436,12 @@ describe('render', () => {
 			expect(renderXml(<div foo={false} bar={0} />)).to.equal(`<div bar="0" />`);
 		});
 	});
+
+	describe('objects with toJSON', () => {
+		it('should render objects with toJSON', () => {
+			let obj = { toJSON: () => { return { nodeName: 'div' }; } };
+			let rendered = render(obj);
+			expect(rendered).to.equal('<div></div>');
+		});
+	});
 });
