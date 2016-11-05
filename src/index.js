@@ -119,7 +119,7 @@ export default function renderToString(vnode, context, opts, inner) {
 			}
 
 			if (name==='class' && v && typeof v==='object') {
-				v = hashToClassName(v);
+				v = Array.isArray(v) ? v.filter(v => v).join(' ') : hashToClassName(v);
 			}
 			else if (name==='style' && v && typeof v==='object') {
 				v = styleObjToCss(v);
