@@ -49,6 +49,11 @@ export function styleObjToCss(s) {
 	return str;
 }
 
+// Convert a function object to a string
+export function stringifyFunc(s) {
+	let str = Function.prototype.toString.call(s);
+	return str.replace(/(\s\s+)/g, ' ').replace(/(\r|\n|\t)/g, ' ');
+}
 
 // See https://github.com/developit/preact/blob/master/src/util.js#L61
 export function hashToClassName(c) {
