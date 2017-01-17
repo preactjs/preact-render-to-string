@@ -1,4 +1,4 @@
-import { objectKeys, encodeEntities, falsey, memoize, indent, isLargeString, styleObjToCss, hashToClassName, assign, getNodeProps } from './util';
+import { objectKeys, encodeEntities, falsey, memoize, indent, isLargeString, styleObjToCss, hashToClassName, assign, getNodeProps, stringifyFunc } from './util';
 
 const SHALLOW = { shallow: true };
 
@@ -34,6 +34,7 @@ const VOID_ELEMENTS = [
  *	@param {Boolean} [options.shallow=false]	If `true`, renders nested Components as HTML elements (`<Foo a="b" />`).
  *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
  *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
+  *	@param {Boolean} [options.detailedProps=false]		If `true`, deeply renders all object props and anonymous-function props
  */
 renderToString.render = renderToString;
 
@@ -45,7 +46,7 @@ renderToString.render = renderToString;
  *	@param {VNode} vnode	JSX VNode to render.
  *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
  */
-let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
+let shallowRender = (vnode, context, opts) => renderToString(vnode, context, {...opts, ...SHALLOW});
 
 
 /** The default export is an alias of `render()`. */
@@ -134,8 +135,9 @@ export default function renderToString(vnode, context, opts, inner) {
 			if (name==='dangerouslySetInnerHTML') {
 				html = v && v.__html;
 			}
-			else if ((v || v===0 || v==='') && typeof v!=='object' && typeof v!=='function') {
-				if (v===true || v==='') {
+
+			else if ((v || v===0 || (v==='' && name!=='class' && name!== 'style')) && typeof v!=='object' && typeof v!=='function') {
+				if (v===true || (v==='')) {
 					v = name;
 					// in non-xml mode, allow boolean attributes
 					if (!opts || !opts.xml) {
@@ -145,6 +147,14 @@ export default function renderToString(vnode, context, opts, inner) {
 				}
 				s += ` ${name}="${encodeEntities(v)}"`;
 			}
+
+			if (opts.shallow && v && typeof v==='object' || typeof v=== 'function') {
+				if (!opts.detailedProps) s += ` ${name}=${Object.prototype.toString.call(v)}`;
+				else if (typeof v==='object') s += ` ${name}=${JSON.stringify(v)}`;
+				else if (typeof v==='function') s += ` ${name}=${stringifyFunc(v)}`;
+				continue;
+			}
+
 		}
 	}
 
