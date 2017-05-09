@@ -1,5 +1,7 @@
 # preact-render-to-string
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/developit/preact-render-to-string.svg)](https://greenkeeper.io/)
+
 [![NPM](http://img.shields.io/npm/v/preact-render-to-string.svg)](https://www.npmjs.com/package/preact-render-to-string)
 [![travis-ci](https://travis-ci.org/developit/preact-render-to-string.svg)](https://travis-ci.org/developit/preact-render-to-string)
 
