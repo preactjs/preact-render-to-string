@@ -123,6 +123,11 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 				name = name.toLowerCase().replace(/^xlink\:?(.+)/, 'xlink:$1');
 			}
 
+			let valueHook = opts.attributeValueHook && opts.attributeValueHook(name, v, context, opts, isComponent);
+			if (valueHook !== undefined) {
+				v = valueHook || '';
+			}
+
 			if (name==='class' && v && typeof v==='object') {
 				v = hashToClassName(v);
 			}
