@@ -469,6 +469,26 @@ describe('render', () => {
 			rendered = render(<div className={{ foo:1, bar:0, baz:true, buzz:false }} />);
 			expect(rendered, 'className').to.equal('<div class="foo baz"></div>');
 		});
+
+		it('should stringify array classNames', () => {
+			let vnode = {
+				nodeName: 'div',
+				attributes: { class: [ 'foo', 'baz' ] },
+				children: [],
+				key: undefined
+			};
+			let rendered = render(vnode);
+			expect(rendered, 'class').to.equal('<div class="foo baz"></div>');
+
+			vnode = {
+				nodeName: 'div',
+				attributes: { className: [ 'foo', false, 0, 'baz' ] },
+				children: [],
+				key: undefined
+			};
+			rendered = render(vnode);
+			expect(rendered, 'className').to.equal('<div class="foo baz"></div>');
+		});
 	});
 
 	describe('sortAttributes', () => {
