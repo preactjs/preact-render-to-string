@@ -58,7 +58,7 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 	let pretty = opts.pretty,
 		indentChar = typeof pretty==='string' ? pretty : '\t';
 
-	if (vnode==null || vnode===false) {
+	if (vnode===null || vnode===false) {
 		return '';
 	}
 
@@ -95,6 +95,10 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 					context = assign(assign({}, context), c.getChildContext());
 				}
 			}
+      if (rendered instanceof Promise) {
+        return rendered
+          .then(rendered => renderToString(rendered, context, opts, opts.shallowHighOrder!==false));
+      }
 
 			return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
 		}
