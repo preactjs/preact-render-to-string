@@ -206,8 +206,7 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 }
 
 function getComponentName(component) {
-	let ctor = component.prototype && component.prototype.constructor;
-	return ctor.displayName || ctor.name || getFallbackComponentName(component);
+	return component.displayName || component!==Function && component.name || getFallbackComponentName(component);
 }
 
 function getFallbackComponentName(component) {
