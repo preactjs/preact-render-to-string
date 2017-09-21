@@ -48,12 +48,27 @@ renderToString.render = renderToString;
 let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
 
+/**
+ *  Only render elements, leaving Components inline as `<ComponentName ... />`
+ *  except those specified in fullyRenderedComponents.
+ *	This method is just a convenience alias for `render(vnode, context, { shallow:true, alwaysRenderedComponented: [] })`
+ *	@param {VNode} vnode	JSX VNode to render.
+ *	@param {Array} alwaysRenderedComponents		List of components that should be rendered with shallow rendering
+ *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
+ */
+let mixedRender = (vnode, alwaysRenderedComponents = [], context) => {
+	const opts = Object.assign({ alwaysRenderedComponents }, SHALLOW);
+	return renderToString(vnode, context, opts);
+};
+
+
 /** The default export is an alias of `render()`. */
 export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 	let { nodeName, attributes, children } = vnode || EMPTY,
 		isComponent = false;
 	context = context || {};
 	opts = opts || {};
+	opts.alwaysRenderedComponents = opts.alwaysRenderedComponents || [];
 
 	let pretty = opts.pretty,
 		indentChar = typeof pretty==='string' ? pretty : '\t';
@@ -69,9 +84,12 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 
 	// components
 	if (typeof nodeName==='function') {
+		let componentName = getComponentName(nodeName);
 		isComponent = true;
-		if (opts.shallow && (inner || opts.renderRootComponent===false)) {
-			nodeName = getComponentName(nodeName);
+		if (opts.shallow &&
+			(inner || opts.renderRootComponent===false) &&
+			!opts.alwaysRenderedComponents.includes(componentName)) {
+			nodeName = componentName;
 		}
 		else {
 			let props = getNodeProps(vnode),
@@ -235,5 +253,6 @@ renderToString.shallowRender = shallowRender;
 export {
 	renderToString as render,
 	renderToString,
-	shallowRender
+	shallowRender,
+	mixedRender
 };
