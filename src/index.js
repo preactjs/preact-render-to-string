@@ -248,6 +248,7 @@ function getFallbackComponentName(component) {
 	return name;
 }
 renderToString.shallowRender = shallowRender;
+renderToString.mixedRender = mixedRender;
 
 
 export {
