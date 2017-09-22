@@ -1,7 +1,7 @@
 {
-  "name": "preact-render-to-string",
+  "name": "@yr/preact-render-to-string",
   "amdName": "preactRenderToString",
-  "version": "3.6.3",
+  "version": "4.0.2",
   "description": "Render JSX to an HTML string, with support for Preact components.",
   "main": "dist/index.js",
   "jsnext:main": "src/index.js",
@@ -20,15 +20,15 @@
     "universal",
     "isomorphic"
   ],
-  "author": "Jason Miller <jason@developit.ca>",
+  "author": "Jason Miller <jason@developit.ca>, Simen Sægrov <simen.sagrov@nrk.no>",
   "license": "MIT",
   "typings": "src/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/developit/preact-render-to-string.git"
+    "url": "https://github.com/yr/preact-render-to-string.git"
   },
   "bugs": {
-    "url": "https://github.com/developit/preact-render-to-string/issues"
+    "url": "https://github.com/yr/preact-render-to-string/issues"
   },
   "homepage": "https://github.com/developit/preact-render-to-string",
   "peerDependencies": {
