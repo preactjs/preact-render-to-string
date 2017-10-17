@@ -74,7 +74,7 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 		isComponent = true;
 		if (opts.shallow &&
 			(inner || opts.renderRootComponent===false) &&
-			!opts.alwaysRenderedComponents.includes(componentName)) {
+			opts.alwaysRenderedComponents.indexOf(componentName)===-1) {
 			nodeName = componentName;
 		}
 		else {
