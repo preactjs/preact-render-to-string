@@ -34,6 +34,7 @@ const VOID_ELEMENTS = [
  *	@param {Boolean} [options.shallow=false]	If `true`, renders nested Components as HTML elements (`<Foo a="b" />`).
  *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
  *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
+ *	@param {string[]} [options.alwaysRenderedComponents=[]]	List of components that should be rendered with shallow rendering
  */
 renderToString.render = renderToString;
 
@@ -46,21 +47,6 @@ renderToString.render = renderToString;
  *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
  */
 let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
-
-
-/**
- *  Only render elements, leaving Components inline as `<ComponentName ... />`
- *  except those specified in fullyRenderedComponents.
- *	This method is just a convenience alias for `render(vnode, context, { shallow:true, alwaysRenderedComponented: [] })`
- *	@param {VNode} vnode	JSX VNode to render.
- *	@param {Array} alwaysRenderedComponents		List of components that should be rendered with shallow rendering
- *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
- */
-let mixedRender = (vnode, alwaysRenderedComponents = [], context) => {
-	const opts = Object.assign({ alwaysRenderedComponents }, SHALLOW);
-	return renderToString(vnode, context, opts);
-};
-
 
 /** The default export is an alias of `render()`. */
 export default function renderToString(vnode, context, opts, inner, isSvgMode) {
@@ -248,12 +234,10 @@ function getFallbackComponentName(component) {
 	return name;
 }
 renderToString.shallowRender = shallowRender;
-renderToString.mixedRender = mixedRender;
 
 
 export {
 	renderToString as render,
 	renderToString,
-	shallowRender,
-	mixedRender
+	shallowRender
 };
