@@ -119,6 +119,12 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 				if (attributes['class']) continue;
 				name = 'class';
 			}
+			
+			if (name==='htmlFor') {
+				if (attributes['for']) continue;
+				name = 'for';
+			}
+
 			else if (isSvgMode && name.match(/^xlink\:?(.+)/)) {
 				name = name.toLowerCase().replace(/^xlink\:?(.+)/, 'xlink:$1');
 			}
