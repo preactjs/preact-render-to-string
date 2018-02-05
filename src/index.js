@@ -24,6 +24,50 @@ const VOID_ELEMENTS = [
 	'wbr'
 ];
 
+const MAPPED_ATTRIBUTES = {
+	acceptCharset:     'accept-charset',
+	accessKey:         'access-key',
+	allowFullScreen:   'allow-full-screen',
+	allowTransparency: 'allow-transparency',
+	autoPlay:          'auto-play',
+	cellPadding:       'cell-padding',
+	cellSpacing:       'cell-spacing',
+	charSet:           'char-set',
+	className:         'class-name',
+	colSpan:           'col-span',
+	contentEditable:   'content-editable',
+	contextMenu:       'context-menu',
+	crossOrigin:       'cross-origin',
+	dateTime:          'date-time',
+	encType:           'enc-type',
+	formAction:        'form-action',
+	formEncType:       'form-enc-type',
+	formMethod:        'form-method',
+	formNoValidate:    'form-no-validate',
+	formTarget:        'form-target',
+	frameBorder:       'frame-border',
+	hrefLang:          'href-lang',
+	httpEquiv:         'http-equiv',
+	inputMode:         'input-mode',
+	keyParams:         'key-params',
+	keyType:           'key-type',
+	marginHeight:      'margin-height',
+	marginWidth:       'margin-width',
+	maxLength:         'max-length',
+	mediaGroup:        'media-group',
+	minLength:         'min-length',
+	noValidate:        'no-validate',
+	radioGroup:        'radio-group',
+	readOnly:          'read-only',
+	rowSpan:           'row-span',
+	spellCheck:        'spell-check',
+	srcDoc:            'src-doc',
+	srcLang:           'src-lang',
+	srcSet:            'src-set',
+	tabIndex:          'tab-index',
+	useMap:            'use-Map'
+};
+
 
 /** Render Preact JSX + Components to an HTML string.
  *	@name render
@@ -118,6 +162,11 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 			if (name==='className') {
 				if (attributes['class']) continue;
 				name = 'class';
+			}
+			else if (MAPPED_ATTRIBUTES.hasOwnProperty(name)) {
+				const actual = MAPPED_ATTRIBUTES[name];
+				if (attributes[actual]) continue;
+				name = actual;
 			}
 			else if (isSvgMode && name.match(/^xlink\:?(.+)/)) {
 				name = name.toLowerCase().replace(/^xlink\:?(.+)/, 'xlink:$1');
