@@ -40,6 +40,10 @@ describe('jsx', () => {
 		expect(renderJsx(<a style="" />)).to.equal('<a></a>');
 	});
 
+	it('should render supported camel cased attributes in normal form', () => {
+		expect(renderJsx(<meta httpEquiv="" />)).to.equal('<meta http-equiv="" />');
+	});
+
 	it('should render JSX attributes inline if short enough', () => {
 		expect(renderJsx(
 			<a b="c">bar</a>
