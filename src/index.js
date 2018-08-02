@@ -2,9 +2,6 @@ import { objectKeys, encodeEntities, indent, isLargeString, styleObjToCss, assig
 
 const SHALLOW = { shallow: true };
 
-// components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
-const UNNAMED = [];
-
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 
@@ -54,8 +51,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 	// components
 	if (typeof nodeName==='function') {
 		isComponent = true;
-		if (opts.shallow && (inner || opts.renderRootComponent===false)) {
-			nodeName = getComponentName(nodeName);
+		if (opts.shallow && opts.getComponentName && (inner || opts.renderRootComponent===false)) {
+			nodeName = opts.getComponentName(nodeName);
 		}
 		else {
 			let props = getNodeProps(vnode),
@@ -189,30 +186,6 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 	return s;
 }
 
-function getComponentName(component) {
-	return component.displayName || component!==Function && component.name || getFallbackComponentName(component);
-}
-
-function getFallbackComponentName(component) {
-	let str = Function.prototype.toString.call(component),
-		name = (str.match(/^\s*function\s+([^\( ]+)/) || EMPTY)[1];
-	if (!name) {
-		// search for an existing indexed name for the given component:
-		let index = -1;
-		for (let i=UNNAMED.length; i--; ) {
-			if (UNNAMED[i]===component) {
-				index = i;
-				break;
-			}
-		}
-		// not found, create a new indexed name:
-		if (index<0) {
-			index = UNNAMED.push(component) - 1;
-		}
-		name = `UnnamedComponent${index}`;
-	}
-	return name;
-}
 renderToString.shallowRender = shallowRender;
 
 export default renderToString;

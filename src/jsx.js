@@ -19,6 +19,34 @@ let prettyFormatOpts = {
 	plugins: [preactPlugin]
 };
 
+// components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
+const UNNAMED = [];
+
+function getComponentName(component) {
+	return component.displayName || component!==Function && component.name || getFallbackComponentName(component);
+}
+
+function getFallbackComponentName(component) {
+	let str = Function.prototype.toString.call(component),
+		name = (str.match(/^\s*function\s+([^( ]+)/) || '')[1];
+	if (!name) {
+		// search for an existing indexed name for the given component:
+		let index = -1;
+		for (let i=UNNAMED.length; i--; ) {
+			if (UNNAMED[i]===component) {
+				index = i;
+				break;
+			}
+		}
+		// not found, create a new indexed name:
+		if (index<0) {
+			index = UNNAMED.push(component) - 1;
+		}
+		name = `UnnamedComponent${index}`;
+	}
+	return name;
+}
+
 
 function attributeHook(name, value, context, opts, isComponent) {
 	let type = typeof value;
@@ -57,6 +85,7 @@ let defaultOpts = {
 	functions: true,
 	functionNames: true,
 	skipFalseAttributes: true,
+	getComponentName,
 	pretty: '  '
 };
 
@@ -65,3 +94,15 @@ export default function renderToJsxString(vnode, context, opts, inner) {
 	opts = assign(assign({}, defaultOpts), opts || {});
 	return renderToString(vnode, context, opts, inner);
 }
+
+export function shallowRender(vnode, context, opts) {
+	const jsx = opts && opts.jsx===true;
+	return renderToJsxString(vnode, context, assign({
+		jsx,
+		pretty: jsx,
+		attributeHook: jsx && attributeHook,
+		shallow: true
+	}, opts));
+}
+
+renderToJsxString.shallowRender = shallowRender;
