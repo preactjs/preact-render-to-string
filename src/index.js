@@ -73,7 +73,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 				c._disable = c.__x = true;
 				c.props = props;
 				c.context = context;
-				if (c.constructor.getDerivedStateFromProps) c.state = assign(assign({}, c.state), c.constructor.getDerivedStateFromProps(c.props, c.state));
+				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
 				else if (c.componentWillMount) c.componentWillMount();
 				rendered = c.render(c.props, c.state, c.context);
 
