@@ -54,6 +54,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 
 	// components
 	if (typeof nodeName==='function') {
+		let c;
 		isComponent = true;
 		if (opts.shallow && (inner || opts.renderRootComponent===false)) {
 			nodeName = getComponentName(nodeName);
@@ -68,27 +69,31 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 			}
 			else {
 				// class-based components
-				let c = new nodeName(props, context);
+				c = new nodeName(props, context);
 				// turn off stateful re-rendering:
 				c._disable = c.__x = true;
 				c.props = props;
 				c.context = context;
-				try {
-					if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
-					else if (c.componentWillMount) c.componentWillMount();
-					rendered = c.render(c.props, c.state, c.context);
-				}
-				catch (error) {
-					if (c.componentDidCatch) c.componentDidCatch(error);
-					else throw error;
-				}
+				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
+				else if (c.componentWillMount) c.componentWillMount();
+				rendered = c.render(c.props, c.state, c.context);
 
 				if (c.getChildContext) {
 					context = assign(assign({}, context), c.getChildContext());
 				}
 			}
 
-			return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
+			try {
+				return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
+			}
+			catch (error) {
+				if (c && c.componentDidCatch) {
+					c.componentDidCatch(error);
+					rendered = c.render(c.props, c.state, c.context);
+					return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
+				}
+				throw error;
+			}
 		}
 	}
 

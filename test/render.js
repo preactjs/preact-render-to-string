@@ -612,65 +612,259 @@ describe('render', () => {
 	});
 
 	describe('Error Handling', () => {
-		it('should invoke componentDidCatch from an error thrown in getDerivedStateFromProps', () => {
-			class Test extends Component {
+		it('should invoke ErrorBoundry\'s componentDidCatch from an error thrown in ComponentThatThrows\'s getDerivedStateFromProps', () => {
+			class ComponentThatThrows extends Component {
 				static getDerivedStateFromProps() {
 					throw new Error();
 				}
 				componentDidCatch(error) {}
-			}
-			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
-			spy(Test.prototype, 'componentDidCatch');
-
-			render(<Test />);
-			
-			expect(Test.prototype.constructor.getDerivedStateFromProps)
-				.to.have.been.calledOnce
-				.and.to.have.been.calledBefore(Test.prototype.componentDidCatch);
-
-			expect(Test.prototype.constructor.getDerivedStateFromProps)
-				.to.throw();
-		});
-		
-		it('should invoke componentDidCatch from an error thrown in componentWillMount', () => {
-			class Test extends Component {
-				componentWillMount() {
-					throw new Error('Error in componentWillMount() method');
-				}
-				componentDidCatch(error) {}
-			}
-			spy(Test.prototype, 'componentWillMount');
-			spy(Test.prototype, 'componentDidCatch');
-
-			render(<Test />);
-
-			expect(Test.prototype.componentWillMount)
-				.to.have.been.calledOnce
-				.and.to.have.been.calledBefore(Test.prototype.componentDidCatch);
-
-			expect(Test.prototype.componentWillMount)
-				.to.throw();
-		});
-		
-		it('should invoke componentDidCatch from an error thrown in render', () => {
-			class Test extends Component {
-				componentDidCatch(error) {}
 				render(props) {
-					throw new Error('Error in render() method');
 					return <div {...props} />; // eslint-disable-line
 				}
 			}
-			spy(Test.prototype, 'render');
-			spy(Test.prototype, 'componentDidCatch');
+			class ComponentThatRenders extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			class ErrorBoundry extends Component {
+				constructor(props) {
+					super(props);
+					this.state = { throwError: true };
+				}
+				componentDidCatch(error) {
+					this.setState({ throwError: false });
+				}
+				render(props, state) {
+					return state.throwError
+						? <ComponentThatThrows />
+						: <ComponentThatRenders />;
+				}
+			}
+			class App extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					return <ErrorBoundry />;
+				}
+			}
+			
+			spy(ComponentThatThrows.prototype.constructor, 'getDerivedStateFromProps');
+			spy(ComponentThatThrows.prototype, 'componentDidCatch');
+			spy(ComponentThatThrows.prototype, 'render');
+			spy(ComponentThatRenders.prototype, 'componentDidCatch');
+			spy(ComponentThatRenders.prototype, 'render');
+			spy(ErrorBoundry.prototype, 'componentDidCatch');
+			spy(ErrorBoundry.prototype, 'render');
+			spy(App.prototype, 'componentDidCatch');
+			spy(App.prototype, 'render');
 
-			render(<Test />);
+			render(<App />);
 
-			expect(Test.prototype.render)
-				.to.have.been.calledOnce
-				.and.to.have.been.calledBefore(Test.prototype.componentDidCatch);
+			// ComponentThatThrows
+			expect(ComponentThatThrows.prototype.componentDidCatch)
+				.to.not.have.been.called;
 
-			expect(Test.prototype.render)
+			expect(ComponentThatThrows.prototype.constructor.getDerivedStateFromProps)
+				.to.have.been.calledOnce;
+			
+			expect(ComponentThatThrows.prototype.constructor.getDerivedStateFromProps)
 				.to.throw();
+
+			expect(ComponentThatThrows.prototype.render)
+				.to.not.have.been.called;
+
+			// ComponentThatRenders
+			expect(ComponentThatRenders.prototype.componentDidCatch)
+				.to.not.have.been.called;
+			
+			expect(ComponentThatRenders.prototype.render)
+				.to.have.been.calledOnce;
+
+			expect(ComponentThatRenders.prototype.render)
+				.to.not.throw();
+
+			// ErrorBoundry
+			expect(ErrorBoundry.prototype.componentDidCatch)
+				.to.have.been.calledOnce;
+			
+			expect(ErrorBoundry.prototype.render)
+				.to.have.been.calledTwice;
+
+			// App
+			expect(App.prototype.render)
+				.to.have.been.calledOnce;
+				
+			expect(App.prototype.componentDidCatch)
+				.to.not.have.been.called;
+		});
+		
+		it('should invoke ErrorBoundry\'s componentDidCatch from an error thrown in ComponentThatThrows\'s componentWillMount', () => {
+			class ComponentThatThrows extends Component {
+				componentWillMount() {
+					throw new Error();
+				}
+				componentDidCatch(error) {}
+				render(props) {
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			class ComponentThatRenders extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			class ErrorBoundry extends Component {
+				constructor(props) {
+					super(props);
+					this.state = { throwError: true };
+				}
+				componentDidCatch(error) {
+					this.setState({ throwError: false });
+				}
+				render(props, state) {
+					return state.throwError
+						? <ComponentThatThrows />
+						: <ComponentThatRenders />;
+				}
+			}
+			class App extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					return <ErrorBoundry />;
+				}
+			}
+			
+			spy(ComponentThatThrows.prototype, 'componentWillMount');
+			spy(ComponentThatThrows.prototype, 'componentDidCatch');
+			spy(ComponentThatThrows.prototype, 'render');
+			spy(ComponentThatRenders.prototype, 'componentDidCatch');
+			spy(ComponentThatRenders.prototype, 'render');
+			spy(ErrorBoundry.prototype, 'componentDidCatch');
+			spy(ErrorBoundry.prototype, 'render');
+			spy(App.prototype, 'componentDidCatch');
+			spy(App.prototype, 'render');
+
+			render(<App />);
+
+			// ComponentThatThrows
+			expect(ComponentThatThrows.prototype.componentDidCatch)
+				.to.not.have.been.called;
+
+			expect(ComponentThatThrows.prototype.componentWillMount)
+				.to.have.been.calledOnce;
+			
+			expect(ComponentThatThrows.prototype.componentWillMount)
+				.to.throw();
+
+			expect(ComponentThatThrows.prototype.render)
+				.to.not.have.been.called;
+
+			// ComponentThatRenders
+			expect(ComponentThatRenders.prototype.componentDidCatch)
+				.to.not.have.been.called;
+			
+			expect(ComponentThatRenders.prototype.render)
+				.to.have.been.calledOnce;
+
+			expect(ComponentThatRenders.prototype.render)
+				.to.not.throw();
+
+			// ErrorBoundry
+			expect(ErrorBoundry.prototype.componentDidCatch)
+				.to.have.been.calledOnce;
+			
+			expect(ErrorBoundry.prototype.render)
+				.to.have.been.calledTwice;
+
+			// App
+			expect(App.prototype.render)
+				.to.have.been.calledOnce;
+				
+			expect(App.prototype.componentDidCatch)
+				.to.not.have.been.called;
+		});
+		
+		it('should invoke ErrorBoundry\'s componentDidCatch from an error thrown in ComponentThatThrows\'s render', () => {
+			class ComponentThatThrows extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					throw new Error();
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			class ComponentThatRenders extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			class ErrorBoundry extends Component {
+				constructor(props) {
+					super(props);
+					this.state = { throwError: true };
+				}
+				componentDidCatch(error) {
+					this.setState({ throwError: false });
+				}
+				render(props, state) {
+					return state.throwError
+						? <ComponentThatThrows />
+						: <ComponentThatRenders />;
+				}
+			}
+			class App extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					return <ErrorBoundry />;
+				}
+			}
+			
+			spy(ComponentThatThrows.prototype, 'componentDidCatch');
+			spy(ComponentThatThrows.prototype, 'render');
+			spy(ComponentThatRenders.prototype, 'componentDidCatch');
+			spy(ComponentThatRenders.prototype, 'render');
+			spy(ErrorBoundry.prototype, 'componentDidCatch');
+			spy(ErrorBoundry.prototype, 'render');
+			spy(App.prototype, 'componentDidCatch');
+			spy(App.prototype, 'render');
+
+			render(<App />);
+
+			// ComponentThatThrows
+			expect(ComponentThatThrows.prototype.componentDidCatch)
+				.to.not.have.been.called;
+
+			expect(ComponentThatThrows.prototype.render)
+				.to.have.been.calledOnce;
+			
+			expect(ComponentThatThrows.prototype.render)
+				.to.throw();
+
+			// ComponentThatRenders
+			expect(ComponentThatRenders.prototype.componentDidCatch)
+				.to.not.have.been.called;
+			
+			expect(ComponentThatRenders.prototype.render)
+				.to.have.been.calledOnce;
+
+			expect(ComponentThatRenders.prototype.render)
+				.to.not.throw();
+
+			// ErrorBoundry
+			expect(ErrorBoundry.prototype.componentDidCatch)
+				.to.have.been.calledOnce;
+			
+			expect(ErrorBoundry.prototype.render)
+				.to.have.been.calledTwice;
+
+			// App
+			expect(App.prototype.render)
+				.to.have.been.calledOnce;
+				
+			expect(App.prototype.componentDidCatch)
+				.to.not.have.been.called;
 		});
 	});
 });
