@@ -89,7 +89,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 			catch (error) {
 				if (c) {
 					if (nodeName.getDerivedStateFromError) {
-						c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromError(c.props, c.state));
+						c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromError(error));
 						rendered = c.render(c.props, c.state, c.context);
 						return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
 					}
