@@ -54,13 +54,13 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 
 	// components
 	if (typeof nodeName==='function') {
-		let c;
 		isComponent = true;
 		if (opts.shallow && (inner || opts.renderRootComponent===false)) {
 			nodeName = getComponentName(nodeName);
 		}
 		else {
-			let props = getNodeProps(vnode),
+			let c,
+				props = getNodeProps(vnode),
 				rendered;
 
 			if (!nodeName.prototype || typeof nodeName.prototype.render!=='function') {
