@@ -610,4 +610,68 @@ describe('render', () => {
 			expect(Bar).to.have.been.calledOnce.and.calledWithMatch({ count: 1 });
 		});
 	});
+
+	describe('Error Handling', () => {
+		it('should invoke componentDidCatch from an error thrown in getDerivedStateFromProps', () => {
+			const error = new Error();
+			class Test extends Component {
+				static getDerivedStateFromProps() {
+					throw error;
+				}
+				componentDidCatch(error) {}
+			}
+			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
+			spy(Test.prototype, 'componentDidCatch');
+
+			render(<Test />);
+			
+			expect(Test.prototype.constructor.getDerivedStateFromProps)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.componentDidCatch);
+
+			expect(Test.prototype.constructor.getDerivedStateFromProps)
+				.to.throw();
+		});
+		
+		it('should invoke componentDidCatch from an error thrown in componentWillMount', () => {
+			class Test extends Component {
+				componentWillMount() {
+					throw new Error('Error in componentWillMount() method');
+				}
+				componentDidCatch(error) {}
+			}
+			spy(Test.prototype, 'componentWillMount');
+			spy(Test.prototype, 'componentDidCatch');
+
+			render(<Test />);
+
+			expect(Test.prototype.componentWillMount)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.componentDidCatch);
+
+			expect(Test.prototype.componentWillMount)
+				.to.throw();
+		});
+		
+		it('should invoke componentDidCatch from an error thrown in render', () => {
+			class Test extends Component {
+				componentDidCatch(error) {}
+				render(props) {
+					throw new Error('Error in render() method');
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			spy(Test.prototype, 'render');
+			spy(Test.prototype, 'componentDidCatch');
+
+			render(<Test />);
+
+			expect(Test.prototype.render)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.componentDidCatch);
+
+			expect(Test.prototype.render)
+				.to.throw();
+		});
+	});
 });
