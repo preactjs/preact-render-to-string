@@ -613,10 +613,9 @@ describe('render', () => {
 
 	describe('Error Handling', () => {
 		it('should invoke componentDidCatch from an error thrown in getDerivedStateFromProps', () => {
-			const error = new Error();
 			class Test extends Component {
 				static getDerivedStateFromProps() {
-					throw error;
+					throw new Error();
 				}
 				componentDidCatch(error) {}
 			}
