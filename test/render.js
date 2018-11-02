@@ -672,5 +672,81 @@ describe('render', () => {
 			expect(Test.prototype.render)
 				.to.throw();
 		});
+
+		it('should invoke getDerivedStateFromError from an error thrown in getDerivedStateFromProps', () => {
+			class Test extends Component {
+				static getDerivedStateFromProps() {
+					throw new Error();
+				}
+				static getDerivedStateFromError(error) {}
+				componentDidCatch(error) {}
+			}
+			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
+			spy(Test.prototype.constructor, 'getDerivedStateFromError');
+			spy(Test.prototype, 'componentDidCatch');
+
+			render(<Test />);
+			
+			expect(Test.prototype.constructor.getDerivedStateFromProps)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.constructor.getDerivedStateFromError);
+
+			expect(Test.prototype.componentDidCatch)
+				.to.not.have.been.called;
+
+			expect(Test.prototype.constructor.getDerivedStateFromProps)
+				.to.throw();
+		});
+
+		it('should invoke getDerivedStateFromError from an error thrown in componentWillMount', () => {
+			class Test extends Component {
+				static getDerivedStateFromError(error) {}
+				componentWillMount() {
+					throw new Error();
+				}
+				componentDidCatch(error) {}
+			}
+			spy(Test.prototype.constructor, 'getDerivedStateFromError');
+			spy(Test.prototype, 'componentWillMount');
+			spy(Test.prototype, 'componentDidCatch');
+
+			render(<Test />);
+			
+			expect(Test.prototype.componentWillMount)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.constructor.getDerivedStateFromError);
+
+			expect(Test.prototype.componentDidCatch)
+				.to.not.have.been.called;
+
+			expect(Test.prototype.componentWillMount)
+				.to.throw();
+		});
+
+		it('should invoke getDerivedStateFromError from an error thrown in render', () => {
+			class Test extends Component {
+				static getDerivedStateFromError(error) {}
+				componentDidCatch(error) {}
+				render(props) {
+					throw new Error('Error in render() method');
+					return <div {...props} />; // eslint-disable-line
+				}
+			}
+			spy(Test.prototype.constructor, 'getDerivedStateFromError');
+			spy(Test.prototype, 'componentDidCatch');
+			spy(Test.prototype, 'render');
+
+			render(<Test />);
+			
+			expect(Test.prototype.render)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.constructor.getDerivedStateFromError);
+
+			expect(Test.prototype.componentDidCatch)
+				.to.not.have.been.called;
+
+			expect(Test.prototype.render)
+				.to.throw();
+		});
 	});
 });

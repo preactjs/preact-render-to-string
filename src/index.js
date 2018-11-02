@@ -79,7 +79,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 					rendered = c.render(c.props, c.state, c.context);
 				}
 				catch (error) {
-					if (c.componentDidCatch) c.componentDidCatch(error);
+					if (nodeName.getDerivedStateFromError) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromError(error));
+					else if (c.componentDidCatch) c.componentDidCatch(error);
 					else throw error;
 				}
 
