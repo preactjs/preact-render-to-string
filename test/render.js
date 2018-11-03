@@ -619,13 +619,13 @@ describe('render', () => {
 				}
 				componentDidCatch(error) {}
 				render(props) {
-					return <div {...props} />; // eslint-disable-line
+					return <div {...props} />;
 				}
 			}
 			class ComponentThatRenders extends Component {
 				componentDidCatch(error) {}
 				render(props) {
-					return <div {...props} />; // eslint-disable-line
+					return <div {...props} />;
 				}
 			}
 			class ErrorBoundry extends Component {
@@ -636,8 +636,8 @@ describe('render', () => {
 				componentDidCatch(error) {
 					this.setState({ throwError: false });
 				}
-				render(props, state) {
-					return state.throwError
+				render(props, { throwError }) {
+					return throwError
 						? <ComponentThatThrows />
 						: <ComponentThatRenders />;
 				}
@@ -662,15 +662,13 @@ describe('render', () => {
 			render(<App />);
 
 			// ComponentThatThrows
+			expect(ComponentThatThrows.prototype.constructor.getDerivedStateFromProps)
+				.to.have.been.calledOnce
+				.and.to.throw();
+
 			expect(ComponentThatThrows.prototype.componentDidCatch)
 				.to.not.have.been.called;
-
-			expect(ComponentThatThrows.prototype.constructor.getDerivedStateFromProps)
-				.to.have.been.calledOnce;
-			
-			expect(ComponentThatThrows.prototype.constructor.getDerivedStateFromProps)
-				.to.throw();
-
+	
 			expect(ComponentThatThrows.prototype.render)
 				.to.not.have.been.called;
 
@@ -679,10 +677,8 @@ describe('render', () => {
 				.to.not.have.been.called;
 			
 			expect(ComponentThatRenders.prototype.render)
-				.to.have.been.calledOnce;
-
-			expect(ComponentThatRenders.prototype.render)
-				.to.not.throw();
+				.to.have.been.calledOnce
+				.and.to.not.throw();
 
 			// ErrorBoundry
 			expect(ErrorBoundry.prototype.componentDidCatch)
@@ -706,13 +702,13 @@ describe('render', () => {
 				}
 				componentDidCatch(error) {}
 				render(props) {
-					return <div {...props} />; // eslint-disable-line
+					return <div {...props} />;
 				}
 			}
 			class ComponentThatRenders extends Component {
 				componentDidCatch(error) {}
 				render(props) {
-					return <div {...props} />; // eslint-disable-line
+					return <div {...props} />;
 				}
 			}
 			class ErrorBoundry extends Component {
@@ -723,8 +719,8 @@ describe('render', () => {
 				componentDidCatch(error) {
 					this.setState({ throwError: false });
 				}
-				render(props, state) {
-					return state.throwError
+				render(props, { throwError }) {
+					return throwError
 						? <ComponentThatThrows />
 						: <ComponentThatRenders />;
 				}
@@ -753,10 +749,8 @@ describe('render', () => {
 				.to.not.have.been.called;
 
 			expect(ComponentThatThrows.prototype.componentWillMount)
-				.to.have.been.calledOnce;
-			
-			expect(ComponentThatThrows.prototype.componentWillMount)
-				.to.throw();
+				.to.have.been.calledOnce
+				.and.to.throw();
 
 			expect(ComponentThatThrows.prototype.render)
 				.to.not.have.been.called;
@@ -766,10 +760,8 @@ describe('render', () => {
 				.to.not.have.been.called;
 			
 			expect(ComponentThatRenders.prototype.render)
-				.to.have.been.calledOnce;
-
-			expect(ComponentThatRenders.prototype.render)
-				.to.not.throw();
+				.to.have.been.calledOnce
+				.and.to.not.throw();
 
 			// ErrorBoundry
 			expect(ErrorBoundry.prototype.componentDidCatch)
@@ -797,7 +789,7 @@ describe('render', () => {
 			class ComponentThatRenders extends Component {
 				componentDidCatch(error) {}
 				render(props) {
-					return <div {...props} />; // eslint-disable-line
+					return <div {...props} />;
 				}
 			}
 			class ErrorBoundry extends Component {
@@ -808,8 +800,8 @@ describe('render', () => {
 				componentDidCatch(error) {
 					this.setState({ throwError: false });
 				}
-				render(props, state) {
-					return state.throwError
+				render(props, { throwError }) {
+					return throwError
 						? <ComponentThatThrows />
 						: <ComponentThatRenders />;
 				}
@@ -837,20 +829,16 @@ describe('render', () => {
 				.to.not.have.been.called;
 
 			expect(ComponentThatThrows.prototype.render)
-				.to.have.been.calledOnce;
-			
-			expect(ComponentThatThrows.prototype.render)
-				.to.throw();
+				.to.have.been.calledOnce
+				.and.to.throw();
 
 			// ComponentThatRenders
 			expect(ComponentThatRenders.prototype.componentDidCatch)
 				.to.not.have.been.called;
 			
 			expect(ComponentThatRenders.prototype.render)
-				.to.have.been.calledOnce;
-
-			expect(ComponentThatRenders.prototype.render)
-				.to.not.throw();
+				.to.have.been.calledOnce
+				.and.to.not.throw();
 
 			// ErrorBoundry
 			expect(ErrorBoundry.prototype.componentDidCatch)
