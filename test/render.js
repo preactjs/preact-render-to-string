@@ -864,7 +864,7 @@ describe('render', () => {
 				.to.not.have.been.called;
 		});
 
-		it('should invoke ErrorBoundry\'s getDerivedStateFromError from an error thrown in ComponentThatThrows\' getDerivedStateFromProps', () => {
+		it('should invoke ErrorBoundary\'s getDerivedStateFromError from an error thrown in ComponentThatThrows\' getDerivedStateFromProps', () => {
 			const ERROR_MESSAGE = 'getDerivedStateFromProps error',
 				THE_ERROR = new Error(ERROR_MESSAGE);
 			class ComponentThatThrows extends Component {
@@ -884,7 +884,7 @@ describe('render', () => {
 					return <div {...props} />;
 				}
 			}
-			class ErrorBoundry extends Component {
+			class ErrorBoundary extends Component {
 				static getDerivedStateFromError(error) {
 					return { throwError: false };
 				}
@@ -905,7 +905,7 @@ describe('render', () => {
 				static getDerivedStateFromError(error) {}
 				componentDidCatch(error) {}
 				render(props) {
-					return <ErrorBoundry />;
+					return <ErrorBoundary />;
 				}
 			}
 			
@@ -916,9 +916,9 @@ describe('render', () => {
 			spy(ComponentThatRenders.prototype.constructor, 'getDerivedStateFromError');
 			spy(ComponentThatRenders.prototype, 'componentDidCatch');
 			spy(ComponentThatRenders.prototype, 'render');
-			spy(ErrorBoundry.prototype.constructor, 'getDerivedStateFromError');
-			spy(ErrorBoundry.prototype, 'componentDidCatch');
-			spy(ErrorBoundry.prototype, 'render');
+			spy(ErrorBoundary.prototype.constructor, 'getDerivedStateFromError');
+			spy(ErrorBoundary.prototype, 'componentDidCatch');
+			spy(ErrorBoundary.prototype, 'render');
 			spy(App.prototype.constructor, 'getDerivedStateFromError');
 			spy(App.prototype, 'componentDidCatch');
 			spy(App.prototype, 'render');
@@ -950,15 +950,15 @@ describe('render', () => {
 				.to.have.been.calledOnce
 				.and.to.not.throw();
 
-			// ErrorBoundry
-			expect(ErrorBoundry.prototype.constructor.getDerivedStateFromError)
+			// ErrorBoundary
+			expect(ErrorBoundary.prototype.constructor.getDerivedStateFromError)
 				.to.have.been.calledOnce
 				.and.calledWithExactly(THE_ERROR);
 
-			expect(ErrorBoundry.prototype.componentDidCatch)
+			expect(ErrorBoundary.prototype.componentDidCatch)
 				.to.not.have.been.called;
 			
-			expect(ErrorBoundry.prototype.render)
+			expect(ErrorBoundary.prototype.render)
 				.to.have.been.calledTwice;
 
 			// App
@@ -972,7 +972,7 @@ describe('render', () => {
 				.to.have.been.calledOnce;
 		});
 
-		it('should invoke ErrorBoundry\'s getDerivedStateFromError from an error thrown in ComponentThatThrows\' componentWillMount', () => {
+		it('should invoke ErrorBoundary\'s getDerivedStateFromError from an error thrown in ComponentThatThrows\' componentWillMount', () => {
 			const ERROR_MESSAGE = 'componentWillMount error',
 				THE_ERROR = new Error(ERROR_MESSAGE);
 			class ComponentThatThrows extends Component {
@@ -992,7 +992,7 @@ describe('render', () => {
 					return <div {...props} />;
 				}
 			}
-			class ErrorBoundry extends Component {
+			class ErrorBoundary extends Component {
 				static getDerivedStateFromError(error) {
 					return { throwError: false };
 				}
@@ -1013,7 +1013,7 @@ describe('render', () => {
 				static getDerivedStateFromError(error) {}
 				componentDidCatch(error) {}
 				render(props) {
-					return <ErrorBoundry />;
+					return <ErrorBoundary />;
 				}
 			}
 			
@@ -1024,9 +1024,9 @@ describe('render', () => {
 			spy(ComponentThatRenders.prototype.constructor, 'getDerivedStateFromError');
 			spy(ComponentThatRenders.prototype, 'componentDidCatch');
 			spy(ComponentThatRenders.prototype, 'render');
-			spy(ErrorBoundry.prototype.constructor, 'getDerivedStateFromError');
-			spy(ErrorBoundry.prototype, 'componentDidCatch');
-			spy(ErrorBoundry.prototype, 'render');
+			spy(ErrorBoundary.prototype.constructor, 'getDerivedStateFromError');
+			spy(ErrorBoundary.prototype, 'componentDidCatch');
+			spy(ErrorBoundary.prototype, 'render');
 			spy(App.prototype.constructor, 'getDerivedStateFromError');
 			spy(App.prototype, 'componentDidCatch');
 			spy(App.prototype, 'render');
@@ -1058,15 +1058,15 @@ describe('render', () => {
 				.to.have.been.calledOnce
 				.and.to.not.throw();
 
-			// ErrorBoundry
-			expect(ErrorBoundry.prototype.constructor.getDerivedStateFromError)
+			// ErrorBoundary
+			expect(ErrorBoundary.prototype.constructor.getDerivedStateFromError)
 				.to.have.been.calledOnce
 				.and.calledWithExactly(THE_ERROR);
 
-			expect(ErrorBoundry.prototype.componentDidCatch)
+			expect(ErrorBoundary.prototype.componentDidCatch)
 				.to.not.have.been.called;
 			
-			expect(ErrorBoundry.prototype.render)
+			expect(ErrorBoundary.prototype.render)
 				.to.have.been.calledTwice;
 
 			// App
@@ -1080,7 +1080,7 @@ describe('render', () => {
 				.to.have.been.calledOnce;
 		});
 
-		it('should invoke ErrorBoundry\'s getDerivedStateFromError from an error thrown in ComponentThatThrows\' render', () => {
+		it('should invoke ErrorBoundary\'s getDerivedStateFromError from an error thrown in ComponentThatThrows\' render', () => {
 			const ERROR_MESSAGE = 'render error',
 				THE_ERROR = new Error(ERROR_MESSAGE);
 			class ComponentThatThrows extends Component {
@@ -1098,7 +1098,7 @@ describe('render', () => {
 					return <div {...props} />;
 				}
 			}
-			class ErrorBoundry extends Component {
+			class ErrorBoundary extends Component {
 				static getDerivedStateFromError(error) {
 					return { throwError: false };
 				}
@@ -1119,7 +1119,7 @@ describe('render', () => {
 				static getDerivedStateFromError(error) {}
 				componentDidCatch(error) {}
 				render(props) {
-					return <ErrorBoundry />;
+					return <ErrorBoundary />;
 				}
 			}
 			
@@ -1129,9 +1129,9 @@ describe('render', () => {
 			spy(ComponentThatRenders.prototype.constructor, 'getDerivedStateFromError');
 			spy(ComponentThatRenders.prototype, 'componentDidCatch');
 			spy(ComponentThatRenders.prototype, 'render');
-			spy(ErrorBoundry.prototype.constructor, 'getDerivedStateFromError');
-			spy(ErrorBoundry.prototype, 'componentDidCatch');
-			spy(ErrorBoundry.prototype, 'render');
+			spy(ErrorBoundary.prototype.constructor, 'getDerivedStateFromError');
+			spy(ErrorBoundary.prototype, 'componentDidCatch');
+			spy(ErrorBoundary.prototype, 'render');
 			spy(App.prototype.constructor, 'getDerivedStateFromError');
 			spy(App.prototype, 'componentDidCatch');
 			spy(App.prototype, 'render');
@@ -1160,15 +1160,15 @@ describe('render', () => {
 				.to.have.been.calledOnce
 				.and.to.not.throw();
 
-			// ErrorBoundry
-			expect(ErrorBoundry.prototype.constructor.getDerivedStateFromError)
+			// ErrorBoundary
+			expect(ErrorBoundary.prototype.constructor.getDerivedStateFromError)
 				.to.have.been.calledOnce
 				.and.calledWithExactly(THE_ERROR);
 
-			expect(ErrorBoundry.prototype.componentDidCatch)
+			expect(ErrorBoundary.prototype.componentDidCatch)
 				.to.not.have.been.called;
 			
-			expect(ErrorBoundry.prototype.render)
+			expect(ErrorBoundary.prototype.render)
 				.to.have.been.calledTwice;
 
 			// App
