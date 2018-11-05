@@ -59,47 +59,39 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 			nodeName = getComponentName(nodeName);
 		}
 		else {
-			let c,
-				props = getNodeProps(vnode),
+			let props = getNodeProps(vnode),
 				rendered;
 
 			if (!nodeName.prototype || typeof nodeName.prototype.render!=='function') {
 				// stateless functional components
 				rendered = nodeName(props, context);
+				return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
 			}
-			else {
-				// class-based components
-				c = new nodeName(props, context);
-				// turn off stateful re-rendering:
-				c._disable = c.__x = true;
-				c.props = props;
-				c.context = context;
-				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
-				else if (c.componentWillMount) c.componentWillMount();
-				rendered = c.render(c.props, c.state, c.context);
+			
+			// class-based components
+			let c = new nodeName(props, context);
+			// turn off stateful re-rendering:
+			c._disable = c.__x = true;
+			c.props = props;
+			c.context = context;
+			if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
+			else if (c.componentWillMount) c.componentWillMount();
+			rendered = c.render(c.props, c.state, c.context);
 
-				if (c.getChildContext) {
-					context = assign(assign({}, context), c.getChildContext());
-				}
+			if (c.getChildContext) {
+				context = assign(assign({}, context), c.getChildContext());
 			}
 
 			try {
 				return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
 			}
 			catch (error) {
-				if (c) {
-					if (nodeName.getDerivedStateFromError) {
-						c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromError(error));
-						rendered = c.render(c.props, c.state, c.context);
-						return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
-					}
-					else if (c.componentDidCatch) {
-						c.componentDidCatch(error);
-						rendered = c.render(c.props, c.state, c.context);
-						return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
-					}
-				}
-				throw error;
+				// error boundary
+				if (nodeName.getDerivedStateFromError) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromError(error));
+				else if (c.componentDidCatch) c.componentDidCatch(error);
+				else throw error;
+				rendered = c.render(c.props, c.state, c.context);
+				return renderToString(rendered, context, opts, opts.shallowHighOrder!==false);
 			}
 		}
 	}
