@@ -1,28 +1,12 @@
-import { objectKeys, encodeEntities, falsey, memoize, indent, isLargeString, styleObjToCss, hashToClassName, assign, getNodeProps } from './util';
+import { encodeEntities, indent, isLargeString, styleObjToCss, assign, getNodeProps } from './util';
+import { ENABLE_PRETTY } from '../env';
 
 const SHALLOW = { shallow: true };
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
 
-const EMPTY = {};
-
-const VOID_ELEMENTS = [
-	'area',
-	'base',
-	'br',
-	'col',
-	'embed',
-	'hr',
-	'img',
-	'input',
-	'link',
-	'meta',
-	'param',
-	'source',
-	'track',
-	'wbr'
-];
+const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 
 /** Render Preact JSX + Components to an HTML string.
@@ -49,18 +33,19 @@ let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
 
 /** The default export is an alias of `render()`. */
-export default function renderToString(vnode, context, opts, inner, isSvgMode) {
-	let { nodeName, attributes, children } = vnode || EMPTY,
+function renderToString(vnode, context, opts, inner, isSvgMode) {
+	if (vnode==null || typeof vnode==='boolean') {
+		return '';
+	}
+
+	let nodeName = vnode.nodeName,
+		attributes = vnode.attributes,
 		isComponent = false;
 	context = context || {};
 	opts = opts || {};
 
-	let pretty = opts.pretty,
-		indentChar = typeof pretty==='string' ? pretty : '\t';
-
-	if (vnode==null || typeof vnode==='boolean') {
-		return '';
-	}
+	let pretty = ENABLE_PRETTY && opts.pretty,
+		indentChar = pretty && typeof pretty==='string' ? pretty : '\t';
 
 	// #text nodes
 	if (typeof vnode!=='object' && !nodeName) {
@@ -88,7 +73,8 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 				c._disable = c.__x = true;
 				c.props = props;
 				c.context = context;
-				if (c.componentWillMount) c.componentWillMount();
+				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
+				else if (c.componentWillMount) c.componentWillMount();
 				rendered = c.render(c.props, c.state, c.context);
 
 				if (c.getChildContext) {
@@ -104,7 +90,7 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 	let s = '', html;
 
 	if (attributes) {
-		let attrs = objectKeys(attributes);
+		let attrs = Object.keys(attributes);
 
 		// allow sorting lexicographically for more determinism (useful for tests, such as via preact-jsx-chai)
 		if (opts && opts.sortAttributes===true) attrs.sort();
@@ -113,10 +99,13 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 			let name = attrs[i],
 				v = attributes[name];
 			if (name==='children') continue;
+
+			if (name.match(/[\s\n\\/='"\0<>]/)) continue;
+
 			if (!(opts && opts.allAttributes) && (name==='key' || name==='ref')) continue;
 
 			if (name==='className') {
-				if (attributes['class']) continue;
+				if (attributes.class) continue;
 				name = 'class';
 			}
 			
@@ -125,14 +114,11 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 				name = 'for';
 			}
 
-			else if (isSvgMode && name.match(/^xlink\:?(.+)/)) {
-				name = name.toLowerCase().replace(/^xlink\:?(.+)/, 'xlink:$1');
+			else if (isSvgMode && name.match(/^xlink:?./)) {
+				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
 			}
 
-			if (name==='class' && v && typeof v==='object') {
-				v = hashToClassName(v);
-			}
-			else if (name==='style' && v && typeof v==='object') {
+			if (name==='style' && v && typeof v==='object') {
 				v = styleObjToCss(v);
 			}
 
@@ -160,16 +146,19 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 	}
 
 	// account for >1 multiline attribute
-	let sub = s.replace(/^\n\s*/, ' ');
-	if (sub!==s && !~sub.indexOf('\n')) s = sub;
-	else if (pretty && ~s.indexOf('\n')) s += '\n';
-
-	s = `<${nodeName}${s}>`;
-
-	if (VOID_ELEMENTS.indexOf(nodeName)>-1) {
-		s = s.replace(/>$/, ' />');
+	if (pretty) {
+		let sub = s.replace(/^\n\s*/, ' ');
+		if (sub!==s && !~sub.indexOf('\n')) s = sub;
+		else if (pretty && ~s.indexOf('\n')) s += '\n';
 	}
 
+	s = `<${nodeName}${s}>`;
+	if (String(nodeName).match(/[\s\n\\/='"\0<>]/)) throw s;
+
+	let isVoid = String(nodeName).match(VOID_ELEMENTS);
+	if (isVoid) s = s.replace(/>$/, ' />');
+
+	let pieces = [];
 	if (html) {
 		// if multiline, indent.
 		if (pretty && isLargeString(html)) {
@@ -177,16 +166,14 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 		}
 		s += html;
 	}
-	else {
-		let len = children && children.length,
-			pieces = [],
-			hasLarge = ~s.indexOf('\n');
-		for (let i=0; i<len; i++) {
-			let child = children[i];
-			if (!falsey(child)) {
+	else if (vnode.children) {
+		let hasLarge = pretty && ~s.indexOf('\n');
+		for (let i=0; i<vnode.children.length; i++) {
+			let child = vnode.children[i];
+			if (child!=null && child!==false) {
 				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
 					ret = renderToString(child, context, opts, true, childSvgMode);
-				if (!hasLarge && pretty && isLargeString(ret)) hasLarge = true;
+				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 				if (ret) pieces.push(ret);
 			}
 		}
@@ -195,15 +182,16 @@ export default function renderToString(vnode, context, opts, inner, isSvgMode) {
 				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
 			}
 		}
-		if (pieces.length) {
-			s += pieces.join('');
-		}
-		else if (opts && opts.xml) {
-			return s.substring(0, s.length-1) + ' />';
-		}
 	}
 
-	if (VOID_ELEMENTS.indexOf(nodeName)===-1) {
+	if (pieces.length) {
+		s += pieces.join('');
+	}
+	else if (opts && opts.xml) {
+		return s.substring(0, s.length-1) + ' />';
+	}
+
+	if (!isVoid) {
 		if (pretty && ~s.indexOf('\n')) s += '\n';
 		s += `</${nodeName}>`;
 	}
@@ -217,7 +205,7 @@ function getComponentName(component) {
 
 function getFallbackComponentName(component) {
 	let str = Function.prototype.toString.call(component),
-		name = (str.match(/^\s*function\s+([^\( ]+)/) || EMPTY)[1];
+		name = (str.match(/^\s*function\s+([^( ]+)/) || '')[1];
 	if (!name) {
 		// search for an existing indexed name for the given component:
 		let index = -1;
@@ -237,6 +225,7 @@ function getFallbackComponentName(component) {
 }
 renderToString.shallowRender = shallowRender;
 
+export default renderToString;
 
 export {
 	renderToString as render,

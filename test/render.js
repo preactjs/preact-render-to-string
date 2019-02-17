@@ -56,15 +56,54 @@ describe('render', () => {
 			expect(render(<div foo={0} />)).to.equal(`<div foo="0"></div>`);
 		});
 
+		describe('attribute name sanitization', () => {
+			it('should omit attributes with invalid names', () => {
+				let rendered = render(h('div', {
+					'<a': '1',
+					'a>': '1',
+					'foo"bar': '1',
+					'"hello"': '1'
+				}));
+				expect(rendered).to.equal(`<div></div>`);
+			});
+
+			it('should mitigate attribute name injection', () => {
+				let rendered = render(h('div', {
+					'></div><script>alert("hi")</script>': '',
+					'foo onclick': 'javascript:alert()',
+					a: 'b'
+				}));
+				expect(rendered).to.equal(`<div a="b"></div>`);
+			});
+
+			it('should allow emoji attribute names', () => {
+				let rendered = render(h('div', {
+					'a;b': '1',
+					'a🧙‍b': '1'
+				}));
+				expect(rendered).to.equal(`<div a;b="1" a🧙‍b="1"></div>`);
+			});
+		});
+
+		it('should throw for invalid nodeName values', () => {
+			expect(() => render(h('div'))).not.to.throw();
+			expect(() => render(h('x-💩'))).not.to.throw();
+			expect(() => render(h('a b'))).to.throw(/<a b>/);
+			expect(() => render(h('a\0b'))).to.throw(/<a\0b>/);
+			expect(() => render(h('a>'))).to.throw(/<a>>/);
+			expect(() => render(h('<'))).to.throw(/<<>/);
+			expect(() => render(h('"'))).to.throw(/<">/);
+		});
+
 		it('should collapse collapsible attributes', () => {
-			let rendered = render(<div class="" style="" foo={true} bar />),
+			let rendered = render(<div class="" style="" foo bar />),
 				expected = `<div class style foo bar></div>`;
 
 			expect(rendered).to.equal(expected);
 		});
 
 		it('should omit functions', () => {
-			let rendered = render(<div a={()=>{}} b={function(){}} />),
+			let rendered = render(<div a={() => {}} b={function(){}} />),
 				expected = `<div></div>`;
 
 			expect(rendered).to.equal(expected);
@@ -85,7 +124,7 @@ describe('render', () => {
 		});
 
 		it('should self-close void elements', () => {
-			let rendered = render(<div><input type='text' /><wbr /></div>),
+			let rendered = render(<div><input type="text" /><wbr /></div>),
 				expected = `<div><input type="text" /><wbr /></div>`;
 
 			expect(rendered).to.equal(expected);
@@ -99,7 +138,7 @@ describe('render', () => {
 		});
 
 		it('should serialize object styles', () => {
-			let rendered = render(<div style={{ color:'red', border:'none' }} />),
+			let rendered = render(<div style={{ color: 'red', border: 'none' }} />),
 				expected = `<div style="color: red; border: none;"></div>`;
 
 			expect(rendered).to.equal(expected);
@@ -167,7 +206,7 @@ describe('render', () => {
 					match({
 						foo: 1,
 						children: [
-							match({ nodeName:'span', children:['asdf'] })
+							match({ nodeName: 'span', children: ['asdf'] })
 						]
 					}),
 					match({})
@@ -182,8 +221,9 @@ describe('render', () => {
 			};
 
 			expect(render(<Test />), 'defaults').to.equal('<div foo="default foo" bar="default bar"></div>');
-			expect(render(<Test bar="b" />), 'partial').to.equal('<div foo="default foo" bar="b"></div>');
+			expect(render(<Test bar="b" />), 'partial').to.equal('<div bar="b" foo="default foo"></div>');
 			expect(render(<Test foo="a" bar="b" />), 'overridden').to.equal('<div foo="a" bar="b"></div>');
+			expect(render(<Test foo={undefined} bar="b" />), 'overridden').to.equal('<div foo="default foo" bar="b"></div>');
 		});
 	});
 
@@ -245,7 +285,7 @@ describe('render', () => {
 					match({
 						foo: 1,
 						children: [
-							match({ nodeName:'span', children:['asdf'] })
+							match({ nodeName: 'span', children: ['asdf'] })
 						]
 					}),
 					match({}),	// empty state
@@ -255,18 +295,36 @@ describe('render', () => {
 
 		it('should apply defaultProps', () => {
 			class Test extends Component {
-				static defaultProps = {
-					foo: 'default foo',
-					bar: 'default bar'
-				};
 				render(props) {
 					return <div {...props} />;
 				}
 			}
+			Test.defaultProps = {
+				foo: 'default foo',
+				bar: 'default bar'
+			};
 
 			expect(render(<Test />), 'defaults').to.equal('<div foo="default foo" bar="default bar"></div>');
-			expect(render(<Test bar="b" />), 'partial').to.equal('<div foo="default foo" bar="b"></div>');
+			expect(render(<Test bar="b" />), 'partial').to.equal('<div bar="b" foo="default foo"></div>');
 			expect(render(<Test foo="a" bar="b" />), 'overridden').to.equal('<div foo="a" bar="b"></div>');
+			expect(render(<Test foo={undefined} bar="b" />), 'overridden').to.equal('<div foo="default foo" bar="b"></div>');
+		});
+
+		it('should invoke getDerivedStateFromProps', () => {
+			class Test extends Component {
+				static getDerivedStateFromProps() {}
+				render(props) {
+					return <div {...props} />;
+				}
+			}
+			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
+			spy(Test.prototype, 'render');
+
+			render(<Test />);
+
+			expect(Test.prototype.constructor.getDerivedStateFromProps)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.render);
 		});
 
 		it('should invoke componentWillMount', () => {
@@ -286,9 +344,30 @@ describe('render', () => {
 				.and.to.have.been.calledBefore(Test.prototype.render);
 		});
 
+		it('should invoke getDerivedStateFromProps rather than componentWillMount', () => {
+			class Test extends Component {
+				static getDerivedStateFromProps() {}
+				componentWillMount() {}
+				render(props) {
+					return <div {...props} />;
+				}
+			}
+			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
+			spy(Test.prototype, 'componentWillMount');
+			spy(Test.prototype, 'render');
+
+			render(<Test />);
+
+			expect(Test.prototype.constructor.getDerivedStateFromProps)
+				.to.have.been.calledOnce
+				.and.to.have.been.calledBefore(Test.prototype.render);
+			expect(Test.prototype.componentWillMount)
+				.to.not.have.been.called;
+		});
+
 		it('should pass context to grandchildren', () => {
-			const CONTEXT = { a:'a' };
-			const PROPS = { b:'b' };
+			const CONTEXT = { a: 'a' };
+			const PROPS = { b: 'b' };
 
 			class Outer extends Component {
 				getChildContext() {
@@ -320,8 +399,8 @@ describe('render', () => {
 		});
 
 		it('should pass context to direct children', () => {
-			const CONTEXT = { a:'a' };
-			const PROPS = { b:'b' };
+			const CONTEXT = { a: 'a' };
+			const PROPS = { b: 'b' };
 
 			class Outer extends Component {
 				getChildContext() {
@@ -352,12 +431,12 @@ describe('render', () => {
 			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), {}, CONTEXT);
 
 			// make sure render() could make use of context.a
-			expect(Inner.prototype.render).to.have.returned(match({ children:['a'] }));
+			expect(Inner.prototype.render).to.have.returned(match({ children: ['a'] }));
 		});
 
 		it('should preserve existing context properties when creating child contexts', () => {
-			let outerContext = { outer:true },
-				innerContext = { inner:true };
+			let outerContext = { outer: true },
+				innerContext = { inner: true };
 			class Outer extends Component {
 				getChildContext() {
 					return { outerContext };
@@ -424,10 +503,10 @@ describe('render', () => {
 			let rendered = render(<Outer />);
 			expect(rendered).to.equal('<div>hi</div>');
 
-			rendered = render(<Outer />, null, { shallow:true });
+			rendered = render(<Outer />, null, { shallow: true });
 			expect(rendered, '{shallow:true}').to.equal('<Middle></Middle>');
 
-			rendered = render(<Outer />, null, { shallow:true, shallowHighOrder:false });
+			rendered = render(<Outer />, null, { shallow: true, shallowHighOrder: false });
 			expect(rendered, '{shallow:true,shallowHighOrder:false}').to.equal('<div><Inner></Inner></div>', 'but it should never render nested grandchild components');
 		});
 	});
@@ -436,12 +515,12 @@ describe('render', () => {
 		it('should support dangerouslySetInnerHTML', () => {
 			// some invalid HTML to make sure we're being flakey:
 			let html = '<a href="foo">asdf</a> some text <ul><li>foo<li>bar</ul>';
-			let rendered = render(<div id="f" dangerouslySetInnerHTML={{__html:html}} />);
+			let rendered = render(<div id="f" dangerouslySetInnerHTML={{ __html: html }} />);
 			expect(rendered).to.equal(`<div id="f">${html}</div>`);
 		});
 
 		it('should override children', () => {
-			let rendered = render(<div dangerouslySetInnerHTML={{__html:'foo'}}><b>bar</b></div>);
+			let rendered = render(<div dangerouslySetInnerHTML={{ __html: 'foo' }}><b>bar</b></div>);
 			expect(rendered).to.equal('<div>foo</div>');
 		});
 	});
@@ -461,14 +540,6 @@ describe('render', () => {
 			let rendered = render(<div class="foo" className="foo bar" />);
 			expect(rendered).to.equal('<div class="foo"></div>');
 		});
-
-		it('should stringify object classNames', () => {
-			let rendered = render(<div class={{ foo:1, bar:0, baz:true, buzz:false }} />);
-			expect(rendered, 'class').to.equal('<div class="foo baz"></div>');
-
-			rendered = render(<div className={{ foo:1, bar:0, baz:true, buzz:false }} />);
-			expect(rendered, 'className').to.equal('<div class="foo baz"></div>');
-		});
 	});
 
 	describe('sortAttributes', () => {
@@ -478,13 +549,13 @@ describe('render', () => {
 		});
 
 		it('should sort attributes lexicographically if enabled', () => {
-			let rendered = render(<div b1="b1" c="c" a="a" b="b" />, null, { sortAttributes:true });
+			let rendered = render(<div b1="b1" c="c" a="a" b="b" />, null, { sortAttributes: true });
 			expect(rendered).to.equal('<div a="a" b="b" b1="b1" c="c"></div>');
 		});
 	});
 
 	describe('xml:true', () => {
-		let renderXml = jsx => render(jsx, null, { xml:true });
+		let renderXml = jsx => render(jsx, null, { xml: true });
 
 		it('should render end-tags', () => {
 			expect(renderXml(<div />)).to.equal(`<div />`);

@@ -1,15 +1,15 @@
-import { render, shallowRender } from '../src';
-import { h, Component } from 'preact';
+import { render as basicRender } from '../src';
+import { render } from '../src/jsx';
+import { h } from 'preact';
 import chai, { expect } from 'chai';
-import { spy, match } from 'sinon';
 import sinonChai from 'sinon-chai';
 chai.use(sinonChai);
 
 describe('pretty', () => {
-	let prettyRender = jsx => render(jsx, {}, { pretty:true });
+	let prettyRender = jsx => render(jsx, {}, { pretty: true });
 
 	it('should render no whitespace by default', () => {
-		let rendered = render(
+		let rendered = basicRender(
 			<section>
 				<a href="/foo">foo</a>
 				bar
