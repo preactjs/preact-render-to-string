@@ -182,7 +182,7 @@ describe('render', () => {
 				.and.calledWithExactly(
 					match({
 						foo: 'test',
-						children: ['content']
+						children: 'content'
 					}),
 					match({})
 				);
@@ -206,7 +206,7 @@ describe('render', () => {
 					match({
 						foo: 1,
 						children: [
-							match({ nodeName: 'span', children: ['asdf'] })
+							match({ nodeName: 'span', children: 'asdf' })
 						]
 					}),
 					match({})
@@ -240,7 +240,7 @@ describe('render', () => {
 
 			const PROPS = {
 				foo: 'test',
-				children: ['content']
+				children: 'content'
 			};
 
 			expect(rendered)
@@ -284,9 +284,7 @@ describe('render', () => {
 				.and.calledWithExactly(
 					match({
 						foo: 1,
-						children: [
-							match({ nodeName: 'span', children: ['asdf'] })
-						]
+						children: match({ nodeName: 'span', children: ['asdf'] })
 					}),
 					match({}),	// empty state
 					match({})
@@ -587,8 +585,8 @@ describe('render', () => {
 			
 			expect(render(<Foo />)).to.equal('<div></div>');
 			
-			expect(inst).to.have.property('_disable', true);
-			expect(inst).to.have.property('__x', true);
+			expect(inst).to.have.property('_dirty', true);
+			expect(inst).to.have.property('__d', true);
 		});
 
 		it('should prevent re-rendering', () => {
