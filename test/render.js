@@ -205,9 +205,7 @@ describe('render', () => {
 				.and.calledWithExactly(
 					match({
 						foo: 1,
-						children: [
-							match({ nodeName: 'span', children: 'asdf' })
-						]
+						children: match({ type: 'span', props: { children: 'asdf' } })
 					}),
 					match({})
 				);
@@ -254,8 +252,8 @@ describe('render', () => {
 				.to.have.been.calledOnce
 				.and.calledWithExactly(
 					match(PROPS),
-					match({}),	// empty state
-					match({})	// empty context
+					match.falsy,
+					match({}) // empty context
 				);
 		});
 
@@ -284,9 +282,9 @@ describe('render', () => {
 				.and.calledWithExactly(
 					match({
 						foo: 1,
-						children: match({ nodeName: 'span', children: ['asdf'] })
+						children: match({ type: 'span', props: { children: 'asdf' } })
 					}),
-					match({}),	// empty state
+					match.falsy,
 					match({})
 				);
 		});
@@ -387,13 +385,13 @@ describe('render', () => {
 			render(<Outer />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledOnce;
-			expect(Inner.prototype.render).to.have.been.calledWith(match({}), {}, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match.falsy, CONTEXT);
 
 			CONTEXT.foo = 'bar';
 			render(<Outer {...PROPS} />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledTwice;
-			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), {}, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), match.falsy, CONTEXT);
 		});
 
 		it('should pass context to direct children', () => {
@@ -420,16 +418,16 @@ describe('render', () => {
 			render(<Outer />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledOnce;
-			expect(Inner.prototype.render).to.have.been.calledWith(match({}), {}, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match.falsy, CONTEXT);
 
 			CONTEXT.foo = 'bar';
 			render(<Outer {...PROPS} />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledTwice;
-			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), {}, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), match.falsy, CONTEXT);
 
 			// make sure render() could make use of context.a
-			expect(Inner.prototype.render).to.have.returned(match({ children: ['a'] }));
+			expect(Inner.prototype.render).to.have.returned(match({ props: { children: 'a' } }));
 		});
 
 		it('should preserve existing context properties when creating child contexts', () => {
@@ -464,8 +462,8 @@ describe('render', () => {
 
 			render(<Outer />);
 
-			expect(Inner.prototype.render).to.have.been.calledWith(match({}), {}, { outerContext });
-			expect(InnerMost.prototype.render).to.have.been.calledWith(match({}), {}, { outerContext, innerContext });
+			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match.falsy, { outerContext });
+			expect(InnerMost.prototype.render).to.have.been.calledWith(match({}), match.falsy, { outerContext, innerContext });
 		});
 	});
 
@@ -595,7 +593,7 @@ describe('render', () => {
 			let count = 0;
 
 			class Foo extends Component {
-				componentWillMount() {
+				componentDidMount() {
 					this.forceUpdate();
 				}
 				render() {
