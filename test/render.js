@@ -206,7 +206,7 @@ describe('render', () => {
 					match({
 						foo: 1,
 						children: [
-							match({ nodeName: 'span', children: 'asdf' })
+							children: match({ type: 'span', props: { children: 'asdf' } })
 						]
 					}),
 					match({})
