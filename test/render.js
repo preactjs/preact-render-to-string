@@ -569,7 +569,7 @@ describe('render', () => {
 	});
 	
 	describe('state locking', () => {
-		it('should set _disable and __x to true', () => {
+		it('should set _dirty and __d to true', () => {
 			let inst;
 			class Foo extends Component {
 				constructor(props, context) {
