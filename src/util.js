@@ -46,24 +46,18 @@ export function assign(obj, props) {
 }
 
 /**
- * Reconstruct Component-style `props` from a VNode.
- * Ensures default/fallback values from `defaultProps`:
- * Own-properties of `defaultProps` not present in `vnode.attributes` are added.
- * @param {import('preact').VNode} vnode The VNode to get props for
- * @returns {object} The props to use for this VNode
+ * Get flattened children from the children prop
+ * @param {Array} accumulator
+ * @param {any} children A `props.children` opaque object.
+ * @returns {Array} accumulator
+ * @private
  */
-export function getNodeProps(vnode) {
-	let props = assign({}, vnode.attributes);
-	props.children = vnode.children;
-
-	let defaultProps = vnode.nodeName.defaultProps;
-	if (defaultProps!==undefined) {
-		for (let i in defaultProps) {
-			if (props[i]===undefined) {
-				props[i] = defaultProps[i];
-			}
-		}
+export function getChildren(accumulator, children) {
+	if (Array.isArray(children)) {
+		children.reduce(getChildren, accumulator);
 	}
-
-	return props;
+	else if (children!=null && children!==false) {
+		accumulator.push(children);
+	}
+	return accumulator;
 }

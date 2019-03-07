@@ -1,4 +1,4 @@
-import { encodeEntities, indent, isLargeString, styleObjToCss, assign, getNodeProps } from './util';
+import { encodeEntities, indent, isLargeString, styleObjToCss, assign, getChildren } from './util';
 import { ENABLE_PRETTY } from '../env';
 
 const SHALLOW = { shallow: true };
@@ -38,8 +38,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 		return '';
 	}
 
-	let nodeName = vnode.nodeName,
-		attributes = vnode.attributes,
+	let nodeName = vnode.type,
+		props = vnode.props,
 		isComponent = false;
 	context = context || {};
 	opts = opts || {};
@@ -59,9 +59,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 			nodeName = getComponentName(nodeName);
 		}
 		else {
-			let c,
-				props = getNodeProps(vnode),
-				rendered;
+			let c, rendered;
 
 			if (!nodeName.prototype || typeof nodeName.prototype.render!=='function') {
 				// stateless functional components
@@ -71,7 +69,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 				// class-based components
 				c = new nodeName(props, context);
 				// turn off stateful re-rendering:
-				c._disable = c.__x = true;
+				c._dirty = c.__d = true;
 				c.props = props;
 				c.context = context;
 				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
@@ -100,15 +98,15 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 	// render JSX to HTML
 	let s = '', html;
 
-	if (attributes) {
-		let attrs = Object.keys(attributes);
+	if (props) {
+		let attrs = Object.keys(props);
 
 		// allow sorting lexicographically for more determinism (useful for tests, such as via preact-jsx-chai)
 		if (opts && opts.sortAttributes===true) attrs.sort();
 
 		for (let i=0; i<attrs.length; i++) {
 			let name = attrs[i],
-				v = attributes[name];
+				v = props[name];
 			if (name==='children') continue;
 
 			if (name.match(/[\s\n\\/='"\0<>]/)) continue;
@@ -116,7 +114,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 			if (!(opts && opts.allAttributes) && (name==='key' || name==='ref')) continue;
 
 			if (name==='className') {
-				if (attributes.class) continue;
+				if (props.class) continue;
 				name = 'class';
 			}
 			else if (isSvgMode && name.match(/^xlink:?./)) {
@@ -164,6 +162,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 	if (isVoid) s = s.replace(/>$/, ' />');
 
 	let pieces = [];
+
+	let children;
 	if (html) {
 		// if multiline, indent.
 		if (pretty && isLargeString(html)) {
@@ -171,10 +171,10 @@ function renderToString(vnode, context, opts, inner, isSvgMode) {
 		}
 		s += html;
 	}
-	else if (vnode.children) {
+	else if (props && getChildren(children = [], props.children).length) {
 		let hasLarge = pretty && ~s.indexOf('\n');
-		for (let i=0; i<vnode.children.length; i++) {
-			let child = vnode.children[i];
+		for (let i=0; i<children.length; i++) {
+			let child = children[i];
 			if (child!=null && child!==false) {
 				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
 					ret = renderToString(child, context, opts, true, childSvgMode);
