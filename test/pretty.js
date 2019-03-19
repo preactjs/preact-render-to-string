@@ -1,6 +1,6 @@
 import { render as basicRender } from '../src';
 import { render } from '../src/jsx';
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 chai.use(sinonChai);
@@ -62,6 +62,24 @@ describe('pretty', () => {
 		expect(prettyRender(
 			<div>
 				<span />
+			</div>
+		)).to.equal(`<div>\n\t<span></span>\n</div>`);
+	});
+
+	it('should not increase indentation with Fragments', () => {
+		expect(prettyRender(
+			<div>
+				<Fragment><span /></Fragment>
+			</div>
+		)).to.equal(`<div>\n\t<span></span>\n</div>`);
+	});
+
+	it('should not increase indentation with nestedFragments', () => {
+		expect(prettyRender(
+			<div>
+				<Fragment>
+					<Fragment><span /></Fragment>
+				</Fragment>
 			</div>
 		)).to.equal(`<div>\n\t<span></span>\n</div>`);
 	});
