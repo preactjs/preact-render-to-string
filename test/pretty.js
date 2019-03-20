@@ -74,7 +74,7 @@ describe('pretty', () => {
 		)).to.equal(`<div>\n\t<span></span>\n</div>`);
 	});
 
-	it('should not increase indentation with nestedFragments', () => {
+	it('should not increase indentation with nested Fragments', () => {
 		expect(prettyRender(
 			<div>
 				<Fragment>
@@ -82,5 +82,18 @@ describe('pretty', () => {
 				</Fragment>
 			</div>
 		)).to.equal(`<div>\n\t<span></span>\n</div>`);
+	});
+
+	it('should not increase indentation with sibling Fragments', () => {
+		expect(prettyRender(
+			<div>
+				<Fragment>
+					<div>A</div>
+				</Fragment>
+				<Fragment>
+					<div>B</div>
+				</Fragment>
+			</div>
+		)).to.equal(`<div>\n\t<div>A</div>\n\t<div>B</div>\n</div>`);
 	});
 });
