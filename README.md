@@ -93,6 +93,24 @@ app.get('/:fox', (req, res) => {
 ---
 
 
+### Re-render Preact in the browser
+
+Note that unlike React, Preact does not overwrite pre-rendered DOM unless instructed to. Specify the third argument for `render` to match behaviour.
+
+```js
+// Previously rendered to <div id="root"> in the server
+var root = document.getElementById('root');
+render((
+	<Box type="open">
+		<Fox name="Finn" />
+	</Box>
+), root, root.lastElementChild);
+```
+
+
+---
+
+
 ### License
 
 [MIT]
