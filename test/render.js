@@ -876,5 +876,150 @@ describe('render', () => {
 				}
 			);
 		});
+
+		it('should support nested suspensions', () => {
+			function LazyComp() { return <p>Hello Lazy!</p>; }
+			const Lazied = lazy(() => Promise.resolve({ default: LazyComp }));
+			function LazyComp2() {
+				return (
+					<div>
+						<Lazied />
+						<p>Hello Lazy 2!</p>
+					</div>
+				);
+			}
+			const Lazied2 = lazy(() => Promise.resolve({ default: LazyComp2 }));
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Fragment>
+								<Lazied2 />
+							</Fragment>
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><div><p>Hello Lazy!</p><p>Hello Lazy 2!</p></div></article></section>`;
+
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
+		});
+
+		it('should trigger multiple suspensions in parallel', () => {
+			// we resolve the first promise once the second was triggered
+			// This ensures that renderToString doesn't wait for promises to finish before
+			// continuing rendering...
+			let resolveFirst;
+
+			function LazyComp() { return <p>Hello Lazy!</p>; }
+			const Lazied = lazy(() => new Promise((res) => {
+				resolveFirst = () => {
+					res({ default: LazyComp });
+				};
+			}));
+
+			function LazyComp2() { return <p>Hello Lazy 2!</p>; }
+			const Lazied2 = lazy(() => {
+				resolveFirst();
+				return Promise.resolve({ default: LazyComp2 });
+			});
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Fragment>
+								<Lazied />
+								<Lazied2 />
+							</Fragment>
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><p>Hello Lazy!</p><p>Hello Lazy 2!</p></article></section>`;
+
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
+		});
+
+		it('should trigger multiple suspensions nested in components in parallel', () => {
+			// we resolve the first promise once the second was triggered
+			// This ensures that renderToString doesn't wait for promises to finish before
+			// continuing rendering...
+			let resolveFirst;
+
+			function LazyComp() { return <p>Hello Lazy!</p>; }
+			const Lazied = lazy(() => new Promise((res) => {
+				resolveFirst = () => {
+					res({ default: LazyComp });
+				};
+			}));
+
+			function LazyComp2() { return <p>Hello Lazy 2!</p>; }
+			const Lazied2 = lazy(() => {
+				resolveFirst();
+				return Promise.resolve({ default: LazyComp2 });
+			});
+
+			class Nested extends Component {
+				render() {
+					return (
+						<Lazied2 />
+					);
+				}
+			}
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Fragment>
+								<Lazied />
+								<Nested />
+							</Fragment>
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><p>Hello Lazy!</p><p>Hello Lazy 2!</p></article></section>`;
+
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
+		});
 	});
 });
