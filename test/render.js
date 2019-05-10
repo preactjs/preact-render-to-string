@@ -841,5 +841,40 @@ describe('render', () => {
 				}
 			);
 		});
+
+		it('should render two suspensions in Fragment', () => {
+			function LazyComp() { return <p>Hello Lazy!</p>; }
+			const Lazied = lazy(() => Promise.resolve({ default: LazyComp }));
+			function LazyComp2() { return <p>Hello Lazy 2!</p>; }
+			const Lazied2 = lazy(() => Promise.resolve({ default: LazyComp2 }));
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Fragment>
+								<Lazied />
+								<Lazied2 />
+							</Fragment>
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><p>Hello Lazy!</p><p>Hello Lazy 2!</p></article></section>`;
+		
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
+		});
 	});
 });

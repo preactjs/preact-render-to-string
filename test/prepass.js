@@ -1,4 +1,4 @@
-import prepass from '../src/prepass';
+import prepass from '../prepass';
 import { h, lazy, Suspense } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
@@ -26,7 +26,7 @@ describe('prepass', () => {
 		return result.then(
 			(rendered) => {
 				let expected = `<section><article><p>Hello Lazy!</p></article></section>`;
-	
+
 				expect(rendered).to.equal(expected);
 			},
 			(e) => {
@@ -49,7 +49,7 @@ describe('prepass', () => {
 		return result.then(
 			(rendered) => {
 				let expected = `<section><p>Hello synchronous render</p></section>`;
-	
+
 				expect(rendered).to.equal(expected);
 			},
 			(e) => {
