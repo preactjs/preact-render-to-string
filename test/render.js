@@ -1021,5 +1021,40 @@ describe('render', () => {
 				}
 			);
 		});
+
+		it('might support render methods that return promises', () => {
+			function PromiseComponent() {
+				return Promise.resolve(
+					<div>Hello promised!</div>
+				);
+			}
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Fragment>
+								<PromiseComponent />
+							</Fragment>
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><div>Hello promised!</div></article></section>`;
+
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
+		});
 	});
 });
