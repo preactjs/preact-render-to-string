@@ -1,5 +1,5 @@
-import { render, shallowRender } from '../src';
-import { h, Component, createContext, Fragment } from 'preact';
+import { render, shallowRender, renderAsync } from '../src';
+import { h, Component, createContext, Fragment, lazy, Suspense } from 'preact';
 import { useState, useContext, useEffect } from 'preact/hooks';
 import chai, { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
@@ -253,7 +253,7 @@ describe('render', () => {
 				.to.have.been.calledOnce
 				.and.calledWithExactly(
 					match(PROPS),
-					match.falsy,
+					match({}),
 					match({}) // empty context
 				);
 		});
@@ -285,7 +285,7 @@ describe('render', () => {
 						foo: 1,
 						children: match({ type: 'span', props: { children: 'asdf' } })
 					}),
-					match.falsy,
+					match({}),
 					match({})
 				);
 		});
@@ -386,13 +386,13 @@ describe('render', () => {
 			render(<Outer />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledOnce;
-			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match.falsy, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match({}), CONTEXT);
 
 			CONTEXT.foo = 'bar';
 			render(<Outer {...PROPS} />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledTwice;
-			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), match.falsy, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), match({}), CONTEXT);
 		});
 
 		it('should pass context to direct children', () => {
@@ -419,13 +419,13 @@ describe('render', () => {
 			render(<Outer />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledOnce;
-			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match.falsy, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match({}), CONTEXT);
 
 			CONTEXT.foo = 'bar';
 			render(<Outer {...PROPS} />);
 
 			expect(Outer.prototype.getChildContext).to.have.been.calledTwice;
-			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), match.falsy, CONTEXT);
+			expect(Inner.prototype.render).to.have.been.calledWith(match(PROPS), match({}), CONTEXT);
 
 			// make sure render() could make use of context.a
 			expect(Inner.prototype.render).to.have.returned(match({ props: { children: 'a' } }));
@@ -463,8 +463,8 @@ describe('render', () => {
 
 			render(<Outer />);
 
-			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match.falsy, { outerContext });
-			expect(InnerMost.prototype.render).to.have.been.calledWith(match({}), match.falsy, { outerContext, innerContext });
+			expect(Inner.prototype.render).to.have.been.calledWith(match({}), match({}), { outerContext });
+			expect(InnerMost.prototype.render).to.have.been.calledWith(match({}), match({}), { outerContext, innerContext });
 		});
 	});
 
@@ -777,5 +777,35 @@ describe('render', () => {
 			</select>
 		);
 		expect(res).to.equal('<select><option selected value="2">2</option></select>');
+	});
+
+	describe('suspense', () => {
+		it('should render suspension', () => {
+			function LazyComp() { return <p>Hello Lazy!</p>; }
+			const Lazied = lazy(() => Promise.resolve({ default: LazyComp }));
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Lazied />
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			renderAsync(toBeRendered)
+				.then(
+					() => {
+						let rendered = render(toBeRendered);
+						let expected = `<section><article><p>Hello Lazy!</p></article></section>`;
+			
+						expect(rendered).to.equal(expected);
+					},
+					(e) => {
+						expect(e).to.eql(undefined);
+					}
+				);
+		});
 	});
 });

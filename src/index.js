@@ -1,6 +1,7 @@
 import { encodeEntities, indent, isLargeString, styleObjToCss, assign, getChildren } from './util';
 import { ENABLE_PRETTY } from '../env';
 import { options, Fragment } from 'preact';
+import { renderAsync } from './render-async';
 
 const SHALLOW = { shallow: true };
 
@@ -96,7 +97,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				c.context = context;
 				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
 				else if (c.componentWillMount) c.componentWillMount();
-				rendered = c.render(c.props, c.state, c.context);
+				rendered = c.render(c.props, c.state || {}, c.context);
 			}
 			
 			if (c.getChildContext) {
@@ -257,5 +258,6 @@ export default renderToString;
 export {
 	renderToString as render,
 	renderToString,
-	shallowRender
+	shallowRender,
+	renderAsync
 };
