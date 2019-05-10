@@ -76,8 +76,6 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				: rendered.join('');
 		}
 		else {
-			let rendered;
-			
 			let c = vnode.__c = { __v: vnode, context, props: vnode.props };
 			if (options.render) options.render(vnode);
 
@@ -129,7 +127,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				};
 			}
 
-			rendered = doRender();
+			const rendered = doRender();
 
 			const finish = (renderedVnode) => {
 				if (c.getChildContext) {
