@@ -1,7 +1,6 @@
 import { encodeEntities, indent, isLargeString, styleObjToCss, assign, getChildren } from './util';
 import { ENABLE_PRETTY } from '../env';
 import { options, Fragment } from 'preact';
-import { renderAsync } from './render-async';
 
 const SHALLOW = { shallow: true };
 
@@ -61,20 +60,28 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			nodeName = getComponentName(nodeName);
 		}
 		else if (nodeName===Fragment) {
-			let rendered = '';
+			let rendered = [];
 			let children = [];
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				rendered += renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
+				rendered.push(renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue));
 			}
-			return rendered;
+
+			// check allowAsync to not do unneeded array looping
+			// TODO: when allowAsync is set we could always use Promise.all as it allows for non-promise params
+			// TODO: we could keep an "isAsync" indicator to get rid of array looping...
+			return opts.allowAsync && rendered.some(p => p && p.then)
+				? Promise.all(rendered).then(parts => parts.join(''))
+				: rendered.join('');
 		}
 		else {
 			let rendered;
 			
 			let c = vnode.__c = { __v: vnode, context, props: vnode.props };
 			if (options.render) options.render(vnode);
+
+			let doRender;
 
 			if (!nodeName.prototype || typeof nodeName.prototype.render!=='function') {
 				// Necessary for createContext api. Setting this property will pass
@@ -84,7 +91,18 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				let cctx = cxType != null ? (provider ? provider.props.value : cxType._defaultValue) : context;
 
 				// stateless functional components
-				rendered = nodeName.call(vnode.__c, props, cctx);
+				doRender = () => {
+					try {
+						return nodeName.call(vnode.__c, props, cctx);
+					}
+					catch (e) {
+						if (opts.allowAsync && e.then) {
+							return e.then(doRender, doRender);
+						}
+
+						throw e;
+					}
+				};
 			}
 			else {
 				// class-based components
@@ -97,14 +115,32 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				c.context = context;
 				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
 				else if (c.componentWillMount) c.componentWillMount();
-				rendered = c.render(c.props, c.state || {}, c.context);
-			}
-			
-			if (c.getChildContext) {
-				context = assign(assign({}, context), c.getChildContext());
+				doRender = () => {
+					try {
+						return c.render(c.props, c.state || {}, c.context);
+					}
+					catch (e) {
+						if (opts.allowAsync && e.then) {
+							return e.then(doRender, doRender);
+						}
+
+						throw e;
+					}
+				};
 			}
 
-			return renderToString(rendered, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
+			rendered = doRender();
+
+			const finish = (renderedVnode) => {
+				if (c.getChildContext) {
+					context = assign(assign({}, context), c.getChildContext());
+				}
+
+				return renderToString(renderedVnode, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
+			};
+
+			// TODO: would this allow render to return a promise?
+			return rendered && rendered.then ? rendered.then(finish) : finish(rendered);
 		}
 	}
 
@@ -207,24 +243,39 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		}
 		if (pretty && hasLarge) {
 			for (let i=pieces.length; i--; ) {
-				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
+				const doIndent = (val) => '\n' + indentChar + indent(val, indentChar);
+				if (pieces[i].then) {
+					pieces[i] = pieces[i].then(doIndent);
+				}
+				else {
+					pieces[i] = doIndent(pieces[i]);
+				}
 			}
 		}
 	}
 
-	if (pieces.length) {
-		s += pieces.join('');
-	}
-	else if (opts && opts.xml) {
-		return s.substring(0, s.length-1) + ' />';
-	}
+	const doConcat = (p) => {
+		if (p.length) {
+			s += p.join('');
+		}
+		else if (opts && opts.xml) {
+			return s.substring(0, s.length-1) + ' />';
+		}
 
-	if (!isVoid) {
-		if (pretty && ~s.indexOf('\n')) s += '\n';
-		s += `</${nodeName}>`;
-	}
+		if (!isVoid) {
+			if (pretty && ~s.indexOf('\n')) s += '\n';
+			s += `</${nodeName}>`;
+		}
 
-	return s;
+		return s;
+	};
+
+	// check allowAsync to not do unneeded array looping
+	// TODO: when allowAsync is set we could always use Promise.all as it allows for non-promise params
+	// TODO: we could keep an "isAsync" indicator to get rid of array looping...
+	return opts.allowAsync && pieces.some(p => p && p.then)
+		? Promise.all(pieces).then(doConcat)
+		: doConcat(pieces);
 }
 
 function getComponentName(component) {
@@ -258,6 +309,5 @@ export default renderToString;
 export {
 	renderToString as render,
 	renderToString,
-	shallowRender,
-	renderAsync
+	shallowRender
 };

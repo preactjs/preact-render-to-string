@@ -1,4 +1,4 @@
-import { render, shallowRender, renderAsync } from '../src';
+import { render, shallowRender } from '../src';
 import { h, Component, createContext, Fragment, lazy, Suspense } from 'preact';
 import { useState, useContext, useEffect } from 'preact/hooks';
 import chai, { expect } from 'chai';
@@ -779,7 +779,7 @@ describe('render', () => {
 		expect(res).to.equal('<select><option selected value="2">2</option></select>');
 	});
 
-	describe('suspense', () => {
+	describe('async rendering', () => {
 		it('should render suspension', () => {
 			function LazyComp() { return <p>Hello Lazy!</p>; }
 			const Lazied = lazy(() => Promise.resolve({ default: LazyComp }));
@@ -794,18 +794,52 @@ describe('render', () => {
 				</section>
 			);
 
-			renderAsync(toBeRendered)
-				.then(
-					() => {
-						let rendered = render(toBeRendered);
-						let expected = `<section><article><p>Hello Lazy!</p></article></section>`;
-			
-						expect(rendered).to.equal(expected);
-					},
-					(e) => {
-						expect(e).to.eql(undefined);
-					}
-				);
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><p>Hello Lazy!</p></article></section>`;
+		
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
+		});
+
+		it('should render suspension in Fragment', () => {
+			function LazyComp() { return <p>Hello Lazy!</p>; }
+			const Lazied = lazy(() => Promise.resolve({ default: LazyComp }));
+
+			const toBeRendered = (
+				<section>
+					<Suspense fallback={<div>Fallback...</div>}>
+						<article>
+							<Fragment>
+								<Lazied />
+							</Fragment>
+						</article>
+					</Suspense>
+				</section>
+			);
+
+			const result = render(toBeRendered, undefined, { allowAsync: true });
+
+			expect(result.then).not.to.be.undefined;
+
+			return result.then(
+				(rendered) => {
+					let expected = `<section><article><p>Hello Lazy!</p></article></section>`;
+		
+					expect(rendered).to.equal(expected);
+				},
+				(e) => {
+					expect(e).to.eql(undefined);
+				}
+			);
 		});
 	});
 });
