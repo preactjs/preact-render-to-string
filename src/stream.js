@@ -1,7 +1,6 @@
-import mergeStreamsOrStrings from './utils/merge-streams-or-strings';
-import stringToStream from './utils/string-to-stream';
 import { encodeEntities, styleObjToCss, assign, getChildren } from './util';
 import { options, Fragment } from 'preact';
+import stream from 'stream';
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
@@ -9,23 +8,53 @@ const UNNAMED = [];
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 
-function renderToNodeStream(vnode, context, opts) {
+function PreactReadableStream(vnode, context, opts) {
 	if (opts && opts.pretty) {
 		throw new Error('pretty is not supported in renderToNodeStream!');
 	}
 
-	const result = renderToNodeStreamOrString(vnode, context, opts);
+	stream.Readable.call(this, opts && opts.readable);
 
-	if (typeof result !== 'string') {
-		return result;
-	}
-
-	return stringToStream(result);
+	this.vnode = vnode;
+	this.context = context || {};
+	this.opts = opts || {};
 }
 
-function renderToNodeStreamOrString(vnode, context, opts, inner, isSvgMode, selectValue) {
+PreactReadableStream.prototype = new stream.Readable();
+PreactReadableStream.prototype.constructor = PreactReadableStream;
+PreactReadableStream.prototype._read = async function _read() {
+	try {
+		if (!this._generator) {
+			this._generator = this._generate(this.vnode, this.context, this.opts);
+		}
+		else if (this.reading) {
+			console.warn(new Error('You should not call PreactReadableStream#_read when a read is in progress').stack);
+		}
+
+		this.reading = true;
+
+		for await (const chunk of this._generator) {
+			if (!this.push(chunk)) {
+				this.reading = false;
+				// high water mark reached, pause the stream until _read is called again...
+				return;
+			}
+		}
+	}
+	catch (e) {
+		this.emit('error', e);
+		this.push(null);
+		return;
+	}
+
+	// end the stream
+	this.push(null);
+};
+
+PreactReadableStream.prototype._generate = async function *_generate(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (vnode==null || typeof vnode==='boolean') {
-		return '';
+		yield '';
+		return;
 	}
 
 	let nodeName = vnode.type,
@@ -36,7 +65,8 @@ function renderToNodeStreamOrString(vnode, context, opts, inner, isSvgMode, sele
 
 	// #text nodes
 	if (typeof vnode!=='object' && !nodeName) {
-		return encodeEntities(vnode);
+		yield encodeEntities(vnode);
+		return;
 	}
 
 	// components
@@ -46,15 +76,16 @@ function renderToNodeStreamOrString(vnode, context, opts, inner, isSvgMode, sele
 			nodeName = getComponentName(nodeName);
 		}
 		else if (nodeName===Fragment) {
-			let rendered = [];
 			let children = [];
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				rendered.push(renderToNodeStreamOrString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue));
+				for await (const chunk of this._generate(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue)) {
+					yield chunk;
+				}
 			}
 
-			return mergeStreamsOrStrings(rendered);
+			return;
 		}
 		else {
 			let c = vnode.__c = { __v: vnode, context, props: vnode.props };
@@ -108,33 +139,17 @@ function renderToNodeStreamOrString(vnode, context, opts, inner, isSvgMode, sele
 				};
 			}
 
-			const rendered = doRender();
-			const { PassThrough } = require('stream');
-			const pass = new PassThrough();
+			const renderedVnode = await doRender();
 
-			const finish = (renderedVnode) => {
-				if (c.getChildContext) {
-					context = assign(assign({}, context), c.getChildContext());
-				}
-
-				const result = renderToNodeStreamOrString(renderedVnode, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
-
-				if (typeof result !== 'string') {
-					result.pipe(pass);
-				}
-				else {
-					stringToStream(result).pipe(pass);
-				}
-			};
-
-			if (rendered.then) {
-				rendered.then(finish);
-			}
-			else {
-				finish(rendered);
+			if (c.getChildContext) {
+				context = assign(assign({}, context), c.getChildContext());
 			}
 
-			return pass;
+			for await (const chunk of this._generate(renderedVnode, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue)) {
+				yield chunk;
+			}
+
+			return;
 		}
 	}
 
@@ -206,36 +221,40 @@ function renderToNodeStreamOrString(vnode, context, opts, inner, isSvgMode, sele
 	s = `<${nodeName}${s}`;
 	if (String(nodeName).match(/[\s\n\\/='"\0<>]/)) throw s;
 
+	yield s;
+
 	if (html) {
-		return `${s}${html}${isVoid || opts.xml ? '/>' : `></${nodeName}>`}`;
+		yield `>${html}</${nodeName}>`;
+		return;
 	}
 
+	let didCloseOpeningTag = false;
+
 	let children = [];
-	let pieces = [];
 	if (props && getChildren(children, props.children).length) {
 		for (let i=0; i<children.length; i++) {
 			let child = children[i];
 			if (child!=null && child!==false) {
-				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
-					ret = renderToNodeStreamOrString(child, context, opts, true, childSvgMode, selectValue);
-				if (ret) pieces.push(ret);
+				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode;
+				
+				for await (const chunk of this._generate(child, context, opts, true, childSvgMode, selectValue)) {
+					if (chunk) {
+						if (!didCloseOpeningTag) {
+							didCloseOpeningTag = true;
+							yield '>';
+						}
+						
+						yield chunk;
+					}
+				}
 			}
 		}
 	}
 
-	if (!pieces.length) {
-		return `${s}${isVoid || opts.xml ? '/>' : `></${nodeName}>`}`;
-	}
-
-	if (isVoid) {
-		console.warn('encountered void element with children...');
-	}
-
-	pieces.unshift(`${s}>`);
-	pieces.push(`</${nodeName}>`);
-
-	return mergeStreamsOrStrings(pieces);
-}
+	yield didCloseOpeningTag
+		? `</${nodeName}>`
+		: `${isVoid || opts.xml ? '/>' : `></${nodeName}>`}`;
+};
 
 function getComponentName(component) {
 	return component.displayName || component!==Function && component.name || getFallbackComponentName(component);
@@ -262,4 +281,7 @@ function getFallbackComponentName(component) {
 	return name;
 }
 
-export default renderToNodeStream;
+
+export default function renderToNodeStream(vnode, context, opts) {
+	return new PreactReadableStream(vnode, context, opts);
+}
