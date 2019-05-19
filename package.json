@@ -56,8 +56,7 @@
           "pragma": "h"
         }
       ],
-      "@babel/proposal-object-rest-spread",
-      "@babel/syntax-async-generators"
+      "@babel/proposal-object-rest-spread"
     ]
   },
   "author": "Jason Miller <jason@developit.ca>",
@@ -72,7 +71,6 @@
   "devDependencies": {
     "@babel/core": "^7.4.4",
     "@babel/plugin-proposal-object-rest-spread": "^7.4.4",
-    "@babel/plugin-syntax-async-generators": "^7.2.0",
     "@babel/plugin-transform-react-jsx": "^7.3.0",
     "@babel/preset-env": "^7.4.4",
     "@babel/register": "^7.4.4",
