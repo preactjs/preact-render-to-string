@@ -95,7 +95,7 @@ app.get('/:fox', (req, res) => {
 ### Render JSX / Preact / Whatever to a Node.js stream
 
 ```js
-import { renderToNodeStream } from 'preact-render-to-string';
+import { renderToNodeStream } from 'preact-render-to-string/stream';
 import { h } from 'preact';
 /** @jsx h */
 
