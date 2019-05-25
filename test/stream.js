@@ -1,5 +1,5 @@
 import renderToNodeStream from '../src/stream';
-import { h, Component, lazy } from 'preact';
+import { h, Component } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 chai.use(sinonChai);
@@ -163,118 +163,6 @@ describe('stream.render', () => {
 				});
 				stream.on('end', () => {
 					rej('Didn\'t expect stream to end, as it should be paused!');
-				});
-			});
-		});
-
-		it.skip('should support suspension', () => {
-			const LazyComp1 = () => <div>Hello Lazy!</div>;
-			let resolveLoadable1;
-			const loadable1 = new Promise((res) => {
-				resolveLoadable1 = () => {
-					res({ default: LazyComp1 });
-				};
-			});
-			
-			const LazyComp2 = () => <div>Hello Lazy!</div>;
-			let resolveLoadable2;
-			const loadable2 = new Promise((res) => {
-				resolveLoadable2 = () => {
-					res({ default: LazyComp2 });
-				};
-			});
-			const Lazied1 = lazy(() => loadable1);
-			const Lazied2 = lazy(() => loadable2);
-
-			function FuncComp(props) {
-				return (
-					<article>
-						<h1>Hello Functional</h1>
-						<p>More content</p>
-						{props.children}
-					</article>
-				);
-			}
-
-			class ClassComp extends Component {
-				render(props) {
-					return (
-						<article>
-							<h1>Hello Class</h1>
-							<Lazied2 />
-							<p>Even more</p>
-							{props.children}
-						</article>
-					);
-				}
-			}
-
-			let stream = renderToNodeStream(
-					<section>
-						<FuncComp>
-							<Lazied1 />
-						</FuncComp>
-						<ClassComp>
-							<p>Also with children</p>
-						</ClassComp>
-					</section>
-				),
-				expectedParts = [
-					'<section', '>',
-					'<article', '>',
-					'<h1', '>',
-					'Hello Functional',
-					'</h1>',
-					'<p', '>',
-					'More content',
-					'</p>',
-					'<div', '>',
-					'Hello Lazy!',
-					'</div>',
-					'</article>',
-					'<article', '>',
-					'<h1', '>',
-					'Hello Class',
-					'</h1>',
-					'<div', '>',
-					'Hello Lazy!',
-					'</div>',
-					'<p', '>',
-					'Even more',
-					'</p>',
-					'<p', '>',
-					'Also with children',
-					'</p>',
-					'</article>',
-					'</section>'
-				],
-				expected = expectedParts.join('');
-
-			return new Promise((res, rej) => {
-				let chunks = [];
-				stream.on('error', (e) => {
-					console.error('Stream emitted error:', e);
-					rej(e);
-				});
-				stream.on('data', (chunk) => {
-					chunks.push(chunk);
-					if (chunks.length === 12) {
-						expect(chunks.map(c => c.toString('utf8'))).to.deep.equal(expectedParts.slice(0,12));
-						resolveLoadable1();
-					}
-					else if (chunks.length === 16) {
-						expect(chunks.map(c => c.toString('utf8'))).to.deep.equal(expectedParts.slice(0,16));
-						resolveLoadable2();
-					}
-				});
-				stream.on('end', () => {
-					const parts = chunks.map(c => c.toString('utf8'));
-					const final = Buffer.concat(chunks).toString('utf8');
-
-					expect(parts).to.deep.equal(expectedParts);
-					expect(final).to.equal(expected);
-
-					res();
 				});
 			});
 		});

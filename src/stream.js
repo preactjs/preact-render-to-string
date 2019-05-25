@@ -51,7 +51,7 @@ PreactReadableStream.prototype._read = async function _read() {
 	this.push(null);
 };
 
-PreactReadableStream.prototype._generate = async function *_generate(vnode, context, opts, inner, isSvgMode, selectValue) {
+PreactReadableStream.prototype._generate = function *_generate(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (vnode==null || typeof vnode==='boolean') {
 		yield '';
 		return;
@@ -80,7 +80,7 @@ PreactReadableStream.prototype._generate = async function *_generate(vnode, cont
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				for await (const chunk of this._generate(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue)) {
+				for (const chunk of this._generate(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue)) {
 					yield chunk;
 				}
 			}
@@ -91,7 +91,7 @@ PreactReadableStream.prototype._generate = async function *_generate(vnode, cont
 			let c = vnode.__c = { __v: vnode, context, props: vnode.props };
 			if (options.render) options.render(vnode);
 
-			let doRender;
+			let renderedVNode;
 
 			if (!nodeName.prototype || typeof nodeName.prototype.render!=='function') {
 				// Necessary for createContext api. Setting this property will pass
@@ -101,18 +101,7 @@ PreactReadableStream.prototype._generate = async function *_generate(vnode, cont
 				let cctx = cxType != null ? (provider ? provider.props.value : cxType._defaultValue) : context;
 
 				// stateless functional components
-				doRender = () => {
-					try {
-						return nodeName.call(vnode.__c, props, cctx);
-					}
-					catch (e) {
-						if (e.then) {
-							return e.then(doRender, doRender);
-						}
-
-						throw e;
-					}
-				};
+				renderedVNode = nodeName.call(vnode.__c, props, cctx);
 			}
 			else {
 				// class-based components
@@ -125,27 +114,15 @@ PreactReadableStream.prototype._generate = async function *_generate(vnode, cont
 				c.context = context;
 				if (nodeName.getDerivedStateFromProps) c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
 				else if (c.componentWillMount) c.componentWillMount();
-				doRender = () => {
-					try {
-						return c.render(c.props, c.state || {}, c.context);
-					}
-					catch (e) {
-						if (e.then) {
-							return e.then(doRender, doRender);
-						}
 
-						throw e;
-					}
-				};
+				renderedVNode = c.render(c.props, c.state || {}, c.context);
 			}
-
-			const renderedVnode = await doRender();
 
 			if (c.getChildContext) {
 				context = assign(assign({}, context), c.getChildContext());
 			}
 
-			for await (const chunk of this._generate(renderedVnode, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue)) {
+			for (const chunk of this._generate(renderedVNode, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue)) {
 				yield chunk;
 			}
 
@@ -237,7 +214,7 @@ PreactReadableStream.prototype._generate = async function *_generate(vnode, cont
 			if (child!=null && child!==false) {
 				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode;
 				
-				for await (const chunk of this._generate(child, context, opts, true, childSvgMode, selectValue)) {
+				for (const chunk of this._generate(child, context, opts, true, childSvgMode, selectValue)) {
 					if (chunk) {
 						if (!didCloseOpeningTag) {
 							didCloseOpeningTag = true;
