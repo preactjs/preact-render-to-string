@@ -22,7 +22,7 @@ function PreactReadableStream(vnode, context, opts) {
 
 PreactReadableStream.prototype = new stream.Readable();
 PreactReadableStream.prototype.constructor = PreactReadableStream;
-PreactReadableStream.prototype._read = async function _read() {
+PreactReadableStream.prototype._read = function _read() {
 	try {
 		if (!this._generator) {
 			this._generator = this._generate(this.vnode, this.context, this.opts);
@@ -33,7 +33,7 @@ PreactReadableStream.prototype._read = async function _read() {
 
 		this.reading = true;
 
-		for await (const chunk of this._generator) {
+		for (const chunk of this._generator) {
 			if (!this.push(chunk)) {
 				this.reading = false;
 				// high water mark reached, pause the stream until _read is called again...

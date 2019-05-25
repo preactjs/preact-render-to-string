@@ -8,9 +8,10 @@
   "module": "dist/index.module.js",
   "jsnext:main": "dist/index.module.js",
   "scripts": {
-    "build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
+    "build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s transpile:stream && npm run -s copy-typescript-definition",
     "transpile": "echo 'export const ENABLE_PRETTY = false;'>env.js && microbundle src/index.js -f es,umd --target web --external preact",
     "transpile:jsx": "echo 'export const ENABLE_PRETTY = true;'>env.js && microbundle src/jsx.js -o dist/jsx.js --target web --external none && microbundle dist/jsx.js -o dist/jsx.js -f cjs",
+    "transpile:stream": "echo 'export const ENABLE_PRETTY = true;'>env.js && microbundle dist/stream.js --external preact,stream -o dist/stream.js -f cjs",
     "copy-typescript-definition": "copyfiles -f src/index.d.ts dist",
     "test": "eslint src test && mocha --compilers js:@babel/register test/**/*.js",
     "prepublish": "npm run build",
