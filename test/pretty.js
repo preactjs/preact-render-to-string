@@ -96,4 +96,19 @@ describe('pretty', () => {
 			</div>
 		)).to.equal(`<div>\n\t<div>A</div>\n\t<div>B</div>\n</div>`);
 	});
+
+	it('should join adjacent text nodes', () => {
+		expect(prettyRender(
+			<div>hello{' '} <b /></div>
+		)).to.equal(`<div>\n\thello  \n\t<b></b>\n</div>`);
+		expect(prettyRender(
+			<div>hello{' '} <b />{'a'}{'b'}</div>
+		)).to.equal(`<div>\n\thello  \n\t<b></b>\n\ta\n\tb\n</div>`);
+	});
+
+	it('should join adjacent text nodeswith Fragments', () => {
+		expect(prettyRender(
+			<div><Fragment>foo</Fragment>bar{' '} <b /></div>
+		)).to.equal(`<div>\n\tfoobar  \n\t<b></b>\n</div>`);
+	});
 });

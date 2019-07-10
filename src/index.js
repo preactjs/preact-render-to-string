@@ -211,7 +211,16 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			}
 		}
 		if (pretty && hasLarge) {
+			let lastOutputWasDom = s[s.length-1]=='>';
 			for (let i=pieces.length; i--; ) {
+				if (
+					i<pieces.length-1 &&
+					pieces[i][0]!='<' &&
+					((i>0 && pieces[i-1][0]!='<') || (i==0 && !lastOutputWasDom))
+				) {
+					continue;
+				}
+				
 				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
 			}
 		}
