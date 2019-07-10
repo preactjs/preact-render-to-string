@@ -32,6 +32,7 @@ renderToString.render = renderToString;
  */
 let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
+let LAST_NODE_WAS_TEXT;
 
 /** The default export is an alias of `render()`. */
 function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
@@ -55,8 +56,9 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 	// #text nodes
 	if (typeof vnode!=='object' && !nodeName) {
-		return encodeEntities(vnode);
+		return LAST_NODE_WAS_TEXT = encodeEntities(vnode);
 	}
+	LAST_NODE_WAS_TEXT = null;
 
 	// components
 	if (typeof nodeName==='function') {
@@ -204,8 +206,10 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		for (let i=0; i<children.length; i++) {
 			let child = children[i];
 			if (child!=null && child!==false) {
-				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
+				let wasText = LAST_NODE_WAS_TEXT,
+					childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
 					ret = renderToString(child, context, opts, true, childSvgMode, selectValue);
+				if (wasText && LAST_NODE_WAS_TEXT) ret = ret.replace(/^\s+/,'');
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 				if (ret) pieces.push(ret);
 			}

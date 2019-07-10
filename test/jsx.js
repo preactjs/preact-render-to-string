@@ -30,6 +30,61 @@ describe('jsx', () => {
 		`);
 	});
 
+	it('should collapse whitespace', () => {
+		expect(renderJsx(
+			<p>a<a>b</a></p>
+		)).to.equal(dedent`
+			<p>
+				a
+				<a>b</a>
+			</p>
+		`);
+
+		expect(renderJsx(
+			<p>
+				a{' '}
+				<a>b</a>
+			</p>
+		)).to.equal(dedent`
+			<p>
+				a
+				<a>b</a>
+			</p>
+		`);
+
+		expect(renderJsx(
+			<p>
+				a{''}
+				<a>b</a>
+			</p>
+		)).to.equal(dedent`
+			<p>
+				a
+				<a>b</a>
+			</p>
+		`);
+
+		expect(renderJsx(
+			<p>a <a>b</a></p>
+		)).to.equal(dedent`
+			<p>
+				a\ 
+				<a>b</a>
+			</p>
+		`);
+
+		expect(renderJsx(<a> b </a>)).to.equal(dedent`
+			<a> b </a>
+		`);
+
+		expect(renderJsx(<p><b /> a </p>)).to.equal(dedent`
+			<p>
+				<b></b>
+				\ a\ 
+			</p>
+		`);
+	});
+
 	it('should not render empty class or style DOM attributes', () => {
 		expect(renderJsx(<a b={false} />)).to.equal('<a></a>');
 		expect(renderJsx(<a b="" />)).to.equal('<a b=""></a>');
