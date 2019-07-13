@@ -3,6 +3,7 @@ import { render } from '../src/jsx';
 import { h, Fragment } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
+import { dedent } from './jsx';
 chai.use(sinonChai);
 
 describe('pretty', () => {
@@ -100,15 +101,87 @@ describe('pretty', () => {
 	it('should join adjacent text nodes', () => {
 		expect(prettyRender(
 			<div>hello{' '} <b /></div>
-		)).to.equal(`<div>\n\thello  \n\t<b></b>\n</div>`);
+		)).to.equal(dedent`
+			<div>
+				hello  
+				<b></b>
+			</div>
+		`);
+
 		expect(prettyRender(
 			<div>hello{' '} <b />{'a'}{'b'}</div>
-		)).to.equal(`<div>\n\thello  \n\t<b></b>\n\ta\n\tb\n</div>`);
+		)).to.equal(dedent`
+			<div>
+				hello  
+				<b></b>
+				ab
+			</div>
+		`);
 	});
 
 	it('should join adjacent text nodeswith Fragments', () => {
 		expect(prettyRender(
 			<div><Fragment>foo</Fragment>bar{' '} <b /></div>
-		)).to.equal(`<div>\n\tfoobar  \n\t<b></b>\n</div>`);
+		)).to.equal(dedent`
+			<div>
+				foobar  
+				<b></b>
+			</div>
+		`);
+	});
+
+	it('should collapse whitespace', () => {
+		expect(prettyRender(
+			<p>a<a>b</a></p>
+		)).to.equal(dedent`
+			<p>
+				a
+				<a>b</a>
+			</p>
+		`);
+
+		expect(prettyRender(
+			<p>
+				a{' '}
+				<a>b</a>
+			</p>
+		)).to.equal(dedent`
+			<p>
+				a 
+				<a>b</a>
+			</p>
+		`);
+
+		expect(prettyRender(
+			<p>
+				a{''}
+				<a>b</a>
+			</p>
+		)).to.equal(dedent`
+			<p>
+				a
+				<a>b</a>
+			</p>
+		`);
+
+		expect(prettyRender(
+			<p>a <a>b</a></p>
+		)).to.equal(dedent`
+			<p>
+				a\ 
+				<a>b</a>
+			</p>
+		`);
+
+		expect(prettyRender(<a> b </a>)).to.equal(dedent`
+			<a> b </a>
+		`);
+
+		expect(prettyRender(<p><b /> a </p>)).to.equal(dedent`
+			<p>
+				<b></b>
+				\ a\ 
+			</p>
+		`);
 	});
 });
