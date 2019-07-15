@@ -258,6 +258,16 @@ describe('render', () => {
 				);
 		});
 
+		it('should initialise state', () => {
+			class Foo extends Component {
+				render(_, state) {
+					return <div>{state.foo}</div>;
+				}
+			}
+
+			expect(() => render(<Foo />)).to.not.throw();
+		});
+
 		it('should render classical components within JSX', () => {
 			let Test = spy(class Test extends Component {
 				render({ foo, children }, state) {
