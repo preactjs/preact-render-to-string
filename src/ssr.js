@@ -7,19 +7,11 @@ const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
 /**
  * Render Preact JSX + Components to an HTML string.
- * @param {import('preact').VNode} vnode	A Virtual DOM element to render.
- */
-export default function (vnode) {
-	return renderVNode(vnode, {}, undefined);
-}
-
-/**
- * Render a Virtual DOM element (of any kind) to HTML.
- * @param {import('preact').VNode|Array<any>|string|number|boolean|null|undefined} vnode any renderable value
+ * @param {import('preact').VNode|string|number|null|boolean} vnode any renderable value
  * @param {object} context context object, forks throughout the tree
  * @param {any} selectValue the current select value, passed down through the tree to set <options selected>
  */
-function renderVNode(vnode, context, selectValue) {
+export default function renderToString(vnode, context, selectValue) {
 	if (vnode == null || vnode === false || vnode === true) {
 		return '';
 	}
@@ -28,19 +20,18 @@ function renderVNode(vnode, context, selectValue) {
 		return encodeEntities(vnode);
 	}
 
+	context = context || {};
+
 	if (Array.isArray(vnode)) {
 		let s = '';
 		for (let i=0; i<vnode.length; i++) {
-			s += renderVNode(vnode[i], context, selectValue);
+			s += renderToString(vnode[i], context, selectValue);
 		}
 		return s;
 	}
 
-
 	let nodeName = vnode.type,
 		props = vnode.props;
-
-	context = context || {};
 
 	// components
 	if (typeof nodeName === 'function') {
@@ -51,18 +42,13 @@ function renderVNode(vnode, context, selectValue) {
 		// options.render
 		if (options.__r) options.__r(vnode);
 
+		// Necessary for createContext api. Setting this property will pass
+		// the context value as `this.context` just for this component.
 		let cxType = nodeName.contextType;
 		let provider = cxType && context[cxType.__c];
 		let cctx = cxType != null ? (provider ? provider.props.value : cxType.__) : context;
 
-		if (!('prototype' in nodeName) || !('render' in nodeName.prototype)) {
-			// Necessary for createContext api. Setting this property will pass
-			// the context value as `this.context` just for this component.
-
-			// stateless functional components
-			rendered = nodeName.call(c, props, cctx);
-		}
-		else {
+		if (nodeName.prototype && nodeName.prototype.render) {
 			c = vnode.__c = new nodeName(props, cctx);
 			c.__v = vnode;
 			// turn off stateful re-rendering:
@@ -75,10 +61,10 @@ function renderVNode(vnode, context, selectValue) {
 			}
 
 			c.context = cctx;
-			if ('getDerivedStateFromProps' in nodeName) {
+			if (nodeName.getDerivedStateFromProps) {
 				c.state = assign(assign({}, c.state), nodeName.getDerivedStateFromProps(c.props, c.state));
 			}
-			else if ('componentWillMount' in c) {
+			else if (c.componentWillMount) {
 				c.componentWillMount();
 			}
 
@@ -90,12 +76,16 @@ function renderVNode(vnode, context, selectValue) {
 
 			rendered = c.render(c.props, c.state, c.context);
 		}
+		else {
+			// stateless functional components
+			rendered = nodeName.call(c, props, cctx);
+		}
 
-		if ('getChildContext' in c) {
+		if (c.getChildContext) {
 			context = assign(assign({}, context), c.getChildContext());
 		}
 
-		return renderVNode(rendered, context, selectValue);
+		return renderToString(rendered, context, selectValue);
 	}
 
 	if (UNSAFE_NAME.test(nodeName)) return '';
@@ -152,7 +142,7 @@ function renderVNode(vnode, context, selectValue) {
 		s += html;
 	}
 	else if (props && props.children) {
-		s += renderVNode(props.children, context, selectValue);
+		s += renderToString(props.children, context, selectValue);
 	}
 
 	if (!isVoid) {
