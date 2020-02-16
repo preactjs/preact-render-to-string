@@ -10,8 +10,8 @@ const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
  * @param {import('preact').VNode} vnode	A Virtual DOM element to render.
  */
 export default function (vnode) {
-  // Cheap output buffer. It's a passed-by-reference "pointer" to the work-in-progress output string.
-  // In the future, this object could also hold additional properties for the render root.
+	// Cheap output buffer. It's a passed-by-reference "pointer" to the work-in-progress output string.
+	// In the future, this object could also hold additional properties for the render root.
 	const p = { s: '' };
 	renderVNode(vnode, {}, null, p);
 	return p.s;
