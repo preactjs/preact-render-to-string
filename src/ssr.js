@@ -37,7 +37,7 @@ function renderVNode(vnode, context, selectValue, p) {
 			let children = [];
 			getChildren(children, vnode);
 			for (let i = 0; i < children.length; i++) {
-				p.s += renderVNode(children[i], context, selectValue, p);
+				renderVNode(children[i], context, selectValue, p);
 			}
 			return;
 		}
@@ -125,7 +125,7 @@ function renderVNode(vnode, context, selectValue, p) {
 	// let s = '<';
 	p.s += '<';
 	p.s += nodeName;
-	let html = '';
+	let html;
 	// s += nodeName;
 
 	if (props) {
