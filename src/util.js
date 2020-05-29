@@ -1,5 +1,5 @@
 // DOM properties that should NOT have "px" added when numeric
-export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
+export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord/i;
 
 export let encodeEntities = s => String(s)
 	.replace(/&/g, '&amp;')
@@ -21,7 +21,7 @@ export function styleObjToCss(s) {
 		if (val!=null) {
 			if (str) str += ' ';
 			// str += jsToCss(prop);
-			str += JS_TO_CSS[prop] || (JS_TO_CSS[prop] = prop.replace(/([A-Z])/g,'-$1').toLowerCase());
+			str += prop[0]=='-' ? prop : (JS_TO_CSS[prop] || (JS_TO_CSS[prop] = prop.replace(/([A-Z])/g,'-$1').toLowerCase()));
 			str += ': ';
 			str += val;
 			if (typeof val==='number' && IS_NON_DIMENSIONAL.test(prop)===false) {
