@@ -21,6 +21,19 @@ describe('pretty', () => {
 		expect(rendered).to.equal(`<section><a href="/foo">foo</a>bar<p>hello</p></section>`);
 	});
 
+	it('should preserve indentation of pre content', () => {
+		let rendered = prettyRender(
+			<div>
+				<pre dangerouslySetInnerHTML={{ __html: 'foo\nbar' }} />
+			</div>
+		);
+
+		expect(rendered).to.equal(`<div>
+	<pre>foo
+bar</pre>
+</div>`);
+	});
+
 	it('should render whitespace when pretty=true', () => {
 		let rendered = prettyRender(
 			<section>
