@@ -21,7 +21,7 @@ describe('pretty', () => {
 		expect(rendered).to.equal(`<section><a href="/foo">foo</a>bar<p>hello</p></section>`);
 	});
 
-	it('should preserve indentation of pre content', () => {
+	it('should preserve indentation of dangerouslySetInnerHTML', () => {
 		let rendered = prettyRender(
 			<div>
 				<pre dangerouslySetInnerHTML={{ __html: 'foo\nbar' }} />
@@ -34,18 +34,17 @@ bar</pre>
 </div>`);
 	});
 
-	it('should indent text content', () => {
+	it('should preserve indentation of multiline string child', () => {
 		let rendered = prettyRender(
 			<div>
-				<div dangerouslySetInnerHTML={{ __html: 'foo\nbar' }} />
+				<pre>{`
+  bar`}</pre>
 			</div>
 		);
 
 		expect(rendered).to.equal(`<div>
-	<div>
-		foo
-		bar
-	</div>
+	<pre>
+  bar</pre>
 </div>`);
 	});
 

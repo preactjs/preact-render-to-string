@@ -20,7 +20,6 @@ const noop = () => {};
  *	@param {Boolean} [options.shallow=false]	If `true`, renders nested Components as HTML elements (`<Foo a="b" />`).
  *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
  *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
- *	@param {Boolean} [options.preserveWhitespace=['pre']]		Array of HTML tags for which to preserve indentation.
  */
 renderToString.render = renderToString;
 
@@ -52,7 +51,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	context = context || {};
 	opts = opts || {};
 
-	let pretty = (opts.preserveWhitespace || ['pre']).indexOf(nodeName) === -1 && opts.pretty,
+	let pretty = opts.pretty,
 		indentChar = pretty && typeof pretty==='string' ? pretty : '\t';
 
 	// #text nodes
@@ -74,7 +73,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			for (let i = 0; i < children.length; i++) {
 				rendered += (i > 0 && pretty ? '\n' : '') + renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
 			}
-			return pretty ? indent(rendered, indentChar) : rendered;
+			return rendered;
 		}
 		else {
 			let rendered;
@@ -184,7 +183,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			}
 
 			if (name==='dangerouslySetInnerHTML') {
-				html = v && v.__html;
+				html = v ? v.__html : null; // do not use v && v.__html to prevent dangerouslySetInnerHTML="foo"
+				pretty = false;
 			}
 			else if ((v || v===0 || v==='') && typeof v!=='function') {
 				if (v===true || v==='') {
@@ -270,7 +270,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		}
 		if (pretty && hasLarge) {
 			for (let i=pieces.length; i--; ) {
-				pieces[i] = '\n' + indentChar + pieces[i];
+				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
 			}
 		}
 	}
