@@ -34,6 +34,21 @@ bar</pre>
 </div>`);
 	});
 
+	it('should indent text content', () => {
+		let rendered = prettyRender(
+			<div>
+				<div dangerouslySetInnerHTML={{ __html: 'foo\nbar' }} />
+			</div>
+		);
+
+		expect(rendered).to.equal(`<div>
+	<div>
+		foo
+		bar
+	</div>
+</div>`);
+	});
+
 	it('should render whitespace when pretty=true', () => {
 		let rendered = prettyRender(
 			<section>
