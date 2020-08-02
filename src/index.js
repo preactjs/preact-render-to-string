@@ -10,6 +10,7 @@ const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|sou
 
 const noop = () => {};
 
+const skillEncodeNodeTypes = ['style']
 
 /** Render Preact JSX + Components to an HTML string.
  *	@name render
@@ -21,6 +22,7 @@ const noop = () => {};
  *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
  *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
  *	@param {RegEx|undefined} [options.voidElements]       RegeEx that matches elements that are considered void (self-closing)
+ *  @param {String} [parenType=undefined] checked parent node type, if parent type belongs to skillEncodeNodeTypes, children should not be encodeEntities
  */
 renderToString.render = renderToString;
 
@@ -32,11 +34,11 @@ renderToString.render = renderToString;
  *	@param {VNode} vnode	JSX VNode to render.
  *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
  */
-let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
+let shallowRender = (vnode = {}, context) => renderToString(vnode, context, SHALLOW);
 
 
 /** The default export is an alias of `render()`. */
-function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
+function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, parenType) {
 	if (vnode==null || typeof vnode==='boolean') {
 		return '';
 	}
@@ -51,15 +53,14 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		isComponent = false;
 	context = context || {};
 	opts = opts || {};
-
 	let pretty = opts.pretty,
 		indentChar = pretty && typeof pretty==='string' ? pretty : '\t';
 
 	// #text nodes
 	if (typeof vnode!=='object' && !nodeName) {
-		return encodeEntities(vnode);
+		return skillEncodeNodeTypes.includes(parenType) ? vnode : encodeEntities(vnode);
 	}
-
+ 
 	// components
 	if (typeof nodeName==='function') {
 		isComponent = true;
@@ -72,7 +73,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				rendered += (i > 0 && pretty ? '\n' : '') + renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
+				rendered += (i > 0 && pretty ? '\n' : '') + renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue, nodeName);
 			}
 			return rendered;
 		}
@@ -140,7 +141,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				context = assign(assign({}, context), c.getChildContext());
 			}
 
-			return renderToString(rendered, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue);
+			return renderToString(rendered, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue. nodeName);
 		}
 	}
 
@@ -257,7 +258,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 			if (child!=null && child!==false) {
 				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
-					ret = renderToString(child, context, opts, true, childSvgMode, selectValue);
+					ret = renderToString(child, context, opts, true, childSvgMode, selectValue, nodeName);
 
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 
