@@ -1,4 +1,4 @@
-import renderToString, { render, shallowRender, renderToStaticMarkup, renderToString as _renderToString } from '../src';
+import renderToString, { render, shallowRender, renderToStaticMarkup, renderToString as _renderToString, HTML_VOID_ELEMENTS } from '../src';
 import { expect } from 'chai';
 
 describe('render-to-string', () => {
@@ -24,6 +24,10 @@ describe('render-to-string', () => {
 
 		it('exposes shallowRender as a named export', () => {
 			expect(shallowRender).to.be.a('function');
+		});
+
+		it('exposes HTML_VOID_ELEMENTS as a named export', () => {
+			expect(HTML_VOID_ELEMENTS).to.be.a('RegExp');
 		});
 	});
 });
