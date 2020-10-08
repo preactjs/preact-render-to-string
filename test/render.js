@@ -208,6 +208,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('does not close default void elements when defining custom void elements', () => {
+			let rendered = render(<item><link>https://preactjs.com</link><hello-world /></item>, null, { voidElements: /^hello-world$/ }),
+				expected = `<item><link>https://preactjs.com</link><hello-world /></item>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should serialize object styles', () => {
 			let rendered = render(<div style={{ color: 'red', border: 'none' }} />),
 				expected = `<div style="color: red; border: none;"></div>`;

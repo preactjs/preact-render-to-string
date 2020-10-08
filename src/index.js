@@ -6,7 +6,7 @@ const SHALLOW = { shallow: true };
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
 
-const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+const HTML_VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 const noop = () => {};
 
@@ -235,7 +235,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	s = `<${nodeName}${s}>`;
 	if (String(nodeName).match(/[\s\n\\/='"\0<>]/)) throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
-	let isVoid = String(nodeName).match(VOID_ELEMENTS) || (opts.voidElements && String(nodeName).match(opts.voidElements));
+	let isVoid = String(nodeName).match(opts.voidElements || HTML_VOID_ELEMENTS);
 	if (isVoid) s = s.replace(/>$/, ' />');
 
 	let pieces = [];
@@ -337,5 +337,6 @@ export {
 	renderToString as render,
 	renderToString as renderToStaticMarkup,
 	renderToString,
-	shallowRender
+	shallowRender,
+	HTML_VOID_ELEMENTS
 };
