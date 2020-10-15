@@ -28,6 +28,7 @@
 		"transpile:jsx": "microbundle src/jsx.js -o dist/jsx.js --target web --external none && microbundle dist/jsx.js -o dist/jsx.js -f cjs",
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
 		"test": "eslint src test && tsc && mocha -r babel-core/register test/**/*.js",
+		"bench": "node -r babel-core/register benchmarks/index.js",
 		"prepublishOnly": "npm run build",
 		"release": "npm run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
 	},
@@ -52,7 +53,8 @@
 			"jest/valid-expect": 0,
 			"brace-style": 0,
 			"new-cap": 0,
-			"indent": 0
+			"indent": 0,
+			"arrow-body-style": 0
 		},
 		"settings": {
 			"react": {
@@ -88,6 +90,7 @@
 		"babel-plugin-transform-react-jsx": "^6.24.1",
 		"babel-preset-env": "^1.7.0",
 		"babel-register": "^6.26.0",
+		"benchmarkjs-pretty": "^2.0.1",
 		"chai": "^3.5.0",
 		"copyfiles": "^1.2.0",
 		"eslint": "^4.19.1",
