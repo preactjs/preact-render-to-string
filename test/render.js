@@ -786,6 +786,17 @@ describe('render', () => {
 			expect(html).to.equal('<div>\n\t<div>foo</div>\n\t<div>bar</div>\n\t<div>\n\t\t<div>baz</div>\n\t\t<div>quux</div>\n\t</div>\n</div>');
 		});
 
+		it('should preserve indentation of pre content', () => {
+			let rendered = render(
+				<div>
+					<pre dangerouslySetInnerHTML={{ __html: 'foo\nbar' }} />
+				</div>
+			);
+	
+			expect(rendered).to.equal(`<div><pre>foo
+bar</pre></div>`);
+		});
+
 		it('should skip Fragment even if it has props', () => {
 			let html = render(
 				<div>

@@ -195,7 +195,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			}
 
 			if (name==='dangerouslySetInnerHTML') {
-				html = v && v.__html;
+				html = v ? v.__html : null; // do not use v && v.__html to prevent dangerouslySetInnerHTML="foo"
+				pretty = false;
 			}
 			else if (nodeName === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
