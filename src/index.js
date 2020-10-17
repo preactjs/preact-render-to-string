@@ -102,6 +102,7 @@ function renderToString(
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
+				// TODO: fix this prettyfication
 				(i > 0 && pretty ? '\n' : '') +
 					renderToString(
 						children[i],
@@ -337,20 +338,22 @@ function renderToString(
 
 			if (child != null && child !== false) {
 				let childSvgMode =
-						nodeName === 'svg'
-							? true
-							: nodeName === 'foreignObject'
-							? false
-							: isSvgMode,
-					ret = renderToString(
-						child,
-						context,
-						opts,
-						true,
-						childSvgMode,
-						selectValue,
-						output
-					);
+					nodeName === 'svg'
+						? true
+						: nodeName === 'foreignObject'
+						? false
+						: isSvgMode;
+				renderToString(
+					child,
+					context,
+					opts,
+					true,
+					childSvgMode,
+					selectValue,
+					output
+				);
+
+				let ret = output[output.length - 1];
 
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 
