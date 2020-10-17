@@ -81,15 +81,14 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, out
 		isComponent = true;
 		if (opts.shallow && (inner || opts.renderRootComponent === false)) {
 			nodeName = getComponentName(nodeName);
-		} else if (nodeName === Fragment) {
-			let rendered = '';
+		}
+		else if (nodeName===Fragment) {
 			let children = [];
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				rendered += (i > 0 && pretty ? '\n' : '') + renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue, output);
+				(i > 0 && pretty ? '\n' : '') + renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue, output);
 			}
-			output.push(rendered);
 			return;
 		}
 		else {
@@ -276,8 +275,6 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, out
 		else if (pretty && ~s.indexOf('\n')) s += '\n';
 	}
 
-	output.push(`<${nodeName}${s}>`);
-	s='';
 	if (String(nodeName).match(/[\s\n\\/='"\0<>]/)) throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
 	let isVoid =
@@ -292,10 +289,12 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, out
 			html = '\n' + indentChar + indent(html, indentChar);
 		}
 		s += html;
-	} else if (
-		propChildren != null &&
-		getChildren((children = []), propChildren).length
-	) {
+		output.push(`<${nodeName}${s}>`);
+		s='';
+	}
+	else if (propChildren != null && getChildren(children = [], propChildren).length) {
+		output.push(`<${nodeName}${s}>`);
+		s='';
 		let hasLarge = pretty && ~s.indexOf('\n');
 		let lastWasText = false;
 
@@ -333,6 +332,10 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, out
 				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
 			}
 		}
+	}
+	else {
+		output.push(`<${nodeName}${s}>`);
+		s='';
 	}
 
 	if (pieces.length) {
