@@ -37,12 +37,23 @@ renderToString.render = renderToString;
  *	@param {VNode} vnode	JSX VNode to render.
  *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
  */
-let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
+let shallowRender = (vnode, context) => {
+	const output = [];
+	renderToString(vnode, context, SHALLOW, undefined, undefined, undefined, output);
+	return output.join('');
+};
+
+function render(vnode, context, opts, inner, isSvgMode, selectValue) {
+	const output = [];
+	renderToString(vnode, context, opts, inner, isSvgMode, selectValue, output);
+	return output.join('');
+}
 
 /** The default export is an alias of `render()`. */
-function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
-	if (vnode == null || typeof vnode === 'boolean') {
-		return '';
+function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, output) {
+	if (vnode==null || typeof vnode==='boolean') {
+		output.push('');
+		return;
 	}
 
 	// wrap array nodes in Fragment
@@ -60,8 +71,9 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		indentChar = pretty && typeof pretty === 'string' ? pretty : '\t';
 
 	// #text nodes
-	if (typeof vnode !== 'object' && !nodeName) {
-		return encodeEntities(vnode);
+	if (typeof vnode!=='object' && !nodeName) {
+		output.push(encodeEntities(vnode));
+		return;
 	}
 
 	// components
@@ -75,19 +87,12 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				rendered +=
-					(i > 0 && pretty ? '\n' : '') +
-					renderToString(
-						children[i],
-						context,
-						opts,
-						opts.shallowHighOrder !== false,
-						isSvgMode,
-						selectValue
-					);
+				rendered += (i > 0 && pretty ? '\n' : '') + renderToString(children[i], context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue, output);
 			}
-			return rendered;
-		} else {
+			output.push(rendered);
+			return;
+		}
+		else {
 			let rendered;
 
 			let c = (vnode.__c = {
@@ -170,14 +175,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				context = assign(assign({}, context), c.getChildContext());
 			}
 
-			return renderToString(
-				rendered,
-				context,
-				opts,
-				opts.shallowHighOrder !== false,
-				isSvgMode,
-				selectValue
-			);
+			renderToString(rendered, context, opts, opts.shallowHighOrder!==false, isSvgMode, selectValue, output);
+			return;
 		}
 	}
 
@@ -277,9 +276,9 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		else if (pretty && ~s.indexOf('\n')) s += '\n';
 	}
 
-	s = `<${nodeName}${s}>`;
-	if (String(nodeName).match(/[\s\n\\/='"\0<>]/))
-		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
+	output.push(`<${nodeName}${s}>`);
+	s='';
+	if (String(nodeName).match(/[\s\n\\/='"\0<>]/)) throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
 	let isVoid =
 		String(nodeName).match(VOID_ELEMENTS) ||
@@ -303,21 +302,9 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
 
-			if (child != null && child !== false) {
-				let childSvgMode =
-						nodeName === 'svg'
-							? true
-							: nodeName === 'foreignObject'
-							? false
-							: isSvgMode,
-					ret = renderToString(
-						child,
-						context,
-						opts,
-						true,
-						childSvgMode,
-						selectValue
-					);
+			if (child!=null && child!==false) {
+				let childSvgMode = nodeName==='svg' ? true : nodeName==='foreignObject' ? false : isSvgMode,
+					ret = renderToString(child, context, opts, true, childSvgMode, selectValue, output);
 
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 
@@ -350,8 +337,10 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 	if (pieces.length) {
 		s += pieces.join('');
-	} else if (opts && opts.xml) {
-		return s.substring(0, s.length - 1) + ' />';
+	}
+	else if (opts && opts.xml) {
+		output.push(s.substring(0, s.length-1) + ' />');
+		return;
 	}
 
 	if (isVoid && !children) {
@@ -361,7 +350,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		s += `</${nodeName}>`;
 	}
 
-	return s;
+	output.push(s);
 }
 
 function getComponentName(component) {
@@ -392,13 +381,14 @@ function getFallbackComponentName(component) {
 	}
 	return name;
 }
+
 renderToString.shallowRender = shallowRender;
 
-export default renderToString;
+export default render;
 
 export {
-	renderToString as render,
-	renderToString as renderToStaticMarkup,
-	renderToString,
+	render,
+	render as renderToStaticMarkup,
+	render as renderToString,
 	shallowRender
 };
