@@ -102,17 +102,18 @@ function renderToString(
 			getChildren(children, vnode.props.children);
 
 			for (let i = 0; i < children.length; i++) {
-				// TODO: fix this prettyfication
-				(i > 0 && pretty ? '\n' : '') +
-					renderToString(
-						children[i],
-						context,
-						opts,
-						opts.shallowHighOrder !== false,
-						isSvgMode,
-						selectValue,
-						output
-					);
+				if (i > 0 && pretty) {
+					output.push('\n');
+				}
+				renderToString(
+					children[i],
+					context,
+					opts,
+					opts.shallowHighOrder !== false,
+					isSvgMode,
+					selectValue,
+					output
+				);
 			}
 			return;
 		} else {
@@ -343,7 +344,9 @@ function renderToString(
 						: nodeName === 'foreignObject'
 						? false
 						: isSvgMode;
-				renderToString(
+
+				// TODO: we can't rely on this return-value...
+				let ret = renderToString(
 					child,
 					context,
 					opts,
@@ -352,8 +355,6 @@ function renderToString(
 					selectValue,
 					output
 				);
-
-				let ret = output[output.length - 1];
 
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 
