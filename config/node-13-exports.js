@@ -1,9 +1,9 @@
 const fs = require('fs');
 
-const snakeCaseToCamelCase = str =>
-	str.replace(/([-_][a-z])/g, group => group.toUpperCase().replace('-', ''));
+const snakeCaseToCamelCase = (str) =>
+	str.replace(/([-_][a-z])/g, (group) => group.toUpperCase().replace('-', ''));
 
-const copy = name => {
+const copy = (name) => {
 	// Copy .module.js --> .mjs for Node 13 compat.
 	const filename = name.includes('-') ? snakeCaseToCamelCase(name) : name;
 	fs.writeFileSync(
