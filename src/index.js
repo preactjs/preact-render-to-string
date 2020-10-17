@@ -289,7 +289,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue, out
 			html = '\n' + indentChar + indent(html, indentChar);
 		}
 		s += html;
-		output.push(`<${nodeName}${s}>`);
+		output.push(`<${nodeName}>${s}`);
 		s='';
 	}
 	else if (propChildren != null && getChildren(children = [], propChildren).length) {
