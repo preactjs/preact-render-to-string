@@ -336,7 +336,6 @@ function renderToString(
 
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
-
 			if (child != null && child !== false) {
 				let childSvgMode =
 					nodeName === 'svg'
@@ -346,15 +345,17 @@ function renderToString(
 						: isSvgMode;
 
 				// TODO: we can't rely on this return-value...
-				let ret = renderToString(
+				const temp = [];
+				renderToString(
 					child,
 					context,
 					opts,
 					true,
 					childSvgMode,
 					selectValue,
-					output
+					temp
 				);
+				let ret = temp.join('');
 
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
 
