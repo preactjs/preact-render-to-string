@@ -4,5 +4,5 @@ if (typeof Symbol !== 'function') {
 	Symbol = function (s) {
 		return `@@${s}${++c}`;
 	};
-	Symbol.for = s => `@@${s}`;
+	Symbol.for = (s) => `@@${s}`;
 }

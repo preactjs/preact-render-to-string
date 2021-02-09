@@ -1,5 +1,5 @@
 import { render, shallowRender } from '../src';
-import { h, Component, createContext, Fragment } from 'preact';
+import { h, Component, createContext, Fragment, options } from 'preact';
 import { useState, useContext, useEffect, useLayoutEffect } from 'preact/hooks';
 import chai, { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
@@ -222,12 +222,17 @@ describe('render', () => {
 		});
 
 		it('does not close void elements with closing tags', () => {
+			let rendered = render(<link>http://preactjs.com</link>),
+				expected = `<link>http://preactjs.com</link>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
+		it('should not self-close void elements if it has dangerouslySetInnerHTML prop', () => {
 			let rendered = render(
-					<input>
-						<p>Hello World</p>
-					</input>
+					<link dangerouslySetInnerHTML={{ __html: '<foo>' }} />
 				),
-				expected = `<input /><p>Hello World</p>`;
+				expected = `<link><foo></link>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -314,7 +319,7 @@ describe('render', () => {
 		});
 
 		it('should apply defaultProps', () => {
-			const Test = props => <div {...props} />;
+			const Test = (props) => <div {...props} />;
 			Test.defaultProps = {
 				foo: 'default foo',
 				bar: 'default bar'
@@ -810,12 +815,21 @@ describe('render', () => {
 	});
 
 	describe('xml:true', () => {
-		let renderXml = jsx => render(jsx, null, { xml: true });
+		let renderXml = (jsx) => render(jsx, null, { xml: true });
 
 		it('should render end-tags', () => {
 			expect(renderXml(<div />)).to.equal(`<div />`);
 			expect(renderXml(<a />)).to.equal(`<a />`);
 			expect(renderXml(<a>b</a>)).to.equal(`<a>b</a>`);
+		});
+
+		it('should not self-close if it has dangerouslySetInnerHTML prop', () => {
+			expect(
+				renderXml(<a dangerouslySetInnerHTML={{ __html: 'b' }} />)
+			).to.equal(`<a>b</a>`);
+			expect(
+				renderXml(<a dangerouslySetInnerHTML={{ __html: '<b />' }} />)
+			).to.equal(`<a><b /></a>`);
 		});
 
 		it('should render boolean attributes with named values', () => {
@@ -1051,6 +1065,61 @@ describe('render', () => {
 			render(<Foo />);
 			expect(called).to.equal(false);
 		});
+	});
+
+	it('should invoke option hooks', () => {
+		const calls = [];
+		// _diff
+		const oldDiff = options.__b;
+		options.__b = (...args) => {
+			calls.push(['_diff', args]);
+			if (oldDiff) oldDiff(...args);
+		};
+		// _render
+		const oldRender = options.__r;
+		options.__r = (...args) => {
+			calls.push(['_render', args]);
+			if (oldRender) oldRender(...args);
+		};
+		const oldDiffed = options.diffed;
+		options.diffed = (...args) => {
+			calls.push(['diffed', args]);
+			if (oldDiffed) oldDiffed(...args);
+		};
+		// _commit
+		const oldCommit = options.__c;
+		options.__c = (...args) => {
+			calls.push(['_commit', args]);
+			if (oldCommit) oldCommit(...args);
+		};
+
+		function Component1({ children }) {
+			return children;
+		}
+
+		function Component2() {
+			return <div />;
+		}
+
+		const vnode2 = <Component2>1</Component2>;
+		const vnode1 = <Component1>{vnode2}</Component1>;
+
+		render(vnode1);
+
+		expect(calls).to.deep.equal([
+			['_diff', [vnode1]],
+			['_render', [vnode1]],
+			['diffed', [vnode1]],
+			['_diff', [vnode2]],
+			['_render', [vnode2]],
+			['diffed', [vnode2]],
+			['_commit', [vnode1, []]]
+		]);
+
+		expect(calls.length).to.equal(7);
+
+		options.__b = oldDiff;
+		options.__r = oldRender;
 	});
 
 	it('should render select value on option', () => {

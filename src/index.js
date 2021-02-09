@@ -39,8 +39,17 @@ renderToString.render = renderToString;
  */
 let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
+const EMPTY_ARR = [];
+function renderToString(vnode, context, opts) {
+	const res = _renderToString(vnode, context, opts);
+	// options._commit, we don't schedule any effects in this library right now,
+	// so we can pass an empty queue to this hook.
+	if (options.__c) options.__c(vnode, EMPTY_ARR);
+	return res;
+}
+
 /** The default export is an alias of `render()`. */
-function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
+function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (vnode == null || typeof vnode === 'boolean') {
 		return '';
 	}
@@ -77,7 +86,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			for (let i = 0; i < children.length; i++) {
 				rendered +=
 					(i > 0 && pretty ? '\n' : '') +
-					renderToString(
+					_renderToString(
 						children[i],
 						context,
 						opts,
@@ -101,7 +110,10 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				__h: []
 			});
 
-			// options.render
+			// options._diff
+			if (options.__b) options.__b(vnode);
+
+			// options._render
 			if (options.__r) options.__r(vnode);
 
 			if (
@@ -170,7 +182,8 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				context = assign(assign({}, context), c.getChildContext());
 			}
 
-			return renderToString(
+			if (options.diffed) options.diffed(vnode);
+			return _renderToString(
 				rendered,
 				context,
 				opts,
@@ -284,8 +297,6 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	let isVoid =
 		String(nodeName).match(VOID_ELEMENTS) ||
 		(opts.voidElements && String(nodeName).match(opts.voidElements));
-	if (isVoid) s = s.replace(/>$/, ' />');
-
 	let pieces = [];
 
 	let children;
@@ -312,7 +323,7 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 							: nodeName === 'foreignObject'
 							? false
 							: isSvgMode,
-					ret = renderToString(
+					ret = _renderToString(
 						child,
 						context,
 						opts,
@@ -350,13 +361,15 @@ function renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		}
 	}
 
-	if (pieces.length) {
+	if (pieces.length || html) {
 		s += pieces.join('');
 	} else if (opts && opts.xml) {
 		return s.substring(0, s.length - 1) + ' />';
 	}
 
-	if (!isVoid) {
+	if (isVoid && !children && !html) {
+		s = s.replace(/>$/, ' />');
+	} else {
 		if (pretty && ~s.indexOf('\n')) s += '\n';
 		s += `</${nodeName}>`;
 	}

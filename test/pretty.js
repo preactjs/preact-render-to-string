@@ -7,7 +7,7 @@ import { dedent } from './jsx';
 chai.use(sinonChai);
 
 describe('pretty', () => {
-	let prettyRender = jsx => render(jsx, {}, { pretty: true });
+	let prettyRender = (jsx) => render(jsx, {}, { pretty: true });
 
 	it('should render no whitespace by default', () => {
 		let rendered = basicRender(
