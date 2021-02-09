@@ -39,9 +39,13 @@ renderToString.render = renderToString;
  */
 let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
+let cache = {};
+
 const EMPTY_ARR = [];
 function renderToString(vnode, context, opts) {
+	cache = {};
 	const res = _renderToString(vnode, context, opts);
+	cache = {};
 	// options._commit, we don't schedule any effects in this library right now,
 	// so we can pass an empty queue to this hook.
 	if (options.__c) options.__c(vnode, EMPTY_ARR);
@@ -70,7 +74,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 	// #text nodes
 	if (typeof vnode !== 'object' && !nodeName) {
-		return encodeEntities(vnode);
+		if (vnode in cache) return cache[vnode];
+		return (cache[vnode] = encodeEntities(vnode));
 	}
 
 	// components
@@ -132,7 +137,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						: context;
 
 				// stateless functional components
-				rendered = nodeName.call(vnode.__c, props, cctx);
+				rendered = nodeName.call(c, props, cctx);
 			} else {
 				// class-based components
 				let cxType = nodeName.contextType;
