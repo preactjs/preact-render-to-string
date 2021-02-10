@@ -26,10 +26,12 @@ export function benchmark(name, executor, iterations = 10, timeLimit = 5000) {
 		times.push((now - prev) / iterations);
 	} while (now - start < timeLimit);
 	const elapsed = now - start;
-	const hz = ((count / elapsed) * 1000) | 0;
+	const hz = Math.round((count / elapsed) * 1000);
 	const average = toFixed(elapsed / count);
-	const middle = (times.length / 2) | 0;
-	const median = toFixed((times[middle] + times[middle + 1]) / 2);
+	const middle = Math.floor(times.length / 2);
+	const middle2 = Math.ceil(times.length / 2);
+	times.sort((a, b) => a - b);
+	const median = toFixed((times[middle] + times[middle2]) / 2);
 	const hzStr = hz.toLocaleString();
 	const averageStr = average.toLocaleString();
 	const n = times.length;
