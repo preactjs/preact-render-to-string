@@ -7,24 +7,48 @@ const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
 function noop() {}
 
+/**
+ * Current output buffer
+ * @type {string[]}
+ * */
 let s = [];
-let opts = {};
+
+/**
+ * Current text encoding cache
+ * @type {Map<string, string>}
+ */
 let cache = {};
-let cache2 = {};
+
+/**
+ * Current attribute encoding cache
+ * @type {Map<string, string>}
+ */
+let attrCache = {};
+
+/**
+ * Current rendering options
+ * @type {{ pretty, shallow, shallowHighOrder, renderRootComponent, sortAttributes, allAttributes, attributeHook, xml, voidElements }}
+ */
+let opts = {};
 
 /**
  * Render Preact JSX + Components to an HTML string.
  * @param {import('preact').VNode} vnode	A Virtual DOM element to render.
+ * @param {object} context Initial context for the root node
  */
 export default function (vnode, _opts) {
+	let oldS = s;
+	let oldOpts = opts;
 	opts = _opts || {};
+	s = [];
 	try {
 		renderVNode(vnode, {}, null, false);
 		return s.join('');
 	} finally {
-		s = [];
 		cache = {};
-		cache2 = {};
+		attrCache = {};
+		s = oldS;
+		opts = oldOpts;
 	}
 }
 
@@ -32,8 +56,8 @@ export default function (vnode, _opts) {
  * Render a Virtual DOM element (of any kind) to HTML.
  * @param {import('preact').VNode|string|number|Array<import('preact').VNode|string|number>} any renderable value
  * @param {object} context (forks throughout the tree)
- * @param {any} the current select value, passed down through the tree to set <options selected>
- * @param {{ s: string }} A "string buffer" object, for passing around references to the WIP output string "s".
+ * @param {any} selectValue the current select value, passed down through the tree to set <options selected>
+ * @param {boolean} isSvgMode are we rendering within an SVG?
  */
 function renderVNode(vnode, context, selectValue, isSvgMode) {
 	if (vnode == null || typeof vnode === 'boolean') {
@@ -44,19 +68,14 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 	if (typeof vnode === 'object') {
 		if (Array.isArray(vnode)) {
 			let children = [];
-			// let out = [s];
 			getChildren(children, vnode);
 			for (let i = 0; i < children.length; i++) {
-				// s = '';
 				renderVNode(children[i], context, selectValue, isSvgMode);
-				// out.push(s);
 			}
-			// s = out.join('');
 			return;
 		}
 	} else {
-		if (vnode in cache) s.push(cache[vnode]);
-		else s.push((cache[vnode] = encodeEntities(vnode)));
+		s.push(cache[vnode] || (cache[vnode] = encodeEntities(vnode)));
 		return;
 	}
 
@@ -69,7 +88,7 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 	// components
 	if (typeof nodeName === 'function') {
 		if (nodeName === Fragment) {
-			renderVNode(vnode.props.children);
+			renderVNode(vnode.props.children, context, selectValue, isSvgMode);
 			return;
 		}
 
@@ -241,8 +260,7 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 	if (UNSAFE_NAME.test(nodeName))
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
-	s.push('<');
-	s.push(nodeName);
+	let buf = '<' + nodeName;
 
 	// render JSX to HTML
 	let propChildren, html;
@@ -299,7 +317,7 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 				opts.attributeHook &&
 				opts.attributeHook(name, v, context, opts, isComponent);
 			if (hooked || hooked === '') {
-				s.push(hooked);
+				buf = buf + hooked;
 				continue;
 			}
 
@@ -313,7 +331,7 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 					v = name;
 					// in non-xml mode, allow boolean attributes
 					if (!opts || !opts.xml) {
-						s.push(' ' + name);
+						buf = buf + ' ' + name;
 						continue;
 					}
 				}
@@ -323,10 +341,16 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 						selectValue = v;
 						continue;
 					} else if (nodeName === 'option' && selectValue == v) {
-						s.push(` selected`);
+						buf = buf + ' selected';
 					}
 				}
-				s.push(` ${name}="${cache2[v] || (cache2[v] = encodeEntities(v))}"`);
+				buf =
+					buf +
+					' ' +
+					name +
+					'="' +
+					(attrCache[v] || (attrCache[v] = encodeEntities(v))) +
+					'"';
 			}
 		}
 	}
@@ -339,9 +363,9 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 
 	let children;
 	if (isVoid) {
-		s.push(' />');
+		s.push(buf + ' />');
 	} else {
-		s.push('>');
+		s.push(buf + '>');
 		if (html) {
 			s.push(html);
 		} else if (
@@ -363,7 +387,4 @@ function renderVNode(vnode, context, selectValue, isSvgMode) {
 		}
 		s.push(`</${nodeName}>`);
 	}
-
-	// s += out;
-	// opts.s += s;
 }
