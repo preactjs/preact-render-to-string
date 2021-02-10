@@ -33,10 +33,12 @@ export function benchmark(name, executor, iterations = 10, timeLimit = 5000) {
 	const hzStr = hz.toLocaleString();
 	const averageStr = average.toLocaleString();
 	const n = times.length;
-	const stdev = times.reduce((c, t) => c + (t - average) ** 2, 0) / n;
+	const stdev = Math.sqrt(
+		times.reduce((c, t) => c + (t - average) ** 2, 0) / (n - 1)
+	);
 	const p95 = toFixed((1.96 * stdev) / Math.sqrt(n));
 	console.log(
-		`\x1b[36m${name}:\x1b[0m ${hzStr}/s, average: ${averageStr}ms, median: ${median}ms, ±${p95}`
+		`\x1b[36m${name}:\x1b[0m ${hzStr}/s, average: ${averageStr}ms ±${p95} (median: ${median}ms)`
 	);
 	return { elapsed, hz, average, median };
 }
@@ -162,15 +164,37 @@ class Expect {
 		this[NEGATED] = true;
 		return this;
 	}
+	toEqual(value) {
+		this._result(this[SUBJECT] === value, `to equal ${value}`);
+	}
 	toBeGreaterThan(value) {
+		this._result(this[SUBJECT] > value, `to be greater than ${value}`);
+		// const negated = this[NEGATED];
+
+		// const isOver = subject > value;
+		// const neg = negated ? ' not' : '';
+		// const type = isOver !== negated ? 'SUCCESS' : 'ERROR';
+		// const icon = isOver !== negated ? '✅ ' : '❌ ';
+		// let msg = `${icon} Expected ${subject}${neg} to be greater than ${value}`;
+		// if (logBuffer) {
+		// 	for (let i = logBuffer.length; i-- > -1; ) {
+		// 		if (i < 0 || logBuffer[i][2] === 1) {
+		// 			logBuffer.splice(i + 1, 0, [type, msg, 1]);
+		// 			break;
+		// 		}
+		// 	}
+		// } else {
+		// 	log(type, msg);
+		// }
+	}
+	_result(pass, detail) {
 		const subject = this[SUBJECT];
 		const negated = this[NEGATED];
 
-		const isOver = subject > value;
 		const neg = negated ? ' not' : '';
-		const type = isOver !== negated ? 'SUCCESS' : 'ERROR';
-		const icon = isOver !== negated ? '✅ ' : '❌ ';
-		let msg = `${icon} Expected ${subject}${neg} to be greater than ${value}`;
+		const type = pass !== negated ? 'SUCCESS' : 'ERROR';
+		const icon = pass !== negated ? '✅ ' : '❌ ';
+		let msg = `${icon} Expected ${subject}${neg} ${detail}`;
 		if (logBuffer) {
 			for (let i = logBuffer.length; i-- > -1; ) {
 				if (i < 0 || logBuffer[i][2] === 1) {
