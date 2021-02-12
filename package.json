@@ -29,6 +29,9 @@
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
 		"test": "eslint src test && tsc && npm run test:mocha",
 		"test:mocha": "mocha -r @babel/register test/**/*.js",
+		"bench:x": "node -r @babel/register benchmarks/index.js",
+		"bench:y": "babel benchmarks/*.js -d benchmarks/dist --env-name bench && v8 --module test/bench/benchmark.js",
+		"bench": "microbundle test/bench/index.js -f modern --external none --target node --no-compress --no-sourcemap -o test/bench/.dist.js && v8 --module test/bench/.dist.modern.js",
 		"format": "prettier src/**/*.{d.ts,js} test/**/*.js --write",
 		"prepublishOnly": "npm run build",
 		"release": "npm run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
@@ -74,7 +77,22 @@
 					"pragma": "h"
 				}
 			]
-		]
+		],
+		"env": {
+			"bench": {
+				"presets": [
+					[
+						"@babel/preset-env",
+						{
+							"targets": {
+								"node": true
+							},
+							"modules": false
+						}
+					]
+				]
+			}
+		}
 	},
 	"author": "Jason Miller <jason@developit.ca>",
 	"license": "MIT",
@@ -86,9 +104,12 @@
 		"preact": ">=10"
 	},
 	"devDependencies": {
+		"@babel/cli": "^7.12.13",
+		"@babel/core": "^7.12.13",
 		"@babel/plugin-transform-react-jsx": "^7.12.12",
 		"@babel/preset-env": "^7.12.11",
 		"@babel/register": "^7.12.10",
+		"benchmarkjs-pretty": "^2.0.1",
 		"chai": "^4.2.0",
 		"copyfiles": "^2.4.1",
 		"eslint": "^7.16.0",

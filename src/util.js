@@ -1,21 +1,21 @@
 // DOM properties that should NOT have "px" added when numeric
 export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
 
-export function encodeEntities(s) {
-	if (typeof s !== 'string') s = String(s);
-	let out = '';
-	for (let i = 0; i < s.length; i++) {
-		let ch = s[i];
-		// prettier-ignore
-		switch (ch) {
-			case '<': out += '&lt;'; break;
-			case '>': out += '&gt;'; break;
-			case '"': out += '&quot;'; break;
-			case '&': out += '&amp;'; break;
-			default: out += ch;
-		}
+function replacer(ch) {
+	switch (ch) {
+		case '<':
+			return '&lt;';
+		case '>':
+			return '&gt;';
+		case '"':
+			return '&quot;';
+		default:
+			return '&amp;';
 	}
-	return out;
+}
+
+export function encodeEntities(s) {
+	return (typeof s === 'string' ? s : String(s)).replace(/<>"&/g, replacer);
 }
 
 export let indent = (s, char) =>
