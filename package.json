@@ -22,7 +22,7 @@
 		"./": "./"
 	},
 	"scripts": {
-		"bench": "node -r @babel/register benchmarks index.js",
+		"bench": "rimraf benchmarks/isomorphic-ui-search-results-compiled && babel benchmarks/isomorphic-ui-search-results --copy-files --no-babelrc --config-file ./benchmarks/babel.config.json --out-dir benchmarks/isomorphic-ui-search-results-compiled && node -r @babel/register benchmarks index.js",
 		"build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
 		"postbuild": "node ./config/node-13-exports.js",
 		"transpile": "microbundle src/index.js -f es,umd --target web --external preact",
@@ -87,9 +87,11 @@
 		"preact": ">=10"
 	},
 	"devDependencies": {
+		"@babel/cli": "^7.13.10",
 		"@babel/plugin-transform-react-jsx": "^7.12.12",
 		"@babel/preset-env": "^7.12.11",
 		"@babel/register": "^7.12.10",
+		"babel-plugin-preact-ssr": "^0.1.0",
 		"benchmarkjs-pretty": "^2.0.1",
 		"chai": "^4.2.0",
 		"copyfiles": "^2.4.1",

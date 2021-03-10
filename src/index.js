@@ -8,6 +8,39 @@ import {
 } from './util';
 import { options, Fragment, createElement } from 'preact';
 
+export { h as renderComponent } from 'preact';
+
+export const html = (statics, ...args) => {
+	return {
+		constructor: undefined,
+		type: '$raw',
+		statics,
+		args
+	};
+};
+
+export const escapeAttr = (name, value) => {
+	if (value === false || value == null || typeof value === 'function') {
+		return;
+	}
+
+	name = encodeEntities(name);
+
+	if (name === 'style' && typeof value === 'object') {
+		value = styleObjToCss(value);
+		if (!value) return;
+	} else {
+		value = encodeEntities(value);
+	}
+
+	return {
+		constructor: undefined,
+		type: '$attr',
+		value,
+		name
+	};
+};
+
 const SHALLOW = { shallow: true };
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
@@ -70,6 +103,37 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		isComponent = false;
 	context = context || {};
 	opts = opts || {};
+
+	if (nodeName === '$raw') {
+		let out = '';
+		for (let i = 0; i < vnode.statics.length; i++) {
+			out += vnode.statics[i];
+
+			if (i < vnode.args.length) {
+				const quasi = vnode.args[i];
+				if (
+					quasi !== null &&
+					typeof quasi === 'object' &&
+					quasi.type === '$attr'
+				) {
+					if (quasi.constructor === undefined) {
+						out += `${quasi.name}="${quasi.value}"`;
+					}
+				} else {
+					out += _renderToString(
+						quasi,
+						context,
+						opts,
+						inner,
+						isSvgMode,
+						selectValue
+					);
+				}
+			}
+		}
+
+		return out;
+	}
 
 	let pretty = opts.pretty,
 		indentChar = pretty && typeof pretty === 'string' ? pretty : '\t';

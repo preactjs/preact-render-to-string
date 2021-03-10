@@ -1,0 +1,10 @@
+{
+	"plugins": [
+		[
+			"babel-plugin-preact-ssr",
+			{
+				"importSource": "../../src/index.js"
+			}
+		]
+	]
+}
