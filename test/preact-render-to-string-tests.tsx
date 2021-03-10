@@ -1,4 +1,4 @@
-import render from '../src';
+import { render } from '../src';
 import { h } from 'preact';
 
 let vdom = <div class="foo">content</div>;

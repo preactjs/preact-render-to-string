@@ -19,19 +19,6 @@ const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
 const noop = () => {};
 
-/** Render Preact JSX + Components to an HTML string.
- *	@name render
- *	@function
- *	@param {VNode} vnode	JSX VNode to render.
- *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
- *	@param {Object} [options={}]	Rendering options
- *	@param {Boolean} [options.shallow=false]	If `true`, renders nested Components as HTML elements (`<Foo a="b" />`).
- *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
- *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
- *	@param {RegEx|undefined} [options.voidElements]       RegeEx that matches elements that are considered void (self-closing)
- */
-renderToString.render = renderToString;
-
 /** Only render elements, leaving Components inline as `<ComponentName ... />`.
  *	This method is just a convenience alias for `render(vnode, context, { shallow:true })`
  *	@name shallow
@@ -39,10 +26,22 @@ renderToString.render = renderToString;
  *	@param {VNode} vnode	JSX VNode to render.
  *	@param {Object} [context={}]	Optionally pass an initial context object through the render path.
  */
-let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
+export let shallowRender = (vnode, context) =>
+	renderToString(vnode, context, SHALLOW);
 
 const EMPTY_ARR = [];
-function renderToString(vnode, context, opts) {
+
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX VNode to render.
+ * @param {Object} [context={}]	Optionally pass an initial context object through the render path.
+ * @param {Object} [options={}]	Rendering options
+ * @param {Boolean} [options.shallow=false]	If `true`, renders nested Components as HTML elements (`<Foo a="b" />`).
+ * @param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
+ * @param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
+ * @param {RegEx|undefined} [options.voidElements]       RegeEx that matches elements that are considered void (self-closing)
+ */
+export function renderToString(vnode, context, opts) {
 	const res = _renderToString(vnode, context, opts);
 	// options._commit, we don't schedule any effects in this library right now,
 	// so we can pass an empty queue to this hook.
@@ -50,7 +49,12 @@ function renderToString(vnode, context, opts) {
 	return res;
 }
 
-/** The default export is an alias of `render()`. */
+export {
+	// Aliased export for React compat
+	renderToString as renderToStaticMarkup,
+	renderToString as render
+};
+
 function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (vnode == null || typeof vnode === 'boolean') {
 		return '';
@@ -407,13 +411,3 @@ function getFallbackComponentName(component) {
 	}
 	return name;
 }
-renderToString.shallowRender = shallowRender;
-
-export default renderToString;
-
-export {
-	renderToString as render,
-	renderToString as renderToStaticMarkup,
-	renderToString,
-	shallowRender
-};

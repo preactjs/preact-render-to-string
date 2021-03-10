@@ -16,7 +16,7 @@ Works in Node & the browser, making it useful for universal/isomorphic rendering
 ### Render JSX/VDOM to HTML
 
 ```js
-import render from 'preact-render-to-string';
+import { render } from 'preact-render-to-string';
 import { h } from 'preact';
 /** @jsx h */
 
@@ -31,7 +31,7 @@ console.log(html);
 ### Render Preact Components to HTML
 
 ```js
-import render from 'preact-render-to-string';
+import { render } from 'preact-render-to-string';
 import { h, Component } from 'preact';
 /** @jsx h */
 
@@ -66,7 +66,7 @@ console.log(html);
 ```js
 import express from 'express';
 import { h } from 'preact';
-import render from 'preact-render-to-string';
+import { render } from 'preact-render-to-string';
 /** @jsx h */
 
 // silly example component:
@@ -92,8 +92,30 @@ app.get('/:fox', (req, res) => {
 
 ---
 
+## Migration guide
 
-### License
+### Migrating from 5.x to 6.x
+
+The only breaking change introduced with the `6.x` is that the `default` exports have been removed in favor of named exports. To update, replace the default import in your code with a named one.
+
+```diff
+- import render from 'preact-render-to-string';
++ import { render } from 'preact-render-to-string';
+```
+
+Similarily if you've been using the `jsx` renderer, the default import needs to be swapped with a named import:
+
+```diff
+- import render from 'preact-render-to-string/jsx';
++ import { render } from 'preact-render-to-string/jsx';
+```
+
+_Note: The named exports were already present in the `5.x` release line. So if you can't update today for any reason, you can apply the above changes safely to make a future update to `6.x` easier!_
+
+---
+
+
+## License
 
 [MIT]
 

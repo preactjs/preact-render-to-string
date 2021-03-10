@@ -1,4 +1,4 @@
-import render from '../src/jsx';
+import { render } from '../src/jsx';
 import { h } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';

@@ -10,4 +10,3 @@ interface Options {
 }
 
 export function render(vnode: VNode, context?: any, options?: Options): string;
-export default render;
