@@ -6,11 +6,10 @@ interface Options {
 	pretty?: boolean | string;
 }
 
-export function render(vnode: VNode, context?: any, options?: Options): string;
 export function renderToString(
 	vnode: VNode,
 	context?: any,
 	options?: Options
 ): string;
+export const render: typeof renderToString;
 export function shallowRender(vnode: VNode, context?: any): string;
-export default render;
