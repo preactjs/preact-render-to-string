@@ -3,7 +3,7 @@ import { render } from '../src/jsx';
 import { h, Fragment } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
-import { dedent } from './jsx';
+import { dedent } from './jsx.test';
 chai.use(sinonChai);
 
 describe('pretty', () => {
