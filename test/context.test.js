@@ -2,15 +2,8 @@ import render from '../src/jsx';
 import { h, createContext, Component } from 'preact';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
+import { dedent } from './utils';
 chai.use(sinonChai);
-
-// tag to remove leading whitespace from tagged template literal
-function dedent([str]) {
-	return str
-		.split('\n' + str.match(/^\n*(\s+)/)[1])
-		.join('\n')
-		.replace(/(^\n+|\n+\s*$)/g, '');
-}
 
 describe('context', () => {
 	let renderJsx = (jsx, opts) => render(jsx, null, opts).replace(/ {2}/g, '\t');
