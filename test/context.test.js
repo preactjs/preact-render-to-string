@@ -1,9 +1,7 @@
 import render from '../src/jsx';
 import { h, createContext, Component } from 'preact';
-import chai, { expect } from 'chai';
-import sinonChai from 'sinon-chai';
+import { expect } from 'chai';
 import { dedent } from './utils';
-chai.use(sinonChai);
 
 describe('context', () => {
 	let renderJsx = (jsx, opts) => render(jsx, null, opts).replace(/ {2}/g, '\t');
