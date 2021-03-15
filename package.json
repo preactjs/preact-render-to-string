@@ -23,6 +23,7 @@
 	},
 	"scripts": {
 		"bench": "BABEL_ENV=test node -r @babel/register benchmarks index.js",
+		"bench:v8": "BABEL_ENV=test microbundle benchmarks/index.js -f modern --alias benchmarkjs-pretty=benchmarks/lib/benchmark-lite.js --external none --target node --no-compress --no-sourcemap --raw -o benchmarks/.v8.js && v8 --module benchmarks/.v8.modern.js",
 		"build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
 		"postbuild": "node ./config/node-13-exports.js && node ./config/node-commonjs.js",
 		"transpile": "microbundle src/index.js -f es,umd --target web --external preact",
