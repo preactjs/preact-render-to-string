@@ -22,13 +22,13 @@
 		"./": "./"
 	},
 	"scripts": {
-		"bench": "node -r @babel/register benchmarks index.js",
+		"bench": "BABEL_ENV=test node -r @babel/register benchmarks index.js",
 		"build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
 		"postbuild": "node ./config/node-13-exports.js && node ./config/node-commonjs.js",
 		"transpile": "microbundle src/index.js -f es,umd --target web --external preact",
 		"transpile:jsx": "microbundle src/jsx.js -o dist/jsx.js --target web --external none && microbundle dist/jsx.js -o dist/jsx.js -f cjs",
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
-		"test": "eslint src test && tsc && npm run test:mocha",
+		"test": "eslint src test && tsc && npm run test:mocha && npm run bench",
 		"test:mocha": "mocha -r @babel/register -r test/setup.js test/**/*.test.js",
 		"format": "prettier src/**/*.{d.ts,js} test/**/*.js --write",
 		"prepublishOnly": "npm run build",
@@ -65,17 +65,28 @@
 		}
 	},
 	"babel": {
-		"presets": [
-			"@babel/preset-env"
-		],
-		"plugins": [
-			[
-				"@babel/plugin-transform-react-jsx",
-				{
-					"pragma": "h"
-				}
-			]
-		]
+		"env": {
+			"test": {
+				"presets": [
+					[
+						"@babel/preset-env",
+						{
+							"targets": {
+								"node": true
+							}
+						}
+					]
+				],
+				"plugins": [
+					[
+						"@babel/plugin-transform-react-jsx",
+						{
+							"pragma": "h"
+						}
+					]
+				]
+			}
+		}
 	},
 	"author": "Jason Miller <jason@developit.ca>",
 	"license": "MIT",
