@@ -15,7 +15,7 @@ function replacer(ch) {
 }
 
 export function encodeEntities(s) {
-	return (typeof s === 'string' ? s : String(s)).replace(/<>"&/g, replacer);
+	return (typeof s === 'string' ? s : String(s)).replace(/[<>"&]/g, replacer);
 }
 
 export let indent = (s, char) =>
