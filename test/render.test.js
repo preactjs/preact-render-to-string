@@ -265,7 +265,7 @@ describe('render', () => {
 
 		it('should render SVG elements', () => {
 			let rendered = render(
-				<svg>
+				<svg viewBox="0 0 100 100">
 					<image xlinkHref="#" />
 					<foreignObject>
 						<div xlinkHref="#" />
@@ -277,7 +277,7 @@ describe('render', () => {
 			);
 
 			expect(rendered).to.equal(
-				`<svg><image xlink:href="#"></image><foreignObject><div xlinkHref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
+				`<svg viewBox="0 0 100 100"><image xlink:href="#"></image><foreignObject><div xlinkhref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
 	});

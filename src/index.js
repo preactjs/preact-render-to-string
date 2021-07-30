@@ -17,6 +17,9 @@ const UNNAMED = [];
 
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
+const DASHED_ATTRS = /^(acceptC|httpE)/;
+const CAMEL_ATTRS = /^(viewB)/;
+
 const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
 const noop = () => {};
@@ -250,9 +253,13 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				name = 'class';
 			} else if (isSvgMode && name.match(/^xlink:?./)) {
 				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+			} else if (DASHED_ATTRS.test(name)) {
+				name = name.replace(/([A-Z])/g, (l) => '-' + l.toLowerCase());
+			} else if (!CAMEL_ATTRS.test(name)) {
+				name = name.toLowerCase();
 			}
 
-			if (name === 'htmlFor') {
+			if (name === 'htmlfor') {
 				if (props.for) continue;
 				name = 'for';
 			}
@@ -275,7 +282,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				continue;
 			}
 
-			if (name === 'dangerouslySetInnerHTML') {
+			if (name === 'dangerouslysetinnerhtml') {
 				html = v && v.__html;
 			} else if (nodeName === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
