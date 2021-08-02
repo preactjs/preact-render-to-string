@@ -89,6 +89,20 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should decamelize attributes', () => {
+			let rendered = render(<img srcSet="foo.png, foo2.png 2x" />),
+				expected = `<img srcset="foo.png, foo2.png 2x" />`;
+
+			expect(rendered).to.equal(expected);
+		});
+
+		it('should dasherize certain attributes', () => {
+			let rendered = render(<meta httpEquiv="refresh" />),
+				expected = `<meta http-equiv="refresh" />`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should include boolean aria-* attributes', () => {
 			let rendered = render(<div aria-hidden aria-whatever={false} />),
 				expected = `<div aria-hidden="true" aria-whatever="false"></div>`;

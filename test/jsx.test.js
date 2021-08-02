@@ -74,16 +74,6 @@ describe('jsx', () => {
 		`);
 	});
 
-	it('should decamelize attributes', () => {
-		expect(renderJsx(<img srcSet="foo.png, foo2.png 2x" />)).to.equal(
-			`<img srcset="foo.png, foo2.png 2x" />`
-		);
-	});
-
-	it('should dasherize certain attributes', () => {
-		expect(renderJsx(<meta httpEquiv="" />)).to.equal(`<meta http-equiv="" />`);
-	});
-
 	it('should skip null and undefined attributes', () => {
 		expect(renderJsx(<a b={null}>bar</a>)).to.equal(`<a>bar</a>`);
 
@@ -161,11 +151,11 @@ describe('jsx', () => {
 	it('should skip function names if functionNames=false', () => {
 		expect(
 			renderJsx(<div onClick={() => {}} />, { functionNames: false })
-		).to.equal('<div onclick={Function}></div>');
+		).to.equal('<div onClick={Function}></div>');
 
 		expect(
 			renderJsx(<div onClick={function foo() {}} />, { functionNames: false })
-		).to.equal('<div onclick={Function}></div>');
+		).to.equal('<div onClick={Function}></div>');
 	});
 
 	it('should render self-closing elements', () => {

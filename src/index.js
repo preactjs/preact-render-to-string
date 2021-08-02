@@ -253,13 +253,9 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				name = 'class';
 			} else if (isSvgMode && name.match(/^xlink:?./)) {
 				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
-			} else if (DASHED_ATTRS.test(name)) {
-				name = name.replace(/([A-Z])/g, (l) => '-' + l.toLowerCase());
-			} else if (!CAMEL_ATTRS.test(name)) {
-				name = name.toLowerCase();
 			}
 
-			if (name === 'htmlfor') {
+			if (name === 'htmlFor') {
 				if (props.for) continue;
 				name = 'for';
 			}
@@ -282,7 +278,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				continue;
 			}
 
-			if (name === 'dangerouslysetinnerhtml') {
+			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
 			} else if (nodeName === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
@@ -305,6 +301,14 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						s += ` selected`;
 					}
 				}
+
+				// Convert attribute names to proper html casing
+				if (DASHED_ATTRS.test(name)) {
+					name = name.replace(/([A-Z])/g, (l) => '-' + l.toLowerCase());
+				} else if (!CAMEL_ATTRS.test(name)) {
+					name = name.toLowerCase();
+				}
+
 				s += ` ${name}="${encodeEntities(v)}"`;
 			}
 		}
