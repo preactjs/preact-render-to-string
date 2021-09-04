@@ -1,7 +1,7 @@
 import { h } from 'preact';
 import Suite from 'benchmarkjs-pretty';
 import renderToStringBaseline from './lib/render-to-string';
-import renderToString, {serializeToString} from '../src/index';
+import renderToString, { serializeToString } from '../src/index';
 import TextApp from './text';
 // import StackApp from './stack';
 import { App as IsomorphicSearchResults } from './isomorphic-ui-search-results';
