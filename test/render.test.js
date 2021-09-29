@@ -103,6 +103,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should colonize certain attributes & leave certain attributes camelized', () => {
+			let rendered = render(<svg xmlSpace="preserve" viewBox="0 0 10 10" />),
+				expected = `<svg xml:space="preserve" viewBox="0 0 10 10"></svg>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should include boolean aria-* attributes', () => {
 			let rendered = render(<div aria-hidden aria-whatever={false} />),
 				expected = `<div aria-hidden="true" aria-whatever="false"></div>`;
@@ -291,7 +298,7 @@ describe('render', () => {
 			);
 
 			expect(rendered).to.equal(
-				`<svg viewBox="0 0 100 100"><image xlink:href="#"></image><foreignObject><div xlinkhref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
+				`<svg viewBox="0 0 100 100"><image xlink:href="#"></image><foreignObject><div xlink:href="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
 	});

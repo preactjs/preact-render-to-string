@@ -18,7 +18,10 @@ const UNNAMED = [];
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 const DASHED_ATTRS = /^(acceptC|httpE)/;
-const CAMEL_ATTRS = /^(viewB)/;
+const CAMEL_ATTRS = /^(viewB|isP)/;
+const COLON_ATTRS = /^(xmlS|xlinkH)/;
+const transformAttr = (attr, separator) =>
+	attr.replace(/([A-Z])/g, (w) => separator + w.toLowerCase());
 
 const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
@@ -304,7 +307,9 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 				// Convert attribute names to proper html casing
 				if (DASHED_ATTRS.test(name)) {
-					name = name.replace(/([A-Z])/g, (l) => '-' + l.toLowerCase());
+					name = transformAttr(name, '-');
+				} else if (COLON_ATTRS.test(name)) {
+					name = transformAttr(name, ':');
 				} else if (!CAMEL_ATTRS.test(name)) {
 					name = name.toLowerCase();
 				}
