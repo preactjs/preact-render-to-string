@@ -96,6 +96,15 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should decamelize bool attributes', () => {
+			let rendered = render(
+					<link rel="preconnect" href="https://foo.com" crossOrigin />
+				),
+				expected = `<link rel="preconnect" href="https://foo.com" crossorigin />`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should dasherize certain attributes', () => {
 			let rendered = render(<meta httpEquiv="refresh" />),
 				expected = `<meta http-equiv="refresh" />`;

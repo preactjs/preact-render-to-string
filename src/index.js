@@ -20,8 +20,8 @@ const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|sou
 const DASHED_ATTRS = /^(acceptC|httpE)/;
 const CAMEL_ATTRS = /^(viewB|isP)/;
 const COLON_ATTRS = /^(xmlS|xlinkH)/;
-const transformAttr = (attr, separator) =>
-	attr.replace(/([A-Z])/g, (w) => separator + w.toLowerCase());
+
+const CAPITAL_REGEXP = /([A-Z])/g;
 
 const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
@@ -287,6 +287,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
 				propChildren = v;
 			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
+				name = getAttributeNameInHtmlCase(name);
+
 				if (v === true || v === '') {
 					v = name;
 					// in non-xml mode, allow boolean attributes
@@ -303,15 +305,6 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 					} else if (nodeName === 'option' && selectValue == v) {
 						s += ` selected`;
 					}
-				}
-
-				// Convert attribute names to proper html casing
-				if (DASHED_ATTRS.test(name)) {
-					name = transformAttr(name, '-');
-				} else if (COLON_ATTRS.test(name)) {
-					name = transformAttr(name, ':');
-				} else if (!CAMEL_ATTRS.test(name)) {
-					name = name.toLowerCase();
 				}
 
 				s += ` ${name}="${encodeEntities(v)}"`;
@@ -442,6 +435,19 @@ function getFallbackComponentName(component) {
 	}
 	return name;
 }
+
+function getAttributeNameInHtmlCase(name) {
+	if (CAMEL_ATTRS.test(name)) return name;
+
+	if (DASHED_ATTRS.test(name))
+		return name.replace(CAPITAL_REGEXP, (w) => '-' + w.toLowerCase());
+
+	if (COLON_ATTRS.test(name))
+		return name.replace(CAPITAL_REGEXP, (w) => ':' + w.toLowerCase());
+
+	return name.toLowerCase();
+}
+
 renderToString.shallowRender = shallowRender;
 
 export default renderToString;
