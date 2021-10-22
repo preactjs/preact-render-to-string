@@ -112,9 +112,11 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
-		it('should colonize certain attributes & leave certain attributes camelized', () => {
-			let rendered = render(<svg xmlSpace="preserve" viewBox="0 0 10 10" />),
-				expected = `<svg xml:space="preserve" viewBox="0 0 10 10"></svg>`;
+		it('should colonize/dasherize certain attributes & leave certain attributes camelized', () => {
+			let rendered = render(
+					<svg xmlSpace="preserve" viewBox="0 0 10 10" fillRule="nonzero" />
+				),
+				expected = `<svg xml:space="preserve" viewBox="0 0 10 10" fill-rule="nonzero"></svg>`;
 
 			expect(rendered).to.equal(expected);
 		});

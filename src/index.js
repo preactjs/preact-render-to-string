@@ -17,9 +17,9 @@ const UNNAMED = [];
 
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
-const DASHED_ATTRS = /^(acceptC|httpE)/;
-const CAMEL_ATTRS = /^(viewB|isP)/;
-const COLON_ATTRS = /^(xmlS|xlinkH)/;
+const DASHED_ATTRS = /^(acceptC|httpE|(clip|color|fill|font|glyph|marker|stop|stroke|text|vert)[A-Z])/;
+const CAMEL_ATTRS = /^(isP|viewB)/;
+const COLON_ATTRS = /^(xlink|xml|xmlns)[A-Z]/;
 
 const CAPITAL_REGEXP = /([A-Z])/g;
 
