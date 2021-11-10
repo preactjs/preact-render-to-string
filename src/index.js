@@ -6,7 +6,9 @@ import {
 	assign,
 	getChildren
 } from './util';
-import { options, Fragment, createElement } from 'preact';
+import { options, Fragment } from 'preact';
+
+/** @typedef {import('preact').VNode} VNode */
 
 const SHALLOW = { shallow: true };
 
@@ -28,7 +30,7 @@ const noop = () => {};
  *	@param {Boolean} [options.shallow=false]	If `true`, renders nested Components as HTML elements (`<Foo a="b" />`).
  *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
  *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
- *	@param {RegEx|undefined} [options.voidElements]       RegeEx that matches elements that are considered void (self-closing)
+ *	@param {RegExp|undefined} [options.voidElements]       RegeEx that matches elements that are considered void (self-closing)
  */
 renderToString.render = renderToString;
 
@@ -43,10 +45,24 @@ let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
 const EMPTY_ARR = [];
 function renderToString(vnode, context, opts) {
+	context = context || {};
+	opts = opts || {};
+
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options.__s;
+	options.__s = true;
+
 	const res = _renderToString(vnode, context, opts);
+
 	// options._commit, we don't schedule any effects in this library right now,
 	// so we can pass an empty queue to this hook.
 	if (options.__c) options.__c(vnode, EMPTY_ARR);
+	EMPTY_ARR.length = 0;
+	options.__s = previousSkipEffects;
 	return res;
 }
 
@@ -56,24 +72,33 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		return '';
 	}
 
-	// wrap array nodes in Fragment
+	// #text nodes
+	if (typeof vnode !== 'object') {
+		return encodeEntities(vnode);
+	}
+
+	let pretty = opts.pretty,
+		indentChar = pretty && typeof pretty === 'string' ? pretty : '\t';
+
 	if (Array.isArray(vnode)) {
-		vnode = createElement(Fragment, null, vnode);
+		let rendered = '';
+		for (let i = 0; i < vnode.length; i++) {
+			if (pretty && i > 0) rendered += '\n';
+			rendered += _renderToString(
+				vnode[i],
+				context,
+				opts,
+				inner,
+				isSvgMode,
+				selectValue
+			);
+		}
+		return rendered;
 	}
 
 	let nodeName = vnode.type,
 		props = vnode.props,
 		isComponent = false;
-	context = context || {};
-	opts = opts || {};
-
-	let pretty = opts.pretty,
-		indentChar = pretty && typeof pretty === 'string' ? pretty : '\t';
-
-	// #text nodes
-	if (typeof vnode !== 'object' && !nodeName) {
-		return encodeEntities(vnode);
-	}
 
 	// components
 	if (typeof nodeName === 'function') {
@@ -81,23 +106,16 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		if (opts.shallow && (inner || opts.renderRootComponent === false)) {
 			nodeName = getComponentName(nodeName);
 		} else if (nodeName === Fragment) {
-			let rendered = '';
-			let children = [];
+			const children = [];
 			getChildren(children, vnode.props.children);
-
-			for (let i = 0; i < children.length; i++) {
-				rendered +=
-					(i > 0 && pretty ? '\n' : '') +
-					_renderToString(
-						children[i],
-						context,
-						opts,
-						opts.shallowHighOrder !== false,
-						isSvgMode,
-						selectValue
-					);
-			}
-			return rendered;
+			return _renderToString(
+				children,
+				context,
+				opts,
+				opts.shallowHighOrder !== false,
+				isSvgMode,
+				selectValue
+			);
 		} else {
 			let rendered;
 
@@ -197,7 +215,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	}
 
 	// render JSX to HTML
-	let s = '',
+	let s = '<' + nodeName,
 		propChildren,
 		html;
 
@@ -215,19 +233,20 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				continue;
 			}
 
-			if (name.match(/[\s\n\\/='"\0<>]/)) continue;
+			if (UNSAFE_NAME.test(name)) continue;
 
 			if (
 				!(opts && opts.allAttributes) &&
 				(name === 'key' ||
 					name === 'ref' ||
 					name === '__self' ||
-					name === '__source' ||
-					name === 'defaultValue')
+					name === '__source')
 			)
 				continue;
 
-			if (name === 'className') {
+			if (name === 'defaultValue') {
+				name = 'value';
+			} else if (name === 'className') {
 				if (props.class) continue;
 				name = 'class';
 			} else if (isSvgMode && name.match(/^xlink:?./)) {
@@ -287,18 +306,19 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 	// account for >1 multiline attribute
 	if (pretty) {
-		let sub = s.replace(/^\n\s*/, ' ');
+		let sub = s.replace(/\n\s*/, ' ');
 		if (sub !== s && !~sub.indexOf('\n')) s = sub;
 		else if (pretty && ~s.indexOf('\n')) s += '\n';
 	}
 
-	s = `<${nodeName}${s}>`;
-	if (UNSAFE_NAME.test(String(nodeName)))
+	s += '>';
+
+	if (UNSAFE_NAME.test(nodeName))
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
 	let isVoid =
-		VOID_ELEMENTS.test(String(nodeName)) ||
-		(opts.voidElements && opts.voidElements.test(String(nodeName)));
+		VOID_ELEMENTS.test(nodeName) ||
+		(opts.voidElements && opts.voidElements.test(nodeName));
 	let pieces = [];
 
 	let children;
