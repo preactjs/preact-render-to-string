@@ -19,7 +19,7 @@ const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|sou
 
 const DASHED_ATTRS = /^(acceptC|httpE|(clip|color|fill|font|glyph|marker|stop|stroke|text|vert)[A-Z])/;
 const CAMEL_ATTRS = /^(isP|viewB)/;
-const COLON_ATTRS = /^(xlink|xml|xmlns)[A-Z]/;
+const COLON_ATTRS = /^(xlink|xml|xmlns)([A-Z])/;
 
 const CAPITAL_REGEXP = /([A-Z])/g;
 
@@ -287,7 +287,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
 				propChildren = v;
 			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
-				name = getAttributeNameInHtmlCase(name);
+				name = transformAttributeName(name);
 
 				if (v === true || v === '') {
 					v = name;
@@ -306,7 +306,6 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						s += ` selected`;
 					}
 				}
-
 				s += ` ${name}="${encodeEntities(v)}"`;
 			}
 		}
@@ -436,14 +435,16 @@ function getFallbackComponentName(component) {
 	return name;
 }
 
-function getAttributeNameInHtmlCase(name) {
+function transformAttributeName(name) {
 	if (CAMEL_ATTRS.test(name)) return name;
 
-	if (DASHED_ATTRS.test(name))
-		return name.replace(CAPITAL_REGEXP, (w) => '-' + w.toLowerCase());
+	if (DASHED_ATTRS.test(name)) {
+		return name.replace(CAPITAL_REGEXP, '-$1').toLowerCase();
+	}
 
-	if (COLON_ATTRS.test(name))
-		return name.replace(CAPITAL_REGEXP, (w) => ':' + w.toLowerCase());
+	if (COLON_ATTRS.test(name)) {
+		return name.replace(CAPITAL_REGEXP, ':$1').toLowerCase();
+	}
 
 	return name.toLowerCase();
 }
