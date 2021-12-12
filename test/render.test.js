@@ -1,4 +1,5 @@
 import { render, shallowRender } from '../src';
+import { possibleStandardNames } from './utils';
 import { h, Component, createContext, Fragment, options } from 'preact';
 import { useState, useContext, useEffect, useLayoutEffect } from 'preact/hooks';
 import { expect } from 'chai';
@@ -87,6 +88,16 @@ describe('render', () => {
 				expected = `<div value="test"></div>`;
 
 			expect(rendered).to.equal(expected);
+		});
+
+		it('should transform attribute names to html standard name', () => {
+			Object.entries(possibleStandardNames).forEach(([standardName, name]) => {
+				let props = { [name]: 'test' },
+					rendered = render(<div {...props} />),
+					expected = `<div ${standardName}="test"></div>`;
+
+				expect(rendered).to.equal(expected);
+			});
 		});
 
 		it('should include boolean aria-* attributes', () => {
