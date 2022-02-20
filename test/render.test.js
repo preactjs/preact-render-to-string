@@ -3,6 +3,7 @@ import { h, Component, createContext, Fragment, options } from 'preact';
 import { useState, useContext, useEffect, useLayoutEffect } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
+import { createInternalFromVnode } from '../src/util';
 
 describe('render', () => {
 	describe('Basic JSX', () => {
@@ -322,27 +323,6 @@ describe('render', () => {
 				match({})
 			);
 		});
-
-		it('should apply defaultProps', () => {
-			const Test = (props) => <div {...props} />;
-			Test.defaultProps = {
-				foo: 'default foo',
-				bar: 'default bar'
-			};
-
-			expect(render(<Test />), 'defaults').to.equal(
-				'<div foo="default foo" bar="default bar"></div>'
-			);
-			expect(render(<Test bar="b" />), 'partial').to.equal(
-				'<div bar="b" foo="default foo"></div>'
-			);
-			expect(render(<Test foo="a" bar="b" />), 'overridden').to.equal(
-				'<div foo="a" bar="b"></div>'
-			);
-			expect(render(<Test foo={undefined} bar="b" />), 'overridden').to.equal(
-				'<div foo="default foo" bar="b"></div>'
-			);
-		});
 	});
 
 	describe('Classical Components', () => {
@@ -413,31 +393,6 @@ describe('render', () => {
 				}),
 				match({}),
 				match({})
-			);
-		});
-
-		it('should apply defaultProps', () => {
-			class Test extends Component {
-				render(props) {
-					return <div {...props} />;
-				}
-			}
-			Test.defaultProps = {
-				foo: 'default foo',
-				bar: 'default bar'
-			};
-
-			expect(render(<Test />), 'defaults').to.equal(
-				'<div foo="default foo" bar="default bar"></div>'
-			);
-			expect(render(<Test bar="b" />), 'partial').to.equal(
-				'<div bar="b" foo="default foo"></div>'
-			);
-			expect(render(<Test foo="a" bar="b" />), 'overridden').to.equal(
-				'<div foo="a" bar="b"></div>'
-			);
-			expect(render(<Test foo={undefined} bar="b" />), 'overridden').to.equal(
-				'<div foo="default foo" bar="b"></div>'
 			);
 		});
 
@@ -1113,10 +1068,10 @@ describe('render', () => {
 
 		expect(calls).to.deep.equal([
 			['_diff', [vnode1]],
-			['_render', [vnode1]],
+			['_render', [createInternalFromVnode(vnode1, {})]],
 			['diffed', [vnode1]],
 			['_diff', [vnode2]],
-			['_render', [vnode2]],
+			['_render', [createInternalFromVnode(vnode2, {})]],
 			['diffed', [vnode2]],
 			['_commit', [vnode1, []]]
 		]);

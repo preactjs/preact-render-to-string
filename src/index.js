@@ -4,7 +4,8 @@ import {
 	isLargeString,
 	styleObjToCss,
 	assign,
-	getChildren
+	getChildren,
+	createInternalFromVnode
 } from './util';
 import { options, Fragment } from 'preact';
 
@@ -15,8 +16,7 @@ const SHALLOW = { shallow: true };
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
 
-const VOID_ELEMENTS =
-	/^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
@@ -128,14 +128,15 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				setState: noop,
 				forceUpdate: noop,
 				// hooks
-				__h: []
+				data: {}
 			});
 
 			// options._diff
 			if (options.__b) options.__b(vnode);
 
+			const internal = createInternalFromVnode(vnode, context);
 			// options._render
-			if (options.__r) options.__r(vnode);
+			if (options.__r) options.__r(internal);
 
 			if (
 				!nodeName.prototype ||
