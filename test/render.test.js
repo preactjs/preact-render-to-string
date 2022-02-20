@@ -3,6 +3,7 @@ import { h, Component, createContext, Fragment, options } from 'preact';
 import { useState, useContext, useEffect, useLayoutEffect } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
+import { createInternalFromVnode } from '../src/util';
 
 describe('render', () => {
 	describe('Basic JSX', () => {
@@ -1067,10 +1068,10 @@ describe('render', () => {
 
 		expect(calls).to.deep.equal([
 			['_diff', [vnode1]],
-			['_render', [vnode1]],
+			['_render', [createInternalFromVnode(vnode1, {})]],
 			['diffed', [vnode1]],
 			['_diff', [vnode2]],
-			['_render', [vnode2]],
+			['_render', [createInternalFromVnode(vnode2, {})]],
 			['diffed', [vnode2]],
 			['_commit', [vnode1, []]]
 		]);

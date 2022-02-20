@@ -1,4 +1,5 @@
 import { render } from '../src';
+import { h } from 'preact';
 import { createElement, Component } from 'preact/compat';
 import { expect } from 'chai';
 
