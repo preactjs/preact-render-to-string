@@ -133,8 +133,14 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			// options._diff
 			if (options.__b) options.__b(vnode);
 
+			const internal = {
+				type: vnode.type,
+				props: vnode.props,
+				data: {},
+				_context: context
+			};
 			// options._render
-			if (options.__r) options.__r(vnode);
+			if (options.__r) options.__r(internal);
 
 			if (
 				!nodeName.prototype ||
