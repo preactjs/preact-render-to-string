@@ -15,8 +15,7 @@ const SHALLOW = { shallow: true };
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
 
-const VOID_ELEMENTS =
-	/^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
@@ -296,7 +295,13 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 					if (nodeName === 'select') {
 						selectValue = v;
 						continue;
-					} else if (nodeName === 'option' && selectValue == v) {
+					} else if (
+						// If we're looking at an <option> and it's the currently selected one
+						nodeName === 'option' &&
+						selectValue == v &&
+						// and the <option> doesn't already have a selected attribute on it
+						typeof props.selected === 'undefined'
+					) {
 						s += ` selected`;
 					}
 				}
