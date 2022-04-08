@@ -1139,6 +1139,20 @@ describe('render', () => {
 		);
 	});
 
+	it('should not add a selected attribute if one already exists', () => {
+		let res = render(
+			<select value="B">
+				<option value="A">A</option>
+				<option selected value="B">
+					B
+				</option>
+			</select>
+		);
+		expect(res).to.equal(
+			'<select><option value="A">A</option><option selected value="B">B</option></select>'
+		);
+	});
+
 	it('should render select value on option with a Fragment', () => {
 		let res = render(
 			<select value="B">
