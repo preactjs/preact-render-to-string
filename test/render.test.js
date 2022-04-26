@@ -1,6 +1,12 @@
 import { render, shallowRender } from '../src';
 import { h, Component, createContext, Fragment, options } from 'preact';
-import { useState, useContext, useEffect, useLayoutEffect } from 'preact/hooks';
+import {
+	useState,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useMemo
+} from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
 
@@ -1052,12 +1058,48 @@ describe('render', () => {
 		});
 
 		it('should work with useState', () => {
+			let renders = 0;
+
 			function Foo() {
+				renders++;
 				let [v] = useState(0);
 				return <div>{v}</div>;
 			}
 
 			expect(render(<Foo />)).to.equal('<div>0</div>');
+			expect(renders).to.equal(1);
+		});
+
+		it('should re-render when useState setter is called during rendering', () => {
+			let renders = 0;
+
+			function Foo() {
+				renders++;
+				let [v, setV] = useState(0);
+				useMemo(() => {
+					setV(1);
+				}, []);
+				return <div>{v}</div>;
+			}
+
+			expect(render(<Foo />)).to.equal('<div>1</div>');
+			expect(renders).to.equal(2);
+		});
+
+		it('should re-render up to 25 times to allow useState settling', () => {
+			let renders = 0;
+
+			function Foo() {
+				renders++;
+				let [v, setV] = useState(0);
+				if (v < 30) {
+					setV(v + 1);
+				}
+				return <div>{v}</div>;
+			}
+
+			expect(render(<Foo />)).to.equal('<div>24</div>');
+			expect(renders).to.equal(25);
 		});
 
 		it('should not trigger useEffect callbacks', () => {
