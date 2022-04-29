@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 5.2.0
+
+### Minor Changes
+
+- [#219](https://github.com/preactjs/preact-render-to-string/pull/219) [`250c15f`](https://github.com/preactjs/preact-render-to-string/commit/250c15fbc01e28c3934689e2a846e441709d829f) Thanks [@developit](https://github.com/developit)! - Implement hook state settling. Setting hook state during the execution of a function component (eg: in `useMemo`) will now re-render the component and use the final result. Previously, these updates were dropped.
+
 ## 5.1.21
 
 ### Patch Changes
