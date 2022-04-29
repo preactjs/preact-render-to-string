@@ -19,7 +19,9 @@ const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|sou
 
 const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 
-const noop = () => {};
+function markAsDirty() {
+	this.__d = true;
+}
 
 /** Render Preact JSX + Components to an HTML string.
  *	@name render
@@ -124,8 +126,9 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				context,
 				props: vnode.props,
 				// silently drop state updates
-				setState: noop,
-				forceUpdate: noop,
+				setState: markAsDirty,
+				forceUpdate: markAsDirty,
+				__d: true,
 				// hooks
 				__h: []
 			});
@@ -134,7 +137,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			if (options.__b) options.__b(vnode);
 
 			// options._render
-			if (options.__r) options.__r(vnode);
+			let renderHook = options.__r;
 
 			if (
 				!nodeName.prototype ||
@@ -151,8 +154,20 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 							: cxType.__
 						: context;
 
-				// stateless functional components
-				rendered = nodeName.call(vnode.__c, props, cctx);
+				// If a hook invokes setState() to invalidate the component during rendering,
+				// re-render it up to 25 times to allow "settling" of memoized states.
+				// Note:
+				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
+				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
+				let count = 0;
+				while (c.__d && count++ < 25) {
+					c.__d = false;
+
+					if (renderHook) renderHook(vnode);
+
+					// stateless functional components
+					rendered = nodeName.call(vnode.__c, props, cctx);
+				}
 			} else {
 				// class-based components
 				let cxType = nodeName.contextType;
@@ -194,6 +209,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 							? c.__s
 							: c.state;
 				}
+
+				if (renderHook) renderHook(vnode);
 
 				rendered = c.render(c.props, c.state, c.context);
 			}
