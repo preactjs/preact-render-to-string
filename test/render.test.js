@@ -95,6 +95,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should serialize defaultChecked prop to the checked attribute', () => {
+			let rendered = render(<input type="checkbox" defaultChecked />),
+				expected = `<input type="checkbox" checked />`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should include boolean aria-* attributes', () => {
 			let rendered = render(<div aria-hidden aria-whatever={false} />),
 				expected = `<div aria-hidden="true" aria-whatever="false"></div>`;

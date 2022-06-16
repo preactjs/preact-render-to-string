@@ -263,10 +263,12 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 			if (name === 'defaultValue') {
 				name = 'value';
+			} else if (name === 'defaultChecked') {
+				name = 'checked';
 			} else if (name === 'className') {
 				if (typeof props.class !== 'undefined') continue;
 				name = 'class';
-			} else if (isSvgMode && name.match(/^xlink:?./)) {
+			} else if (isSvgMode && /^xlink:?./.test(name)) {
 				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
 			}
 
