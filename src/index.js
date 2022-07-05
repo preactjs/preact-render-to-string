@@ -104,7 +104,7 @@ function _renderToString(
 	if (Array.isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
-			vnode[i]._parent = parent;
+			if (typeof vnode === 'object') vnode[i][MANGLED_PARENT] = parent;
 			if (pretty && i > 0) rendered += '\n';
 			rendered += _renderToString(
 				vnode[i],
@@ -389,7 +389,7 @@ function _renderToString(
 			let child = children[i];
 
 			if (child != null && child !== false) {
-				child[MANGLED_PARENT] = parent;
+				if (typeof child === 'object') child[MANGLED_PARENT] = parent;
 
 				let childSvgMode =
 						nodeName === 'svg'
