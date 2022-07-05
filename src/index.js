@@ -85,15 +85,10 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (Array.isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
-			if (pretty && i > 0) rendered += '\n';
-			rendered += _renderToString(
-				vnode[i],
-				context,
-				opts,
-				inner,
-				isSvgMode,
-				selectValue
-			);
+			if (pretty && i > 0) rendered = rendered + '\n';
+			rendered =
+				rendered +
+				_renderToString(vnode[i], context, opts, inner, isSvgMode, selectValue);
 		}
 		return rendered;
 	}
@@ -289,7 +284,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				opts.attributeHook &&
 				opts.attributeHook(name, v, context, opts, isComponent);
 			if (hooked || hooked === '') {
-				s += hooked;
+				s = s + hooked;
 				continue;
 			}
 
@@ -303,7 +298,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 					v = name;
 					// in non-xml mode, allow boolean attributes
 					if (!opts || !opts.xml) {
-						s += ' ' + name;
+						s = s + ' ' + name;
 						continue;
 					}
 				}
@@ -319,10 +314,10 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						// and the <option> doesn't already have a selected attribute on it
 						typeof props.selected === 'undefined'
 					) {
-						s += ` selected`;
+						s = s + ` selected`;
 					}
 				}
-				s += ` ${name}="${encodeEntities(v)}"`;
+				s = s + ` ${name}="${encodeEntities(v)}"`;
 			}
 		}
 	}
@@ -331,10 +326,10 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (pretty) {
 		let sub = s.replace(/\n\s*/, ' ');
 		if (sub !== s && !~sub.indexOf('\n')) s = sub;
-		else if (pretty && ~s.indexOf('\n')) s += '\n';
+		else if (pretty && ~s.indexOf('\n')) s = s + '\n';
 	}
 
-	s += '>';
+	s = s + '>';
 
 	if (UNSAFE_NAME.test(nodeName))
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
@@ -350,7 +345,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		if (pretty && isLargeString(html)) {
 			html = '\n' + indentChar + indent(html, indentChar);
 		}
-		s += html;
+		s = s + html;
 	} else if (
 		propChildren != null &&
 		getChildren((children = []), propChildren).length
@@ -387,7 +382,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						// We merge adjacent text nodes, otherwise each piece would be printed
 						// on a new line.
 						if (lastWasText && isText) {
-							pieces[pieces.length - 1] += ret;
+							pieces[pieces.length - 1] = pieces[pieces.length - 1] + ret;
 						} else {
 							pieces.push(ret);
 						}
@@ -407,7 +402,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	}
 
 	if (pieces.length || html) {
-		s += pieces.join('');
+		s = s + pieces.join('');
 	} else if (opts && opts.xml) {
 		return s.substring(0, s.length - 1) + ' />';
 	}
@@ -415,8 +410,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (isVoid && !children && !html) {
 		s = s.replace(/>$/, ' />');
 	} else {
-		if (pretty && ~s.indexOf('\n')) s += '\n';
-		s += `</${nodeName}>`;
+		if (pretty && ~s.indexOf('\n')) s = s + '\n';
+		s = s + `</${nodeName}>`;
 	}
 
 	return s;
