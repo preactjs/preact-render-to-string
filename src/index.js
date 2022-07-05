@@ -23,6 +23,9 @@ function markAsDirty() {
 	this.__d = true;
 }
 
+const MANGLED_PARENT = '__';
+const MANGLED_CHILDREN = '__k';
+
 /** Render Preact JSX + Components to an HTML string.
  *	@name render
  *	@function
@@ -58,7 +61,15 @@ function renderToString(vnode, context, opts) {
 	const previousSkipEffects = options.__s;
 	options.__s = true;
 
-	const res = _renderToString(vnode, context, opts);
+	const res = _renderToString(
+		vnode,
+		context,
+		opts,
+		undefined,
+		undefined,
+		undefined,
+		parent
+	);
 
 	// options._commit, we don't schedule any effects in this library right now,
 	// so we can pass an empty queue to this hook.
@@ -69,7 +80,15 @@ function renderToString(vnode, context, opts) {
 }
 
 /** The default export is an alias of `render()`. */
-function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
+function _renderToString(
+	vnode,
+	context,
+	opts,
+	inner,
+	isSvgMode,
+	selectValue,
+	parent
+) {
 	if (vnode == null || typeof vnode === 'boolean') {
 		return '';
 	}
@@ -85,6 +104,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 	if (Array.isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
+			vnode[i]._parent = parent;
 			if (pretty && i > 0) rendered += '\n';
 			rendered += _renderToString(
 				vnode[i],
@@ -92,7 +112,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 				opts,
 				inner,
 				isSvgMode,
-				selectValue
+				selectValue,
+				parent
 			);
 		}
 		return rendered;
@@ -110,13 +131,15 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		} else if (nodeName === Fragment) {
 			const children = [];
 			getChildren(children, vnode.props.children);
+			parent[MANGLED_CHILDREN] = children;
 			return _renderToString(
 				children,
 				context,
 				opts,
 				opts.shallowHighOrder !== false,
 				isSvgMode,
-				selectValue
+				selectValue,
+				parent
 			);
 		} else {
 			let rendered;
@@ -220,13 +243,16 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			}
 
 			if (options.diffed) options.diffed(vnode);
+
+			vnode[MANGLED_CHILDREN] = rendered;
 			return _renderToString(
 				rendered,
 				context,
 				opts,
 				opts.shallowHighOrder !== false,
 				isSvgMode,
-				selectValue
+				selectValue,
+				vnode
 			);
 		}
 	}
@@ -355,6 +381,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 		propChildren != null &&
 		getChildren((children = []), propChildren).length
 	) {
+		vnode[MANGLED_CHILDREN] = children;
 		let hasLarge = pretty && ~s.indexOf('\n');
 		let lastWasText = false;
 
@@ -362,6 +389,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			let child = children[i];
 
 			if (child != null && child !== false) {
+				child[MANGLED_PARENT] = parent;
+
 				let childSvgMode =
 						nodeName === 'svg'
 							? true
@@ -374,7 +403,8 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						opts,
 						true,
 						childSvgMode,
-						selectValue
+						selectValue,
+						vnode
 					);
 
 				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
