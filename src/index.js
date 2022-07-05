@@ -382,7 +382,7 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						// We merge adjacent text nodes, otherwise each piece would be printed
 						// on a new line.
 						if (lastWasText && isText) {
-							pieces[pieces.length - 1] = pieces[pieces.length - 1] + ret;
+							pieces[pieces.length - 1] += ret;
 						} else {
 							pieces.push(ret);
 						}
