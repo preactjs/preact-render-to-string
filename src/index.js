@@ -68,7 +68,7 @@ function renderToString(vnode, context, opts) {
 		undefined,
 		undefined,
 		undefined,
-		parent
+		vnode
 	);
 
 	// options._commit, we don't schedule any effects in this library right now,
@@ -104,7 +104,7 @@ function _renderToString(
 	if (Array.isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
-			if (typeof vnode === 'object') vnode[i][MANGLED_PARENT] = parent;
+			if (typeof vnode[i] === 'object') vnode[i][MANGLED_PARENT] = parent;
 			if (pretty && i > 0) rendered += '\n';
 			rendered += _renderToString(
 				vnode[i],
