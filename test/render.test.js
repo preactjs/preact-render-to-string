@@ -102,6 +102,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should serialize defaultSelected prop to the selected attribute', () => {
+			let rendered = render(<option defaultSelected />),
+				expected = `<option selected></option>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should include boolean aria-* attributes', () => {
 			let rendered = render(<div aria-hidden aria-whatever={false} />),
 				expected = `<div aria-hidden="true" aria-whatever="false"></div>`;
