@@ -4,13 +4,15 @@ export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine
 const ENCODED_ENTITIES = /[&<>"]/;
 
 export function encodeEntities(str) {
-	if (ENCODED_ENTITIES.test(s) === false) return s;
+	// Skip all work for strings with no entities needing encoding:
+	if (ENCODED_ENTITIES.test(str) === false) return str;
+
 	let start = 0,
 		i = 0,
 		out = '',
 		ch = '';
 	for (; i<str.length; i++) {
-		switch(str.charCodeAt(i)) {
+		switch (str.charCodeAt(i)) {
 			case 60: ch = '&lt;'; break;
 			case 62: ch = '&gt;'; break;
 			case 34: ch = '&quot;'; break;
