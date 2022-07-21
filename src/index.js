@@ -150,6 +150,36 @@ function renderClassComponent(vnode, context, opts) {
 	return c.render(c.props, c.state, c.context);
 }
 
+function normalizePropName(name, isSvgMode) {
+	if (name === 'className') {
+		return 'class';
+	} else if (name === 'htmlFor') {
+		return 'for';
+	} else if (name === 'defaultValue') {
+		return 'value';
+	} else if (name === 'defaultChecked') {
+		return 'checked';
+	} else if (name === 'defaultSelected') {
+		return 'selected';
+	} else if (isSvgMode && XLINK.test(name)) {
+		return name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+	}
+
+	return name;
+}
+
+function normalizePropValue(name, v) {
+	if (name === 'style' && !isNull(v) && isObject(v)) {
+		return styleObjToCss(v);
+	} else if (name[0] === 'a' && name[1] === 'r' && isBoolean(v)) {
+		// always use string values instead of booleans for aria attributes
+		// also see https://github.com/preactjs/preact/pull/2347/files
+		return String(v);
+	}
+
+	return v;
+}
+
 const isUndefined = (x) => typeof x == 'undefined';
 const isFunction = (x) => typeof x == 'function';
 const isBoolean = (x) => typeof x == 'boolean';
@@ -206,17 +236,14 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 	}
 
 	// render JSX to HTML
-	let s = `<${nodeName}`,
+	let s = '<' + nodeName,
 		propChildren,
 		html;
 
 	if (props) {
+		propChildren = props.children;
 		for (let name in props) {
 			let v = props[name];
-			if (name === 'children') {
-				propChildren = v;
-				continue;
-			}
 
 			if (UNSAFE_NAME.test(name)) continue;
 
@@ -224,37 +251,16 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 				name === 'key' ||
 				name === 'ref' ||
 				name === '__self' ||
-				name === '__source'
-			)
+				name === '__source' ||
+				name === 'children' ||
+				(name === 'className' && !isUndefined(props.class)) ||
+				(name === 'htmlFor' && !isUndefined(props.for))
+			) {
 				continue;
-
-			if (name === 'defaultValue') {
-				name = 'value';
-			} else if (name === 'defaultChecked') {
-				name = 'checked';
-			} else if (name === 'defaultSelected') {
-				name = 'selected';
-			} else if (name === 'className') {
-				if (!isUndefined(props.class)) continue;
-				name = 'class';
-			} else if (isSvgMode && XLINK.test(name)) {
-				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
 			}
 
-			if (name === 'htmlFor') {
-				if (props.for) continue;
-				name = 'for';
-			}
-
-			if (name === 'style' && !isNull(v) && isObject(v)) {
-				v = styleObjToCss(v);
-			}
-
-			// always use string values instead of booleans for aria attributes
-			// also see https://github.com/preactjs/preact/pull/2347/files
-			if (name[0] === 'a' && name[1] === 'r' && isBoolean(v)) {
-				v = String(v);
-			}
+			name = normalizePropName(name, isSvgMode);
+			v = normalizePropValue(name, v);
 
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
@@ -279,10 +285,10 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 						// and the <option> doesn't already have a selected attribute on it
 						isUndefined(props.selected)
 					) {
-						s = `${s} selected`;
+						s = s + ' selected';
 					}
 				}
-				s = s + ` ${name}="${encodeEntities(v)}"`;
+				s = s + ' ' + name + '="' + encodeEntities(v) + '"';
 			}
 		}
 	}
@@ -299,7 +305,7 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 
 	let children = [];
 	if (html) {
-		return `${s}${html}</${nodeName}>`;
+		return s + html + '</' + nodeName + '>';
 	} else if (
 		!isNull(propChildren) &&
 		getChildren(children, propChildren).length
@@ -331,12 +337,12 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 	}
 
 	if (pieces.length) {
-		return `${s}${pieces}</${nodeName}>`;
+		return s + pieces + '</' + nodeName + '>';
 	} else if (isVoid) {
 		return s.replace(/>$/, ' />');
 	}
 
-	return `${s}</${nodeName}>`;
+	return s + '</' + nodeName + '>';
 }
 
 /** The default export is an alias of `render()`. */
