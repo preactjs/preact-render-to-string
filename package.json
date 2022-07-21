@@ -18,8 +18,7 @@
 			"browser": "./dist/jsx.module.js",
 			"require": "./dist/jsx.js"
 		},
-		"./package.json": "./package.json",
-		"./": "./"
+		"./package.json": "./package.json"
 	},
 	"scripts": {
 		"bench": "BABEL_ENV=test node -r @babel/register benchmarks index.js",

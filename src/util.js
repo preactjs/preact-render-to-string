@@ -75,8 +75,7 @@ export function styleObjToCss(s) {
  * @private
  */
 export function assign(obj, props) {
-	for (let i in props) obj[i] = props[i];
-	return obj;
+	return Object.assign(obj, props);
 }
 
 /**
