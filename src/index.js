@@ -55,7 +55,14 @@ function renderToString(vnode, context, opts) {
 	options.__s = true;
 
 	let res;
-	if (opts.pretty || opts.sortAttributes || opts.shallow) {
+	if (
+		opts.pretty ||
+		opts.sortAttributes ||
+		opts.shallow ||
+		opts.allAttributes ||
+		opts.xml ||
+		opts.attributeHook
+	) {
 		res = _renderToStringPretty(vnode, context, opts);
 	} else {
 		res = _renderToString(vnode, context, opts, false, undefined);
@@ -77,6 +84,70 @@ function renderFragment(vnode, context, opts, isSvgMode, selectValue) {
 		isSvgMode,
 		selectValue
 	);
+}
+
+function renderFunctionComponent(vnode, context, opts) {
+	let rendered,
+		c = (vnode.__c = createComponent(vnode, context)),
+		cctx = getContext(vnode.type, context);
+
+	// If a hook invokes setState() to invalidate the component during rendering,
+	// re-render it up to 25 times to allow "settling" of memoized states.
+	// Note:
+	//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
+	//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
+	let count = 0;
+	while (c.__d && count++ < 25) {
+		c.__d = false;
+
+		if (opts.render) opts.render(vnode);
+
+		// stateless functional components
+		rendered = vnode.type.call(vnode.__c, vnode.props, cctx);
+	}
+
+	return rendered;
+}
+
+function renderClassComponent(vnode, context, opts) {
+	let nodeName = vnode.type,
+		cctx = getContext(nodeName, context);
+
+	// c = new nodeName(props, context);
+	let c = (vnode.__c = new nodeName(vnode.props, cctx));
+	c.__v = vnode;
+	// turn off stateful re-rendering:
+	c._dirty = c.__d = true;
+	c.props = vnode.props;
+	if (isNull(c.state)) c.state = {};
+
+	if (isNull(c._nextState) && isNull(c.__s)) {
+		c._nextState = c.__s = c.state;
+	}
+
+	c.context = cctx;
+	if (nodeName.getDerivedStateFromProps)
+		c.state = Object.assign(
+			{},
+			c.state,
+			nodeName.getDerivedStateFromProps(c.props, c.state)
+		);
+	else if (c.componentWillMount) {
+		c.componentWillMount();
+
+		// If the user called setState in cWM we need to flush pending,
+		// state updates. This is the same behaviour in React.
+		c.state =
+			c._nextState !== c.state
+				? c._nextState
+				: c.__s !== c.state
+				? c.__s
+				: c.state;
+	}
+
+	if (opts.render) opts.render(vnode);
+
+	return c.render(c.props, c.state, c.context);
 }
 
 const isUndefined = (x) => typeof x == 'undefined';
@@ -115,73 +186,22 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 			return renderFragment(vnode, context, opts, isSvgMode, selectValue);
 		}
 
-		let rendered,
-			c = (vnode.__c = createComponent(vnode, context));
+		let rendered;
 
 		if (opts.diff) opts.diff(vnode);
 
 		if (!nodeName.prototype || !isFunction(nodeName.prototype.render)) {
-			let cctx = getContext(nodeName, context);
-
-			// If a hook invokes setState() to invalidate the component during rendering,
-			// re-render it up to 25 times to allow "settling" of memoized states.
-			// Note:
-			//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-			//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
-			let count = 0;
-			while (c.__d && count++ < 25) {
-				c.__d = false;
-
-				if (opts.render) opts.render(vnode);
-
-				// stateless functional components
-				rendered = nodeName.call(vnode.__c, props, cctx);
-			}
+			rendered = renderFunctionComponent(vnode, context, opts);
 		} else {
-			let cctx = getContext(nodeName, context);
-
-			// c = new nodeName(props, context);
-			c = vnode.__c = new nodeName(props, cctx);
-			c.__v = vnode;
-			// turn off stateful re-rendering:
-			c._dirty = c.__d = true;
-			c.props = props;
-			if (c.state == null) c.state = {};
-
-			if (c._nextState == null && c.__s == null) {
-				c._nextState = c.__s = c.state;
-			}
-
-			c.context = cctx;
-			if (nodeName.getDerivedStateFromProps)
-				c.state = Object.assign(
-					{},
-					c.state,
-					nodeName.getDerivedStateFromProps(c.props, c.state)
-				);
-			else if (c.componentWillMount) {
-				c.componentWillMount();
-
-				// If the user called setState in cWM we need to flush pending,
-				// state updates. This is the same behaviour in React.
-				c.state =
-					c._nextState !== c.state
-						? c._nextState
-						: c.__s !== c.state
-						? c.__s
-						: c.state;
-			}
-
-			if (opts.render) opts.render(vnode);
-
-			rendered = c.render(c.props, c.state, c.context);
+			rendered = renderClassComponent(vnode, context, opts);
 		}
 
-		if (c.getChildContext) {
-			context = Object.assign({}, context, c.getChildContext());
+		if (vnode.__c.getChildContext) {
+			context = Object.assign({}, context, vnode.__c.getChildContext());
 		}
 
 		if (opts.diffed) opts.diffed(vnode);
+
 		return _renderToString(rendered, context, opts, isSvgMode, selectValue);
 	}
 
@@ -201,11 +221,10 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 			if (UNSAFE_NAME.test(name)) continue;
 
 			if (
-				!(opts && opts.allAttributes) &&
-				(name === 'key' ||
-					name === 'ref' ||
-					name === '__self' ||
-					name === '__source')
+				name === 'key' ||
+				name === 'ref' ||
+				name === '__self' ||
+				name === '__source'
 			)
 				continue;
 
@@ -237,14 +256,6 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 				v = String(v);
 			}
 
-			let hooked =
-				opts.attributeHook &&
-				opts.attributeHook(name, v, context, opts, isComponent);
-			if (hooked || hooked === '') {
-				s = s + hooked;
-				continue;
-			}
-
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
 			} else if (nodeName === 'textarea' && name === 'value') {
@@ -253,11 +264,8 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 			} else if ((v || v === 0 || v === '') && !isFunction(v)) {
 				if (v === true || v === '') {
 					v = name;
-					// in non-xml mode, allow boolean attributes
-					if (!opts || !opts.xml) {
-						s = s + ' ' + name;
-						continue;
-					}
+					s = s + ' ' + name;
+					continue;
 				}
 
 				if (name === 'value') {
@@ -291,7 +299,7 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 
 	let children = [];
 	if (html) {
-		s = s + html;
+		return `${s}${html}</${nodeName}>`;
 	} else if (
 		!isNull(propChildren) &&
 		getChildren(children, propChildren).length
@@ -322,13 +330,9 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 		}
 	}
 
-	if (pieces.length || html) {
-		s = s + pieces;
-	} else if (opts && opts.xml) {
-		return s.substring(0, s.length - 1) + ' />';
-	}
-
-	if (isVoid && !children.length && !html) {
+	if (pieces.length) {
+		return `${s}${pieces}</${nodeName}>`;
+	} else if (isVoid) {
 		return s.replace(/>$/, ' />');
 	}
 
