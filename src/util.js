@@ -1,5 +1,8 @@
 // DOM properties that should NOT have "px" added when numeric
 export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
+export const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
+export const XLINK = /^xlink:?./;
 
 const ENCODED_ENTITIES = /[&<>"]/;
 
@@ -16,13 +19,22 @@ export function encodeEntities(str) {
 		ch = '';
 
 	// Seek forward in str until the next entity char:
-	for (; i<str.length; i++) {
+	for (; i < str.length; i++) {
 		switch (str.charCodeAt(i)) {
-			case 60: ch = '&lt;'; break;
-			case 62: ch = '&gt;'; break;
-			case 34: ch = '&quot;'; break;
-			case 38: ch = '&amp;'; break;
-			default: continue;
+			case 60:
+				ch = '&lt;';
+				break;
+			case 62:
+				ch = '&gt;';
+				break;
+			case 34:
+				ch = '&quot;';
+				break;
+			case 38:
+				ch = '&amp;';
+				break;
+			default:
+				continue;
 		}
 		// Append skipped/buffered characters and the encoded entity:
 		if (i > last) out += str.slice(last, i);
@@ -68,17 +80,6 @@ export function styleObjToCss(s) {
 }
 
 /**
- * Copy all properties from `props` onto `obj`.
- * @param {object} obj Object onto which properties should be copied.
- * @param {object} props Object from which to copy properties.
- * @returns {object}
- * @private
- */
-export function assign(obj, props) {
-	return Object.assign(obj, props);
-}
-
-/**
  * Get flattened children from the children prop
  * @param {Array} accumulator
  * @param {any} children A `props.children` opaque object.
@@ -92,4 +93,34 @@ export function getChildren(accumulator, children) {
 		accumulator.push(children);
 	}
 	return accumulator;
+}
+
+function markAsDirty() {
+	this.__d = true;
+}
+
+export function createComponent(vnode, context) {
+	return {
+		__v: vnode,
+		context,
+		props: vnode.props,
+		// silently drop state updates
+		setState: markAsDirty,
+		forceUpdate: markAsDirty,
+		__d: true,
+		// hooks
+		__h: []
+	};
+}
+
+// Necessary for createContext api. Setting this property will pass
+// the context value as `this.context` just for this component.
+export function getContext(nodeName, context) {
+	let cxType = nodeName.contextType;
+	let provider = cxType && context[cxType.__c];
+	return cxType != null
+		? provider
+			? provider.props.value
+			: cxType.__
+		: context;
 }
