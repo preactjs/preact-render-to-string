@@ -1,7 +1,6 @@
 import {
 	encodeEntities,
 	styleObjToCss,
-	getChildren,
 	getContext,
 	createComponent,
 	UNSAFE_NAME,
@@ -199,11 +198,13 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 	}
 
 	if (isArray(vnode)) {
-		return vnode
-			.map((node) =>
-				_renderToString(node, context, opts, isSvgMode, selectValue)
-			)
-			.join('');
+		let rendered = '';
+		for (let i = 0; i < vnode.length; i++) {
+			rendered =
+				rendered +
+				_renderToString(vnode[i], context, opts, isSvgMode, selectValue);
+		}
+		return rendered;
 	}
 
 	let nodeName = vnode.type,
@@ -216,10 +217,9 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 			return renderFragment(vnode, context, opts, isSvgMode, selectValue);
 		}
 
-		let rendered;
-
 		if (opts.diff) opts.diff(vnode);
 
+		let rendered;
 		if (!nodeName.prototype || !isFunction(nodeName.prototype.render)) {
 			rendered = renderFunctionComponent(vnode, context, opts);
 		} else {
@@ -303,13 +303,14 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 		(opts.voidElements && opts.voidElements.test(nodeName));
 	let pieces = '';
 
-	let children = [];
+	let children = isArray(propChildren)
+		? propChildren
+		: !isNull(propChildren)
+		? [propChildren]
+		: undefined;
 	if (html) {
 		return s + html + '</' + nodeName + '>';
-	} else if (
-		!isNull(propChildren) &&
-		getChildren(children, propChildren).length
-	) {
+	} else if (children) {
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
 
