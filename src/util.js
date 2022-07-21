@@ -55,6 +55,7 @@ export let isLargeString = (s, length, ignoreLines) =>
 
 const JS_TO_CSS = {};
 
+const CSS_REGEX = /([A-Z])/g;
 // Convert an Object style to a CSSText string
 export function styleObjToCss(s) {
 	let str = '';
@@ -67,13 +68,13 @@ export function styleObjToCss(s) {
 				prop[0] == '-'
 					? prop
 					: JS_TO_CSS[prop] ||
-					  (JS_TO_CSS[prop] = prop.replace(/([A-Z])/g, '-$1').toLowerCase());
-			str += ': ';
-			str += val;
+					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
+
 			if (typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false) {
-				str += 'px';
+				str = str + ': ' + val + 'px;';
+			} else {
+				str = str + ': ' + val + ';';
 			}
-			str += ';';
 		}
 	}
 	return str || undefined;
