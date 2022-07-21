@@ -4,13 +4,18 @@ export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine
 const ENCODED_ENTITIES = /[&<>"]/;
 
 export function encodeEntities(str) {
+	// Ensure we're always parsing and returning a string:
+	str += '';
+
 	// Skip all work for strings with no entities needing encoding:
 	if (ENCODED_ENTITIES.test(str) === false) return str;
 
-	let start = 0,
+	let last = 0,
 		i = 0,
 		out = '',
 		ch = '';
+
+	// Seek forward in str until the next entity char:
 	for (; i<str.length; i++) {
 		switch (str.charCodeAt(i)) {
 			case 60: ch = '&lt;'; break;
@@ -19,11 +24,13 @@ export function encodeEntities(str) {
 			case 38: ch = '&amp;'; break;
 			default: continue;
 		}
-		if (i > start) out += str.slice(start, i);
+		// Append skipped/buffered characters and the encoded entity:
+		if (i > last) out += str.slice(last, i);
 		out += ch;
-		start = i + 1;
+		// Start the next seek/buffer after the entity's offset:
+		last = i + 1;
 	}
-	return out + str.slice(start, i);
+	return out + str.slice(last, i);
 }
 
 export let indent = (s, char) =>
