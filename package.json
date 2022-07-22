@@ -137,5 +137,10 @@
 		"hooks": {
 			"pre-commit": "lint-staged"
 		}
+	},
+	"mangle": {
+		"compress": {
+			"reduce_funcs": false
+		}
 	}
 }

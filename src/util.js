@@ -4,7 +4,7 @@ export const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|pa
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
-const ENCODED_ENTITIES = /[&<>"]/;
+const ENCODED_ENTITIES = /["&<]/;
 
 export function encodeEntities(str) {
 	// Ensure we're always parsing and returning a string:
@@ -21,28 +21,26 @@ export function encodeEntities(str) {
 	// Seek forward in str until the next entity char:
 	for (; i < str.length; i++) {
 		switch (str.charCodeAt(i)) {
-			case 60:
-				ch = '&lt;';
-				break;
-			case 62:
-				ch = '&gt;';
-				break;
 			case 34:
 				ch = '&quot;';
 				break;
 			case 38:
 				ch = '&amp;';
 				break;
+			case 60:
+				ch = '&lt;';
+				break;
 			default:
 				continue;
 		}
 		// Append skipped/buffered characters and the encoded entity:
-		if (i > last) out += str.slice(last, i);
+		if (i !== last) out += str.slice(last, i);
 		out += ch;
 		// Start the next seek/buffer after the entity's offset:
 		last = i + 1;
 	}
-	return out + str.slice(last, i);
+	if (i !== last) out += str.slice(last, i);
+	return out;
 }
 
 export let indent = (s, char) =>
