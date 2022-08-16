@@ -9,6 +9,17 @@ import {
 } from './util';
 import { options, Fragment } from 'preact';
 import { _renderToStringPretty } from './pretty';
+import {
+	COMMIT,
+	COMPONENT,
+	DIFF,
+	DIFFED,
+	DIRTY,
+	NEXT_STATE,
+	RENDER,
+	SKIP_EFFECTS,
+	VNODE
+} from './constants';
 
 /** @typedef {import('preact').VNode} VNode */
 
@@ -39,112 +50,99 @@ let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 const EMPTY_ARR = [];
 function renderToString(vnode, context, opts) {
 	context = context || {};
-	opts = Object.assign(opts || {}, {
-		diff: options.__b,
-		render: options.__r,
-		diffed: options.diffed
-	});
 
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
 	// and avoid a lot of dirty checks and allocations by setting
 	// `options._skipEffects` (`__s`) too.
-	const previousSkipEffects = options.__s;
-	options.__s = true;
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
 
 	let res;
 	if (
-		opts.pretty ||
-		opts.sortAttributes ||
-		opts.shallow ||
-		opts.allAttributes ||
-		opts.xml ||
-		opts.attributeHook
+		opts &&
+		(opts.pretty ||
+			opts.voidElements ||
+			opts.sortAttributes ||
+			opts.shallow ||
+			opts.allAttributes ||
+			opts.xml ||
+			opts.attributeHook)
 	) {
 		res = _renderToStringPretty(vnode, context, opts);
 	} else {
-		res = _renderToString(vnode, context, opts, false, undefined);
+		res = _renderToString(vnode, context, false, undefined);
 	}
 
 	// options._commit, we don't schedule any effects in this library right now,
 	// so we can pass an empty queue to this hook.
-	if (options.__c) options.__c(vnode, EMPTY_ARR);
+	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+	options[SKIP_EFFECTS] = previousSkipEffects;
 	EMPTY_ARR.length = 0;
-	options.__s = previousSkipEffects;
 	return res;
 }
 
-function renderFragment(vnode, context, opts, isSvgMode, selectValue) {
-	return _renderToString(
-		vnode.props.children,
-		context,
-		opts,
-		isSvgMode,
-		selectValue
-	);
-}
-
-function renderFunctionComponent(vnode, context, opts) {
+function renderFunctionComponent(vnode, context) {
 	let rendered,
-		c = (vnode.__c = createComponent(vnode, context)),
+		c = createComponent(vnode, context),
 		cctx = getContext(vnode.type, context);
+
+	vnode[COMPONENT] = c;
 
 	// If a hook invokes setState() to invalidate the component during rendering,
 	// re-render it up to 25 times to allow "settling" of memoized states.
 	// Note:
 	//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
 	//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
+	let renderHook = options[RENDER];
 	let count = 0;
-	while (c.__d && count++ < 25) {
-		c.__d = false;
+	while (c[DIRTY] && count++ < 25) {
+		c[DIRTY] = false;
 
-		if (opts.render) opts.render(vnode);
+		if (renderHook) renderHook(vnode);
 
 		// stateless functional components
-		rendered = vnode.type.call(vnode.__c, vnode.props, cctx);
+		rendered = vnode.type.call(c, vnode.props, cctx);
 	}
 
 	return rendered;
 }
 
-function renderClassComponent(vnode, context, opts) {
+function renderClassComponent(vnode, context) {
 	let nodeName = vnode.type,
 		cctx = getContext(nodeName, context);
 
 	// c = new nodeName(props, context);
-	let c = (vnode.__c = new nodeName(vnode.props, cctx));
-	c.__v = vnode;
+	let c = new nodeName(vnode.props, cctx);
+	vnode[COMPONENT] = c;
+	c[VNODE] = vnode;
 	// turn off stateful re-rendering:
-	c._dirty = c.__d = true;
+	c[DIRTY] = true;
 	c.props = vnode.props;
-	if (isNull(c.state)) c.state = {};
+	if (c.state == null) c.state = {};
 
-	if (isNull(c._nextState) && isNull(c.__s)) {
-		c._nextState = c.__s = c.state;
+	if (c[NEXT_STATE] == null) {
+		c[NEXT_STATE] = c.state;
 	}
 
 	c.context = cctx;
-	if (nodeName.getDerivedStateFromProps)
-		c.state = Object.assign(
+	if (nodeName.getDerivedStateFromProps) {
+		c.state = assign(
 			{},
 			c.state,
 			nodeName.getDerivedStateFromProps(c.props, c.state)
 		);
-	else if (c.componentWillMount) {
+	} else if (c.componentWillMount) {
 		c.componentWillMount();
 
 		// If the user called setState in cWM we need to flush pending,
 		// state updates. This is the same behaviour in React.
-		c.state =
-			c._nextState !== c.state
-				? c._nextState
-				: c.__s !== c.state
-				? c.__s
-				: c.state;
+		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
 	}
 
-	if (opts.render) opts.render(vnode);
+	let renderHook = options[RENDER];
+	if (renderHook) renderHook(vnode);
 
 	return c.render(c.props, c.state, c.context);
 }
@@ -168,9 +166,9 @@ function normalizePropName(name, isSvgMode) {
 }
 
 function normalizePropValue(name, v) {
-	if (name === 'style' && !isNull(v) && isObject(v)) {
+	if (name === 'style' && v != null && typeof v === 'object') {
 		return styleObjToCss(v);
-	} else if (name[0] === 'a' && name[1] === 'r' && isBoolean(v)) {
+	} else if (name[0] === 'a' && name[1] === 'r' && typeof v === 'boolean') {
 		// always use string values instead of booleans for aria attributes
 		// also see https://github.com/preactjs/preact/pull/2347/files
 		return String(v);
@@ -179,21 +177,17 @@ function normalizePropValue(name, v) {
 	return v;
 }
 
-const isUndefined = (x) => typeof x == 'undefined';
-const isFunction = (x) => typeof x == 'function';
-const isBoolean = (x) => typeof x == 'boolean';
-const isObject = (x) => typeof x == 'object';
-const isNull = (x) => x == null;
 const isArray = Array.isArray;
+const assign = Object.assign;
 
 /** The default export is an alias of `render()`. */
-function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
-	if (isNull(vnode) || isBoolean(vnode)) {
+function _renderToString(vnode, context, isSvgMode, selectValue) {
+	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
 	}
 
 	// #text nodes
-	if (!isObject(vnode)) {
+	if (typeof vnode !== 'object') {
 		return encodeEntities(vnode);
 	}
 
@@ -201,51 +195,86 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
 			rendered =
-				rendered +
-				_renderToString(vnode[i], context, opts, isSvgMode, selectValue);
+				rendered + _renderToString(vnode[i], context, isSvgMode, selectValue);
 		}
 		return rendered;
 	}
 
 	let nodeName = vnode.type,
 		props = vnode.props;
-	const isComponent = isFunction(nodeName);
+	const isComponent = typeof nodeName === 'function';
 
 	// components
 	if (isComponent) {
 		if (nodeName === Fragment) {
-			return renderFragment(vnode, context, opts, isSvgMode, selectValue);
+			return _renderToString(
+				vnode.props.children,
+				context,
+				isSvgMode,
+				selectValue
+			);
 		}
 
-		if (opts.diff) opts.diff(vnode);
+		if (options[DIFF]) options[DIFF](vnode);
 
 		let rendered;
-		if (!nodeName.prototype || !isFunction(nodeName.prototype.render)) {
-			rendered = renderFunctionComponent(vnode, context, opts);
+		if (nodeName.prototype && typeof nodeName.prototype.render === 'function') {
+			rendered = renderClassComponent(vnode, context);
 		} else {
-			rendered = renderClassComponent(vnode, context, opts);
+			rendered = renderFunctionComponent(vnode, context);
 		}
 
-		if (vnode.__c.getChildContext) {
-			context = Object.assign({}, context, vnode.__c.getChildContext());
+		let component = vnode[COMPONENT];
+		if (component.getChildContext) {
+			context = assign({}, context, component.getChildContext());
 		}
 
-		if (opts.diffed) opts.diffed(vnode);
+		if (options[DIFFED]) options[DIFFED](vnode);
 
-		return _renderToString(rendered, context, opts, isSvgMode, selectValue);
+		return _renderToString(rendered, context, isSvgMode, selectValue);
 	}
 
 	// render JSX to HTML
-	let s = '<' + nodeName,
-		propChildren,
+	let s = '<',
+		children,
 		html;
 
+	s = s + nodeName;
+
 	if (props) {
-		propChildren = props.children;
+		children = props.children;
 		for (let name in props) {
 			let v = props[name];
 
-			if (UNSAFE_NAME.test(name)) continue;
+			// switch (name) {
+			// 	case 'className':
+			// 		if ('class' in props) continue;
+			// 		name = 'class';
+			// 		break;
+			// 	case 'htmlFor':
+			// 		if ('for' in props) continue;
+			// 		name = 'for';
+			// 		break;
+			// 	case 'defaultValue':
+			// 		name = 'value';
+			// 		break;
+			// 	case 'defaultChecked':
+			// 		name = 'checked';
+			// 		break;
+			// 	case 'defaultSelected':
+			// 		name = 'selected';
+			// 		break;
+			// 	case 'key':
+			// 	case 'ref':
+			// 	case '__self':
+			// 	case '__source':
+			// 	case 'children':
+			// 		continue;
+			// 	default:
+			// 		if (isSvgMode && XLINK.test(name)) {
+			// 			name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+			// 		}
+			// }
 
 			if (
 				name === 'key' ||
@@ -253,11 +282,13 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 				name === '__self' ||
 				name === '__source' ||
 				name === 'children' ||
-				(name === 'className' && !isUndefined(props.class)) ||
-				(name === 'htmlFor' && !isUndefined(props.for))
+				(name === 'className' && 'class' in props) ||
+				(name === 'htmlFor' && 'for' in props)
 			) {
 				continue;
 			}
+
+			if (UNSAFE_NAME.test(name)) continue;
 
 			name = normalizePropName(name, isSvgMode);
 			v = normalizePropValue(name, v);
@@ -266,8 +297,9 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 				html = v && v.__html;
 			} else if (nodeName === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
-				propChildren = v;
-			} else if ((v || v === 0 || v === '') && !isFunction(v)) {
+				children = v;
+				// html = encodeEntities(v);
+			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
 				if (v === true || v === '') {
 					v = name;
 					s = s + ' ' + name;
@@ -283,7 +315,7 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 						nodeName === 'option' &&
 						selectValue == v &&
 						// and the <option> doesn't already have a selected attribute on it
-						isUndefined(props.selected)
+						!('selected' in props)
 					) {
 						s = s + ' selected';
 					}
@@ -293,54 +325,65 @@ function _renderToString(vnode, context, opts, isSvgMode, selectValue) {
 		}
 	}
 
+	let startElement = s;
 	s = s + '>';
 
-	if (UNSAFE_NAME.test(nodeName))
+	if (UNSAFE_NAME.test(nodeName)) {
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
+	}
 
-	let isVoid =
-		VOID_ELEMENTS.test(nodeName) ||
-		(opts.voidElements && opts.voidElements.test(nodeName));
 	let pieces = '';
+	let hasChildren = false;
 
-	let children = isArray(propChildren)
-		? propChildren
-		: !isNull(propChildren)
-		? [propChildren]
-		: undefined;
+	// let children = isArray(propChildren)
+	// 	? propChildren
+	// 	: propChildren != null
+	// 	? [propChildren]
+	// 	: undefined;
 	if (html) {
-		return s + html + '</' + nodeName + '>';
-	} else if (children) {
+		// return s + html + '</' + nodeName + '>';
+		// s = s + html;
+		pieces = pieces + html;
+		hasChildren = true;
+	} else if (typeof children === 'string') {
+		// s = s + encodeEntities(children);
+		pieces = pieces + encodeEntities(children);
+		hasChildren = true;
+	} else if (isArray(children)) {
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
 
 			if (child != null && child !== false) {
 				let childSvgMode =
-						nodeName === 'svg'
-							? true
-							: nodeName === 'foreignObject'
-							? false
-							: isSvgMode,
-					ret = _renderToString(
-						child,
-						context,
-						opts,
-						childSvgMode,
-						selectValue
-					);
+					nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
+				let ret = _renderToString(child, context, childSvgMode, selectValue);
 
 				// Skip if we received an empty string
 				if (ret) {
+					// s = s + ret;
 					pieces = pieces + ret;
+					hasChildren = true;
 				}
 			}
 		}
+	} else if (children != null && children !== false && children !== true) {
+		let childSvgMode =
+			nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
+		let ret = _renderToString(children, context, childSvgMode, selectValue);
+
+		// Skip if we received an empty string
+		if (ret) {
+			// s = s + ret;
+			pieces = pieces + ret;
+			hasChildren = true;
+		}
 	}
 
-	if (pieces.length) {
-		return s + pieces + '</' + nodeName + '>';
-	} else if (isVoid) {
-		return s.replace(/>$/, ' />');
+	if (hasChildren) {
+		s = s + pieces;
+		// return s + pieces + '</' + nodeName + '>';
+	} else if (VOID_ELEMENTS.test(nodeName)) {
+		return startElement + ' />';
 	}
 
 	return s + '</' + nodeName + '>';
