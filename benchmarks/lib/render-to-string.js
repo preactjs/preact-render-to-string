@@ -1,3 +1,5 @@
+/* eslint-disable */
+// preact-render-to-string@5.1.21
 import { options as e, Fragment as t } from 'preact';
 var r = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i,
 	n = /[&<>"]/;
