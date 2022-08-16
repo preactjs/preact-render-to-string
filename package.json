@@ -7,13 +7,17 @@
 	"umd:main": "dist/index.js",
 	"module": "dist/index.module.js",
 	"jsnext:main": "dist/index.module.js",
+	"typings": "src/index.d.ts",
+	"types": "src/index.d.ts",
 	"exports": {
 		".": {
+			"types": "./src/index.d.ts",
 			"import": "./dist/index.mjs",
 			"browser": "./dist/index.module.js",
 			"require": "./dist/index.js"
 		},
 		"./jsx": {
+			"types": "./jsx.d.ts",
 			"import": "./dist/jsx.mjs",
 			"browser": "./dist/jsx.module.js",
 			"require": "./dist/jsx.js"
@@ -91,7 +95,6 @@
 	},
 	"author": "Jason Miller <jason@developit.ca>",
 	"license": "MIT",
-	"typings": "src/index.d.ts",
 	"repository": "developit/preact-render-to-string",
 	"bugs": "https://github.com/developit/preact-render-to-string/issues",
 	"homepage": "https://github.com/developit/preact-render-to-string",
