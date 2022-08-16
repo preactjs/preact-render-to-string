@@ -1,6 +1,6 @@
 import './polyfills';
 import renderToString from './index';
-import { indent, encodeEntities, assign } from './util';
+import { indent, encodeEntities } from './util';
 import prettyFormat from 'pretty-format';
 
 // we have to patch in Array support, Possible issue in npm.im/pretty-format
@@ -68,7 +68,7 @@ let defaultOpts = {
 };
 
 function renderToJsxString(vnode, context, opts, inner) {
-	opts = assign(assign({}, defaultOpts), opts || {});
+	opts = Object.assign({}, defaultOpts, opts || {});
 	return renderToString(vnode, context, opts, inner);
 }
 

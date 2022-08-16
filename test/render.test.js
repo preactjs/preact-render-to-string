@@ -177,7 +177,7 @@ describe('render', () => {
 
 		it('should encode entities', () => {
 			let rendered = render(<div a={'"<>&'}>{'"<>&'}</div>),
-				expected = `<div a="&quot;&lt;&gt;&amp;">&quot;&lt;&gt;&amp;</div>`;
+				expected = `<div a="&quot;&lt;>&amp;">&quot;&lt;>&amp;</div>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -871,7 +871,7 @@ describe('render', () => {
 	});
 
 	describe('state locking', () => {
-		it('should set _dirty and __d to true', () => {
+		it('should set __d (_dirty) to true', () => {
 			let inst;
 			class Foo extends Component {
 				constructor(props, context) {
@@ -885,7 +885,7 @@ describe('render', () => {
 
 			expect(render(<Foo />)).to.equal('<div></div>');
 
-			expect(inst).to.have.property('_dirty', true);
+			// expect(inst).to.have.property('_dirty', true);
 			expect(inst).to.have.property('__d', true);
 		});
 

@@ -1,3 +1,5 @@
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export default class Suite {
 	constructor(name, { iterations = 10, timeLimit = 5000 } = {}) {
 		this.name = name;
@@ -9,12 +11,14 @@ export default class Suite {
 		this.tests.push({ name, executor });
 		return this;
 	}
-	run() {
+	async run() {
 		console.log(`  ${this.name}:`);
 		const results = [];
 		let fastest = 0;
 		for (const test of this.tests) {
+			await sleep(50);
 			for (let i = 0; i < 5; i++) test.executor(i);
+			await sleep(10);
 			const result = this.runOne(test);
 			if (result.hz > fastest) fastest = result.hz;
 			results.push({ ...test, ...result });

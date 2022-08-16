@@ -1,7 +1,10 @@
 // DOM properties that should NOT have "px" added when numeric
 export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
+export const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
+export const XLINK = /^xlink:?./;
 
-const ENCODED_ENTITIES = /[&<>"]/;
+const ENCODED_ENTITIES = /["&<]/;
 
 export function encodeEntities(str) {
 	// Ensure we're always parsing and returning a string:
@@ -16,21 +19,28 @@ export function encodeEntities(str) {
 		ch = '';
 
 	// Seek forward in str until the next entity char:
-	for (; i<str.length; i++) {
+	for (; i < str.length; i++) {
 		switch (str.charCodeAt(i)) {
-			case 60: ch = '&lt;'; break;
-			case 62: ch = '&gt;'; break;
-			case 34: ch = '&quot;'; break;
-			case 38: ch = '&amp;'; break;
-			default: continue;
+			case 34:
+				ch = '&quot;';
+				break;
+			case 38:
+				ch = '&amp;';
+				break;
+			case 60:
+				ch = '&lt;';
+				break;
+			default:
+				continue;
 		}
 		// Append skipped/buffered characters and the encoded entity:
-		if (i > last) out += str.slice(last, i);
+		if (i !== last) out += str.slice(last, i);
 		out += ch;
 		// Start the next seek/buffer after the entity's offset:
 		last = i + 1;
 	}
-	return out + str.slice(last, i);
+	if (i !== last) out += str.slice(last, i);
+	return out;
 }
 
 export let indent = (s, char) =>
@@ -43,6 +53,7 @@ export let isLargeString = (s, length, ignoreLines) =>
 
 const JS_TO_CSS = {};
 
+const CSS_REGEX = /([A-Z])/g;
 // Convert an Object style to a CSSText string
 export function styleObjToCss(s) {
 	let str = '';
@@ -55,27 +66,16 @@ export function styleObjToCss(s) {
 				prop[0] == '-'
 					? prop
 					: JS_TO_CSS[prop] ||
-					  (JS_TO_CSS[prop] = prop.replace(/([A-Z])/g, '-$1').toLowerCase());
-			str += ': ';
-			str += val;
+					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
+
 			if (typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false) {
-				str += 'px';
+				str = str + ': ' + val + 'px;';
+			} else {
+				str = str + ': ' + val + ';';
 			}
-			str += ';';
 		}
 	}
 	return str || undefined;
-}
-
-/**
- * Copy all properties from `props` onto `obj`.
- * @param {object} obj Object onto which properties should be copied.
- * @param {object} props Object from which to copy properties.
- * @returns {object}
- * @private
- */
-export function assign(obj, props) {
-	return Object.assign(obj, props);
 }
 
 /**
@@ -92,4 +92,34 @@ export function getChildren(accumulator, children) {
 		accumulator.push(children);
 	}
 	return accumulator;
+}
+
+function markAsDirty() {
+	this.__d = true;
+}
+
+export function createComponent(vnode, context) {
+	return {
+		__v: vnode,
+		context,
+		props: vnode.props,
+		// silently drop state updates
+		setState: markAsDirty,
+		forceUpdate: markAsDirty,
+		__d: true,
+		// hooks
+		__h: []
+	};
+}
+
+// Necessary for createContext api. Setting this property will pass
+// the context value as `this.context` just for this component.
+export function getContext(nodeName, context) {
+	let cxType = nodeName.contextType;
+	let provider = cxType && context[cxType.__c];
+	return cxType != null
+		? provider
+			? provider.props.value
+			: cxType.__
+		: context;
 }

@@ -1,27 +1,29 @@
 import {
 	encodeEntities,
-	indent,
-	isLargeString,
 	styleObjToCss,
-	getChildren
+	getContext,
+	createComponent,
+	UNSAFE_NAME,
+	XLINK,
+	VOID_ELEMENTS
 } from './util';
 import { options, Fragment } from 'preact';
+import { _renderToStringPretty } from './pretty';
+import {
+	COMMIT,
+	COMPONENT,
+	DIFF,
+	DIFFED,
+	DIRTY,
+	NEXT_STATE,
+	RENDER,
+	SKIP_EFFECTS,
+	VNODE
+} from './constants';
 
 /** @typedef {import('preact').VNode} VNode */
 
 const SHALLOW = { shallow: true };
-
-// components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
-const UNNAMED = [];
-
-const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
-
-const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
-const XLINK = /^xlink:?./;
-
-function markAsDirty() {
-	this.__d = true;
-}
 
 /** Render Preact JSX + Components to an HTML string.
  *	@name render
@@ -48,346 +50,139 @@ let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 const EMPTY_ARR = [];
 function renderToString(vnode, context, opts) {
 	context = context || {};
-	opts = opts || {};
 
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
 	// and avoid a lot of dirty checks and allocations by setting
 	// `options._skipEffects` (`__s`) too.
-	const previousSkipEffects = options.__s;
-	options.__s = true;
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
 
 	let res;
-	if (opts.pretty || opts.sortAttributes) {
+	if (
+		opts &&
+		(opts.pretty ||
+			opts.voidElements ||
+			opts.sortAttributes ||
+			opts.shallow ||
+			opts.allAttributes ||
+			opts.xml ||
+			opts.attributeHook)
+	) {
 		res = _renderToStringPretty(vnode, context, opts);
 	} else {
-		res = _renderToString(vnode, context, opts);
+		res = _renderToString(vnode, context, false, undefined);
 	}
 
 	// options._commit, we don't schedule any effects in this library right now,
 	// so we can pass an empty queue to this hook.
-	if (options.__c) options.__c(vnode, EMPTY_ARR);
+	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+	options[SKIP_EFFECTS] = previousSkipEffects;
 	EMPTY_ARR.length = 0;
-	options.__s = previousSkipEffects;
 	return res;
 }
 
-function createComponent(vnode, context) {
-	return {
-		__v: vnode,
-		context,
-		props: vnode.props,
-		// silently drop state updates
-		setState: markAsDirty,
-		forceUpdate: markAsDirty,
-		__d: true,
-		// hooks
-		__h: []
-	};
+function renderFunctionComponent(vnode, context) {
+	let rendered,
+		c = createComponent(vnode, context),
+		cctx = getContext(vnode.type, context);
+
+	vnode[COMPONENT] = c;
+
+	// If a hook invokes setState() to invalidate the component during rendering,
+	// re-render it up to 25 times to allow "settling" of memoized states.
+	// Note:
+	//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
+	//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
+	let renderHook = options[RENDER];
+	let count = 0;
+	while (c[DIRTY] && count++ < 25) {
+		c[DIRTY] = false;
+
+		if (renderHook) renderHook(vnode);
+
+		// stateless functional components
+		rendered = vnode.type.call(c, vnode.props, cctx);
+	}
+
+	return rendered;
 }
 
-// Necessary for createContext api. Setting this property will pass
-// the context value as `this.context` just for this component.
-function getContext(nodeName, context) {
-	let cxType = nodeName.contextType;
-	let provider = cxType && context[cxType.__c];
-	return cxType != null
-		? provider
-			? provider.props.value
-			: cxType.__
-		: context;
-}
-
-/** The default export is an alias of `render()`. */
-function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
-	if (vnode == null || typeof vnode === 'boolean') {
-		return '';
-	}
-
-	// #text nodes
-	if (typeof vnode !== 'object') {
-		return encodeEntities(vnode);
-	}
-
-	if (Array.isArray(vnode)) {
-		const rendered = [];
-		for (let i = 0; i < vnode.length; i++) {
-			rendered.push(
-				_renderToString(vnode[i], context, opts, inner, isSvgMode, selectValue)
-			);
-		}
-		return rendered.join('');
-	}
-
+function renderClassComponent(vnode, context) {
 	let nodeName = vnode.type,
-		props = vnode.props,
-		isComponent = false;
+		cctx = getContext(nodeName, context);
 
-	// components
-	if (typeof nodeName === 'function') {
-		isComponent = true;
-		if (opts.shallow && (inner || opts.renderRootComponent === false)) {
-			nodeName = getComponentName(nodeName);
-		} else if (nodeName === Fragment) {
-			const children = [];
-			getChildren(children, vnode.props.children);
-			return _renderToString(
-				children,
-				context,
-				opts,
-				opts.shallowHighOrder !== false,
-				isSvgMode,
-				selectValue
-			);
-		} else {
-			let rendered;
+	// c = new nodeName(props, context);
+	let c = new nodeName(vnode.props, cctx);
+	vnode[COMPONENT] = c;
+	c[VNODE] = vnode;
+	// turn off stateful re-rendering:
+	c[DIRTY] = true;
+	c.props = vnode.props;
+	if (c.state == null) c.state = {};
 
-			let c = (vnode.__c = createComponent(vnode, context));
-
-			// options._diff
-			if (options.__b) options.__b(vnode);
-
-			// options._render
-			let renderHook = options.__r;
-
-			if (
-				!nodeName.prototype ||
-				typeof nodeName.prototype.render !== 'function'
-			) {
-				let cctx = getContext(nodeName, context);
-
-				// If a hook invokes setState() to invalidate the component during rendering,
-				// re-render it up to 25 times to allow "settling" of memoized states.
-				// Note:
-				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
-				let count = 0;
-				while (c.__d && count++ < 25) {
-					c.__d = false;
-
-					if (renderHook) renderHook(vnode);
-
-					// stateless functional components
-					rendered = nodeName.call(vnode.__c, props, cctx);
-				}
-			} else {
-				let cctx = getContext(nodeName, context);
-
-				// c = new nodeName(props, context);
-				c = vnode.__c = new nodeName(props, cctx);
-				c.__v = vnode;
-				// turn off stateful re-rendering:
-				c._dirty = c.__d = true;
-				c.props = props;
-				if (c.state == null) c.state = {};
-
-				if (c._nextState == null && c.__s == null) {
-					c._nextState = c.__s = c.state;
-				}
-
-				c.context = cctx;
-				if (nodeName.getDerivedStateFromProps)
-					c.state = Object.assign(
-						{},
-						c.state,
-						nodeName.getDerivedStateFromProps(c.props, c.state)
-					);
-				else if (c.componentWillMount) {
-					c.componentWillMount();
-
-					// If the user called setState in cWM we need to flush pending,
-					// state updates. This is the same behaviour in React.
-					c.state =
-						c._nextState !== c.state
-							? c._nextState
-							: c.__s !== c.state
-							? c.__s
-							: c.state;
-				}
-
-				if (renderHook) renderHook(vnode);
-
-				rendered = c.render(c.props, c.state, c.context);
-			}
-
-			if (c.getChildContext) {
-				context = Object.assign({}, context, c.getChildContext());
-			}
-
-			if (options.diffed) options.diffed(vnode);
-			return _renderToString(
-				rendered,
-				context,
-				opts,
-				opts.shallowHighOrder !== false,
-				isSvgMode,
-				selectValue
-			);
-		}
+	if (c[NEXT_STATE] == null) {
+		c[NEXT_STATE] = c.state;
 	}
 
-	// render JSX to HTML
-	let s = `<${nodeName}`,
-		propChildren,
-		html;
+	c.context = cctx;
+	if (nodeName.getDerivedStateFromProps) {
+		c.state = assign(
+			{},
+			c.state,
+			nodeName.getDerivedStateFromProps(c.props, c.state)
+		);
+	} else if (c.componentWillMount) {
+		c.componentWillMount();
 
-	if (props) {
-		for (let name in props) {
-			let v = props[name];
-			if (name === 'children') {
-				propChildren = v;
-				continue;
-			}
-
-			if (UNSAFE_NAME.test(name)) continue;
-
-			if (
-				!(opts && opts.allAttributes) &&
-				(name === 'key' ||
-					name === 'ref' ||
-					name === '__self' ||
-					name === '__source')
-			)
-				continue;
-
-			if (name === 'defaultValue') {
-				name = 'value';
-			} else if (name === 'defaultChecked') {
-				name = 'checked';
-			} else if (name === 'defaultSelected') {
-				name = 'selected';
-			} else if (name === 'className') {
-				if (typeof props.class !== 'undefined') continue;
-				name = 'class';
-			} else if (isSvgMode && XLINK.test(name)) {
-				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
-			}
-
-			if (name === 'htmlFor') {
-				if (props.for) continue;
-				name = 'for';
-			}
-
-			if (name === 'style' && v && typeof v === 'object') {
-				v = styleObjToCss(v);
-			}
-
-			// always use string values instead of booleans for aria attributes
-			// also see https://github.com/preactjs/preact/pull/2347/files
-			if (name[0] === 'a' && name['1'] === 'r' && typeof v === 'boolean') {
-				v = String(v);
-			}
-
-			let hooked =
-				opts.attributeHook &&
-				opts.attributeHook(name, v, context, opts, isComponent);
-			if (hooked || hooked === '') {
-				s = s + hooked;
-				continue;
-			}
-
-			if (name === 'dangerouslySetInnerHTML') {
-				html = v && v.__html;
-			} else if (nodeName === 'textarea' && name === 'value') {
-				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
-				propChildren = v;
-			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
-				if (v === true || v === '') {
-					v = name;
-					// in non-xml mode, allow boolean attributes
-					if (!opts || !opts.xml) {
-						s = s + ' ' + name;
-						continue;
-					}
-				}
-
-				if (name === 'value') {
-					if (nodeName === 'select') {
-						selectValue = v;
-						continue;
-					} else if (
-						// If we're looking at an <option> and it's the currently selected one
-						nodeName === 'option' &&
-						selectValue == v &&
-						// and the <option> doesn't already have a selected attribute on it
-						typeof props.selected === 'undefined'
-					) {
-						s = `${s} selected`;
-					}
-				}
-				s = s + ` ${name}="${encodeEntities(v)}"`;
-			}
-		}
+		// If the user called setState in cWM we need to flush pending,
+		// state updates. This is the same behaviour in React.
+		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
 	}
 
-	s = s + '>';
+	let renderHook = options[RENDER];
+	if (renderHook) renderHook(vnode);
 
-	if (UNSAFE_NAME.test(nodeName))
-		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
-
-	let isVoid =
-		VOID_ELEMENTS.test(nodeName) ||
-		(opts.voidElements && opts.voidElements.test(nodeName));
-	let pieces = '';
-
-	let children;
-	if (html) {
-		s = s + html;
-	} else if (
-		propChildren != null &&
-		getChildren((children = []), propChildren).length
-	) {
-		for (let i = 0; i < children.length; i++) {
-			let child = children[i];
-
-			if (child != null && child !== false) {
-				let childSvgMode =
-						nodeName === 'svg'
-							? true
-							: nodeName === 'foreignObject'
-							? false
-							: isSvgMode,
-					ret = _renderToString(
-						child,
-						context,
-						opts,
-						true,
-						childSvgMode,
-						selectValue
-					);
-
-				// Skip if we received an empty string
-				if (ret) {
-					pieces = pieces + ret;
-				}
-			}
-		}
-	}
-
-	if (pieces.length || html) {
-		s = s + pieces;
-	} else if (opts && opts.xml) {
-		return s.substring(0, s.length - 1) + ' />';
-	}
-
-	if (isVoid && !children && !html) {
-		return s.replace(/>$/, ' />');
-	}
-
-	return `${s}</${nodeName}>`;
+	return c.render(c.props, c.state, c.context);
 }
 
+function normalizePropName(name, isSvgMode) {
+	if (name === 'className') {
+		return 'class';
+	} else if (name === 'htmlFor') {
+		return 'for';
+	} else if (name === 'defaultValue') {
+		return 'value';
+	} else if (name === 'defaultChecked') {
+		return 'checked';
+	} else if (name === 'defaultSelected') {
+		return 'selected';
+	} else if (isSvgMode && XLINK.test(name)) {
+		return name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+	}
+
+	return name;
+}
+
+function normalizePropValue(name, v) {
+	if (name === 'style' && v != null && typeof v === 'object') {
+		return styleObjToCss(v);
+	} else if (name[0] === 'a' && name[1] === 'r' && typeof v === 'boolean') {
+		// always use string values instead of booleans for aria attributes
+		// also see https://github.com/preactjs/preact/pull/2347/files
+		return String(v);
+	}
+
+	return v;
+}
+
+const isArray = Array.isArray;
+const assign = Object.assign;
+
 /** The default export is an alias of `render()`. */
-function _renderToStringPretty(
-	vnode,
-	context,
-	opts,
-	inner,
-	isSvgMode,
-	selectValue
-) {
-	if (vnode == null || typeof vnode === 'boolean') {
+function _renderToString(vnode, context, isSvgMode, selectValue) {
+	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
 	}
 
@@ -396,213 +191,119 @@ function _renderToStringPretty(
 		return encodeEntities(vnode);
 	}
 
-	let pretty = opts.pretty,
-		indentChar = pretty && typeof pretty === 'string' ? pretty : '\t';
-
-	if (Array.isArray(vnode)) {
+	if (isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
-			if (pretty && i > 0) rendered = rendered + '\n';
 			rendered =
-				rendered +
-				_renderToStringPretty(
-					vnode[i],
-					context,
-					opts,
-					inner,
-					isSvgMode,
-					selectValue
-				);
+				rendered + _renderToString(vnode[i], context, isSvgMode, selectValue);
 		}
 		return rendered;
 	}
 
 	let nodeName = vnode.type,
-		props = vnode.props,
-		isComponent = false;
+		props = vnode.props;
+	const isComponent = typeof nodeName === 'function';
 
 	// components
-	if (typeof nodeName === 'function') {
-		isComponent = true;
-		if (opts.shallow && (inner || opts.renderRootComponent === false)) {
-			nodeName = getComponentName(nodeName);
-		} else if (nodeName === Fragment) {
-			const children = [];
-			getChildren(children, vnode.props.children);
-			return _renderToStringPretty(
-				children,
+	if (isComponent) {
+		if (nodeName === Fragment) {
+			return _renderToString(
+				vnode.props.children,
 				context,
-				opts,
-				opts.shallowHighOrder !== false,
-				isSvgMode,
-				selectValue
-			);
-		} else {
-			let rendered;
-
-			let c = (vnode.__c = createComponent(vnode, context));
-
-			// options._diff
-			if (options.__b) options.__b(vnode);
-
-			// options._render
-			let renderHook = options.__r;
-
-			if (
-				!nodeName.prototype ||
-				typeof nodeName.prototype.render !== 'function'
-			) {
-				let cctx = getContext(nodeName, context);
-
-				// If a hook invokes setState() to invalidate the component during rendering,
-				// re-render it up to 25 times to allow "settling" of memoized states.
-				// Note:
-				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
-				let count = 0;
-				while (c.__d && count++ < 25) {
-					c.__d = false;
-
-					if (renderHook) renderHook(vnode);
-
-					// stateless functional components
-					rendered = nodeName.call(vnode.__c, props, cctx);
-				}
-			} else {
-				let cctx = getContext(nodeName, context);
-
-				// c = new nodeName(props, context);
-				c = vnode.__c = new nodeName(props, cctx);
-				c.__v = vnode;
-				// turn off stateful re-rendering:
-				c._dirty = c.__d = true;
-				c.props = props;
-				if (c.state == null) c.state = {};
-
-				if (c._nextState == null && c.__s == null) {
-					c._nextState = c.__s = c.state;
-				}
-
-				c.context = cctx;
-				if (nodeName.getDerivedStateFromProps)
-					c.state = Object.assign(
-						{},
-						c.state,
-						nodeName.getDerivedStateFromProps(c.props, c.state)
-					);
-				else if (c.componentWillMount) {
-					c.componentWillMount();
-
-					// If the user called setState in cWM we need to flush pending,
-					// state updates. This is the same behaviour in React.
-					c.state =
-						c._nextState !== c.state
-							? c._nextState
-							: c.__s !== c.state
-							? c.__s
-							: c.state;
-				}
-
-				if (renderHook) renderHook(vnode);
-
-				rendered = c.render(c.props, c.state, c.context);
-			}
-
-			if (c.getChildContext) {
-				context = Object.assign({}, context, c.getChildContext());
-			}
-
-			if (options.diffed) options.diffed(vnode);
-			return _renderToStringPretty(
-				rendered,
-				context,
-				opts,
-				opts.shallowHighOrder !== false,
 				isSvgMode,
 				selectValue
 			);
 		}
+
+		if (options[DIFF]) options[DIFF](vnode);
+
+		let rendered;
+		if (nodeName.prototype && typeof nodeName.prototype.render === 'function') {
+			rendered = renderClassComponent(vnode, context);
+		} else {
+			rendered = renderFunctionComponent(vnode, context);
+		}
+
+		let component = vnode[COMPONENT];
+		if (component.getChildContext) {
+			context = assign({}, context, component.getChildContext());
+		}
+
+		if (options[DIFFED]) options[DIFFED](vnode);
+
+		return _renderToString(rendered, context, isSvgMode, selectValue);
 	}
 
 	// render JSX to HTML
-	let s = '<' + nodeName,
-		propChildren,
+	let s = '<',
+		children,
 		html;
 
+	s = s + nodeName;
+
 	if (props) {
-		let attrs = Object.keys(props);
+		children = props.children;
+		for (let name in props) {
+			let v = props[name];
 
-		// allow sorting lexicographically for more determinism (useful for tests, such as via preact-jsx-chai)
-		if (opts && opts.sortAttributes === true) attrs.sort();
+			// switch (name) {
+			// 	case 'className':
+			// 		if ('class' in props) continue;
+			// 		name = 'class';
+			// 		break;
+			// 	case 'htmlFor':
+			// 		if ('for' in props) continue;
+			// 		name = 'for';
+			// 		break;
+			// 	case 'defaultValue':
+			// 		name = 'value';
+			// 		break;
+			// 	case 'defaultChecked':
+			// 		name = 'checked';
+			// 		break;
+			// 	case 'defaultSelected':
+			// 		name = 'selected';
+			// 		break;
+			// 	case 'key':
+			// 	case 'ref':
+			// 	case '__self':
+			// 	case '__source':
+			// 	case 'children':
+			// 		continue;
+			// 	default:
+			// 		if (isSvgMode && XLINK.test(name)) {
+			// 			name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+			// 		}
+			// }
 
-		for (let i = 0; i < attrs.length; i++) {
-			let name = attrs[i],
-				v = props[name];
-			if (name === 'children') {
-				propChildren = v;
+			if (
+				name === 'key' ||
+				name === 'ref' ||
+				name === '__self' ||
+				name === '__source' ||
+				name === 'children' ||
+				(name === 'className' && 'class' in props) ||
+				(name === 'htmlFor' && 'for' in props)
+			) {
 				continue;
 			}
 
 			if (UNSAFE_NAME.test(name)) continue;
 
-			if (
-				!(opts && opts.allAttributes) &&
-				(name === 'key' ||
-					name === 'ref' ||
-					name === '__self' ||
-					name === '__source')
-			)
-				continue;
-
-			if (name === 'defaultValue') {
-				name = 'value';
-			} else if (name === 'defaultChecked') {
-				name = 'checked';
-			} else if (name === 'defaultSelected') {
-				name = 'selected';
-			} else if (name === 'className') {
-				if (typeof props.class !== 'undefined') continue;
-				name = 'class';
-			} else if (isSvgMode && XLINK.test(name)) {
-				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
-			}
-
-			if (name === 'htmlFor') {
-				if (props.for) continue;
-				name = 'for';
-			}
-
-			if (name === 'style' && v && typeof v === 'object') {
-				v = styleObjToCss(v);
-			}
-
-			// always use string values instead of booleans for aria attributes
-			// also see https://github.com/preactjs/preact/pull/2347/files
-			if (name[0] === 'a' && name['1'] === 'r' && typeof v === 'boolean') {
-				v = String(v);
-			}
-
-			let hooked =
-				opts.attributeHook &&
-				opts.attributeHook(name, v, context, opts, isComponent);
-			if (hooked || hooked === '') {
-				s = s + hooked;
-				continue;
-			}
+			name = normalizePropName(name, isSvgMode);
+			v = normalizePropValue(name, v);
 
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
 			} else if (nodeName === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
-				propChildren = v;
+				children = v;
+				// html = encodeEntities(v);
 			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
 				if (v === true || v === '') {
 					v = name;
-					// in non-xml mode, allow boolean attributes
-					if (!opts || !opts.xml) {
-						s = s + ' ' + name;
-						continue;
-					}
+					s = s + ' ' + name;
+					continue;
 				}
 
 				if (name === 'value') {
@@ -614,139 +315,82 @@ function _renderToStringPretty(
 						nodeName === 'option' &&
 						selectValue == v &&
 						// and the <option> doesn't already have a selected attribute on it
-						typeof props.selected === 'undefined'
+						!('selected' in props)
 					) {
-						s = s + ` selected`;
+						s = s + ' selected';
 					}
 				}
-				s = s + ` ${name}="${encodeEntities(v)}"`;
+				s = s + ' ' + name + '="' + encodeEntities(v) + '"';
 			}
 		}
 	}
 
-	// account for >1 multiline attribute
-	if (pretty) {
-		let sub = s.replace(/\n\s*/, ' ');
-		if (sub !== s && !~sub.indexOf('\n')) s = sub;
-		else if (pretty && ~s.indexOf('\n')) s = s + '\n';
-	}
-
+	let startElement = s;
 	s = s + '>';
 
-	if (UNSAFE_NAME.test(nodeName))
+	if (UNSAFE_NAME.test(nodeName)) {
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
+	}
 
-	let isVoid =
-		VOID_ELEMENTS.test(nodeName) ||
-		(opts.voidElements && opts.voidElements.test(nodeName));
-	let pieces = [];
+	let pieces = '';
+	let hasChildren = false;
 
-	let children;
+	// let children = isArray(propChildren)
+	// 	? propChildren
+	// 	: propChildren != null
+	// 	? [propChildren]
+	// 	: undefined;
 	if (html) {
-		// if multiline, indent.
-		if (pretty && isLargeString(html)) {
-			html = '\n' + indentChar + indent(html, indentChar);
-		}
-		s = s + html;
-	} else if (
-		propChildren != null &&
-		getChildren((children = []), propChildren).length
-	) {
-		let hasLarge = pretty && ~s.indexOf('\n');
-		let lastWasText = false;
-
+		// return s + html + '</' + nodeName + '>';
+		// s = s + html;
+		pieces = pieces + html;
+		hasChildren = true;
+	} else if (typeof children === 'string') {
+		// s = s + encodeEntities(children);
+		pieces = pieces + encodeEntities(children);
+		hasChildren = true;
+	} else if (isArray(children)) {
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
 
 			if (child != null && child !== false) {
 				let childSvgMode =
-						nodeName === 'svg'
-							? true
-							: nodeName === 'foreignObject'
-							? false
-							: isSvgMode,
-					ret = _renderToStringPretty(
-						child,
-						context,
-						opts,
-						true,
-						childSvgMode,
-						selectValue
-					);
-
-				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
+					nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
+				let ret = _renderToString(child, context, childSvgMode, selectValue);
 
 				// Skip if we received an empty string
 				if (ret) {
-					if (pretty) {
-						let isText = ret.length > 0 && ret[0] != '<';
-
-						// We merge adjacent text nodes, otherwise each piece would be printed
-						// on a new line.
-						if (lastWasText && isText) {
-							pieces[pieces.length - 1] += ret;
-						} else {
-							pieces.push(ret);
-						}
-
-						lastWasText = isText;
-					} else {
-						pieces.push(ret);
-					}
+					// s = s + ret;
+					pieces = pieces + ret;
+					hasChildren = true;
 				}
 			}
 		}
-		if (pretty && hasLarge) {
-			for (let i = pieces.length; i--; ) {
-				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
-			}
+	} else if (children != null && children !== false && children !== true) {
+		let childSvgMode =
+			nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
+		let ret = _renderToString(children, context, childSvgMode, selectValue);
+
+		// Skip if we received an empty string
+		if (ret) {
+			// s = s + ret;
+			pieces = pieces + ret;
+			hasChildren = true;
 		}
 	}
 
-	if (pieces.length || html) {
-		s = s + pieces.join('');
-	} else if (opts && opts.xml) {
-		return s.substring(0, s.length - 1) + ' />';
+	if (hasChildren) {
+		s = s + pieces;
+		// return s + pieces + '</' + nodeName + '>';
+	} else if (VOID_ELEMENTS.test(nodeName)) {
+		return startElement + ' />';
 	}
 
-	if (isVoid && !children && !html) {
-		s = s.replace(/>$/, ' />');
-	} else {
-		if (pretty && ~s.indexOf('\n')) s = s + '\n';
-		s = s + `</${nodeName}>`;
-	}
-
-	return s;
+	return s + '</' + nodeName + '>';
 }
 
-function getComponentName(component) {
-	return (
-		component.displayName ||
-		(component !== Function && component.name) ||
-		getFallbackComponentName(component)
-	);
-}
+/** The default export is an alias of `render()`. */
 
-function getFallbackComponentName(component) {
-	let str = Function.prototype.toString.call(component),
-		name = (str.match(/^\s*function\s+([^( ]+)/) || '')[1];
-	if (!name) {
-		// search for an existing indexed name for the given component:
-		let index = -1;
-		for (let i = UNNAMED.length; i--; ) {
-			if (UNNAMED[i] === component) {
-				index = i;
-				break;
-			}
-		}
-		// not found, create a new indexed name:
-		if (index < 0) {
-			index = UNNAMED.push(component) - 1;
-		}
-		name = `UnnamedComponent${index}`;
-	}
-	return name;
-}
 renderToString.shallowRender = shallowRender;
 
 export default renderToString;
