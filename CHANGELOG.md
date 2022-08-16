@@ -1,5 +1,15 @@
 # preact-render-to-string
 
+## 5.2.2
+
+### Patch Changes
+
+- [#235](https://github.com/preactjs/preact-render-to-string/pull/235) [`2f6d6e8`](https://github.com/preactjs/preact-render-to-string/commit/2f6d6e8dd0573eb075273c2c9a20d7df289dacc8) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Remove duplicate type path in `package.json`. Only one of `types` or `typings` is needed.
+
+* [#228](https://github.com/preactjs/preact-render-to-string/pull/228) [`e4fe799`](https://github.com/preactjs/preact-render-to-string/commit/e4fe7992d717eb3cb8740d2d28696bf2ba6c3d1e) Thanks [@developit](https://github.com/developit)! - Improve string encoding performance by ~50%
+
+- [#229](https://github.com/preactjs/preact-render-to-string/pull/229) [`d83def7`](https://github.com/preactjs/preact-render-to-string/commit/d83def7c1765c4ad1665598905531f5157366abd) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Split up hot paths and make separate path for opts.pretty
+
 ## 5.2.1
 
 ### Patch Changes
