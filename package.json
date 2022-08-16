@@ -7,7 +7,6 @@
 	"umd:main": "dist/index.js",
 	"module": "dist/index.module.js",
 	"jsnext:main": "dist/index.module.js",
-	"typings": "src/index.d.ts",
 	"types": "src/index.d.ts",
 	"exports": {
 		".": {
