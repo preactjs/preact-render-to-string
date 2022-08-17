@@ -7,8 +7,6 @@ export const SKIP_EFFECTS = '__s';
 
 // VNode properties
 export const COMPONENT = '__c';
-export const PARENT = '__';
-export const CHILDREN = '__k';
 
 // Component properties
 export const VNODE = '__v';
