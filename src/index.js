@@ -18,7 +18,9 @@ import {
 	NEXT_STATE,
 	RENDER,
 	SKIP_EFFECTS,
-	VNODE
+	VNODE,
+	PARENT,
+	CHILDREN
 } from './constants';
 
 /** @typedef {import('preact').VNode} VNode */
@@ -72,7 +74,7 @@ function renderToString(vnode, context, opts) {
 	) {
 		res = _renderToStringPretty(vnode, context, opts);
 	} else {
-		res = _renderToString(vnode, context, false, undefined);
+		res = _renderToString(vnode, context, false, undefined, vnode);
 	}
 
 	// options._commit, we don't schedule any effects in this library right now,
@@ -181,7 +183,7 @@ const isArray = Array.isArray;
 const assign = Object.assign;
 
 /** The default export is an alias of `render()`. */
-function _renderToString(vnode, context, isSvgMode, selectValue) {
+function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
 	}
@@ -193,9 +195,15 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 	if (isArray(vnode)) {
 		let rendered = '';
+		parent[CHILDREN] = [];
 		for (let i = 0; i < vnode.length; i++) {
+			if (typeof vnode[i] === 'object' && parent) {
+				vnode[i][PARENT] = parent;
+				parent[CHILDREN].push(vnode[i]);
+			}
 			rendered =
-				rendered + _renderToString(vnode[i], context, isSvgMode, selectValue);
+				rendered +
+				_renderToString(vnode[i], context, isSvgMode, selectValue, parent);
 		}
 		return rendered;
 	}
@@ -206,12 +214,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 	// components
 	if (isComponent) {
+		vnode[PARENT] = parent;
 		if (nodeName === Fragment) {
 			return _renderToString(
 				vnode.props.children,
 				context,
 				isSvgMode,
-				selectValue
+				selectValue,
+				vnode
 			);
 		}
 
@@ -231,7 +241,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 		if (options[DIFFED]) options[DIFFED](vnode);
 
-		return _renderToString(rendered, context, isSvgMode, selectValue);
+		vnode[CHILDREN] = Array.isArray(rendered) ? rendered : [rendered];
+		return _renderToString(rendered, context, isSvgMode, selectValue, vnode);
 	}
 
 	// render JSX to HTML
@@ -245,36 +256,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		children = props.children;
 		for (let name in props) {
 			let v = props[name];
-
-			// switch (name) {
-			// 	case 'className':
-			// 		if ('class' in props) continue;
-			// 		name = 'class';
-			// 		break;
-			// 	case 'htmlFor':
-			// 		if ('for' in props) continue;
-			// 		name = 'for';
-			// 		break;
-			// 	case 'defaultValue':
-			// 		name = 'value';
-			// 		break;
-			// 	case 'defaultChecked':
-			// 		name = 'checked';
-			// 		break;
-			// 	case 'defaultSelected':
-			// 		name = 'selected';
-			// 		break;
-			// 	case 'key':
-			// 	case 'ref':
-			// 	case '__self':
-			// 	case '__source':
-			// 	case 'children':
-			// 		continue;
-			// 	default:
-			// 		if (isSvgMode && XLINK.test(name)) {
-			// 			name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
-			// 		}
-			// }
 
 			if (
 				name === 'key' ||
@@ -335,11 +316,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	let pieces = '';
 	let hasChildren = false;
 
-	// let children = isArray(propChildren)
-	// 	? propChildren
-	// 	: propChildren != null
-	// 	? [propChildren]
-	// 	: undefined;
 	if (html) {
 		// return s + html + '</' + nodeName + '>';
 		// s = s + html;
@@ -350,13 +326,24 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		pieces = pieces + encodeEntities(children);
 		hasChildren = true;
 	} else if (isArray(children)) {
+		vnode[CHILDREN] = [];
+
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
-
+			vnode[CHILDREN].push(child);
 			if (child != null && child !== false) {
+				if (typeof child === 'object') {
+					child[PARENT] = vnode;
+				}
 				let childSvgMode =
 					nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
-				let ret = _renderToString(child, context, childSvgMode, selectValue);
+				let ret = _renderToString(
+					child,
+					context,
+					childSvgMode,
+					selectValue,
+					vnode
+				);
 
 				// Skip if we received an empty string
 				if (ret) {
@@ -367,9 +354,19 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 			}
 		}
 	} else if (children != null && children !== false && children !== true) {
+		vnode[CHILDREN] = [children];
+		if (typeof children === 'object') {
+			children[PARENT] = vnode;
+		}
 		let childSvgMode =
 			nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
-		let ret = _renderToString(children, context, childSvgMode, selectValue);
+		let ret = _renderToString(
+			children,
+			context,
+			childSvgMode,
+			selectValue,
+			vnode
+		);
 
 		// Skip if we received an empty string
 		if (ret) {

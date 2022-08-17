@@ -19,6 +19,45 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		describe('setting vnode properties', () => {
+			it('sets the parent and children attributes for normal nodes', () => {
+				const paragraph = <p>hi</p>;
+				const root = <div>{paragraph}</div>;
+				const rendered = render(root);
+
+				expect(rendered).to.equal(`<div><p>hi</p></div>`);
+				expect(root.__k).to.deep.equal([paragraph]);
+				expect(paragraph.__).to.deep.equal(root);
+			});
+
+			it('sets the parent and children attributes for functions', () => {
+				const Root = () => <p>hi</p>;
+				const root = <Root />;
+				const wrapper = <div>{root}</div>;
+				const rendered = render(wrapper);
+
+				expect(rendered).to.equal(`<div><p>hi</p></div>`);
+				expect(wrapper.__k).to.deep.equal([root]);
+				expect(root.__).to.deep.equal(wrapper);
+			});
+
+			it('sets the parent and children attributes for nested functions', () => {
+				const Root = (props) => props.children;
+				const Child = () => (
+					<div>
+						<p>hi</p>
+					</div>
+				);
+				const child = <Child />;
+				const root = <Root>{child}</Root>;
+				const rendered = render(root);
+
+				expect(rendered).to.equal(`<div><p>hi</p></div>`);
+				expect(root.__k).to.deep.equal([child]);
+				expect(child.__).to.deep.equal(root);
+			});
+		});
+
 		describe('whitespace', () => {
 			it('should omit whitespace between elements', () => {
 				let children = [];
