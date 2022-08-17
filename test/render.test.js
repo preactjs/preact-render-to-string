@@ -1,6 +1,12 @@
 import { render, shallowRender } from '../src';
 import { h, Component, createContext, Fragment, options } from 'preact';
-import { useState, useContext, useEffect, useLayoutEffect } from 'preact/hooks';
+import {
+	useState,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useMemo
+} from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
 
@@ -82,9 +88,23 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
-		it('should omit defaultValue attribute', () => {
+		it('should serialize defaultValue props to the value attribute', () => {
 			let rendered = render(<div defaultValue="test" />),
-				expected = `<div></div>`;
+				expected = `<div value="test"></div>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
+		it('should serialize defaultChecked prop to the checked attribute', () => {
+			let rendered = render(<input type="checkbox" defaultChecked />),
+				expected = `<input type="checkbox" checked />`;
+
+			expect(rendered).to.equal(expected);
+		});
+
+		it('should serialize defaultSelected prop to the selected attribute', () => {
+			let rendered = render(<option defaultSelected />),
+				expected = `<option selected></option>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -189,7 +209,7 @@ describe('render', () => {
 
 		it('should encode entities', () => {
 			let rendered = render(<div a={'"<>&'}>{'"<>&'}</div>),
-				expected = `<div a="&quot;&lt;&gt;&amp;">&quot;&lt;&gt;&amp;</div>`;
+				expected = `<div a="&quot;&lt;>&amp;">&quot;&lt;>&amp;</div>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -883,7 +903,7 @@ describe('render', () => {
 	});
 
 	describe('state locking', () => {
-		it('should set _dirty and __d to true', () => {
+		it('should set __d (_dirty) to true', () => {
 			let inst;
 			class Foo extends Component {
 				constructor(props, context) {
@@ -897,7 +917,7 @@ describe('render', () => {
 
 			expect(render(<Foo />)).to.equal('<div></div>');
 
-			expect(inst).to.have.property('_dirty', true);
+			// expect(inst).to.have.property('_dirty', true);
 			expect(inst).to.have.property('__d', true);
 		});
 
@@ -1084,12 +1104,48 @@ describe('render', () => {
 		});
 
 		it('should work with useState', () => {
+			let renders = 0;
+
 			function Foo() {
+				renders++;
 				let [v] = useState(0);
 				return <div>{v}</div>;
 			}
 
 			expect(render(<Foo />)).to.equal('<div>0</div>');
+			expect(renders).to.equal(1);
+		});
+
+		it('should re-render when useState setter is called during rendering', () => {
+			let renders = 0;
+
+			function Foo() {
+				renders++;
+				let [v, setV] = useState(0);
+				useMemo(() => {
+					setV(1);
+				}, []);
+				return <div>{v}</div>;
+			}
+
+			expect(render(<Foo />)).to.equal('<div>1</div>');
+			expect(renders).to.equal(2);
+		});
+
+		it('should re-render up to 25 times to allow useState settling', () => {
+			let renders = 0;
+
+			function Foo() {
+				renders++;
+				let [v, setV] = useState(0);
+				if (v < 30) {
+					setV(v + 1);
+				}
+				return <div>{v}</div>;
+			}
+
+			expect(render(<Foo />)).to.equal('<div>24</div>');
+			expect(renders).to.equal(25);
 		});
 
 		it('should not trigger useEffect callbacks', () => {
@@ -1164,6 +1220,20 @@ describe('render', () => {
 			<select value="B">
 				<option value="A">A</option>
 				<option value="B">B</option>
+			</select>
+		);
+		expect(res).to.equal(
+			'<select><option value="A">A</option><option selected value="B">B</option></select>'
+		);
+	});
+
+	it('should not add a selected attribute if one already exists', () => {
+		let res = render(
+			<select value="B">
+				<option value="A">A</option>
+				<option selected value="B">
+					B
+				</option>
 			</select>
 		);
 		expect(res).to.equal(
