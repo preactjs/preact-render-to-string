@@ -195,7 +195,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	if (typeof vnode !== 'object') {
 		return encodeEntities(vnode);
 	}
-	
+
 	vnode[PARENT] = parent;
   if (options[DIFF]) options[DIFF](vnode);
 
