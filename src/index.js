@@ -16,9 +16,11 @@ import {
 	DIFFED,
 	DIRTY,
 	NEXT_STATE,
+	PARENT,
 	RENDER,
 	SKIP_EFFECTS,
-	VNODE
+	VNODE,
+	CHILDREN
 } from './constants';
 
 /** @typedef {import('preact').VNode} VNode */
@@ -72,7 +74,9 @@ function renderToString(vnode, context, opts) {
 	) {
 		res = _renderToStringPretty(vnode, context, opts);
 	} else {
-		res = _renderToString(vnode, context, false, undefined);
+		res = _renderToString(vnode, context, false, undefined, {
+			[CHILDREN]: [vnode]
+		});
 	}
 
 	// options._commit, we don't schedule any effects in this library right now,
@@ -191,11 +195,17 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	if (typeof vnode !== 'object') {
 		return encodeEntities(vnode);
 	}
+	
+	vnode[PARENT] = parent;
+  if (options[DIFF]) options[DIFF](vnode);
 
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
+			if (typeof vnode[i] === 'object' && parent) {
+				parent[CHILDREN].push(vnode[i]);
+			}
 			rendered =
 				rendered + _renderToString(vnode[i], context, isSvgMode, selectValue);
 		}
@@ -330,6 +340,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 			}
 		}
 	} else if (children != null && children !== false && children !== true) {
+		vnode[CHILDREN] = [children];
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
 		let ret = _renderToString(children, context, childSvgMode, selectValue);
