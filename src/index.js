@@ -182,15 +182,17 @@ const assign = Object.assign;
 
 /** The default export is an alias of `render()`. */
 function _renderToString(vnode, context, isSvgMode, selectValue) {
+	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
 	}
 
-	// #text nodes
+	// Text VNodes: escape as HTML
 	if (typeof vnode !== 'object') {
 		return encodeEntities(vnode);
 	}
 
+	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '';
 		for (let i = 0; i < vnode.length; i++) {
@@ -200,13 +202,15 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		return rendered;
 	}
 
-	let nodeName = vnode.type,
-		props = vnode.props;
-	const isComponent = typeof nodeName === 'function';
+	if (options[DIFF]) options[DIFF](vnode);
 
-	// components
+	let type = vnode.type,
+		props = vnode.props;
+
+	// Invoke rendering on Components
+	const isComponent = typeof type === 'function';
 	if (isComponent) {
-		if (nodeName === Fragment) {
+		if (type === Fragment) {
 			return _renderToString(
 				vnode.props.children,
 				context,
@@ -215,10 +219,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 			);
 		}
 
-		if (options[DIFF]) options[DIFF](vnode);
-
 		let rendered;
-		if (nodeName.prototype && typeof nodeName.prototype.render === 'function') {
+		if (type.prototype && typeof type.prototype.render === 'function') {
 			rendered = renderClassComponent(vnode, context);
 		} else {
 			rendered = renderFunctionComponent(vnode, context);
@@ -229,52 +231,23 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 			context = assign({}, context, component.getChildContext());
 		}
 
+		// Recurse into children before invoking the after-diff hook
+		const str = _renderToString(rendered, context, isSvgMode, selectValue);
 		if (options[DIFFED]) options[DIFFED](vnode);
-
-		return _renderToString(rendered, context, isSvgMode, selectValue);
+		return str;
 	}
 
-	// render JSX to HTML
+	// Serialize Element VNodes to HTML
 	let s = '<',
 		children,
 		html;
 
-	s = s + nodeName;
+	s = s + type;
 
 	if (props) {
 		children = props.children;
 		for (let name in props) {
 			let v = props[name];
-
-			// switch (name) {
-			// 	case 'className':
-			// 		if ('class' in props) continue;
-			// 		name = 'class';
-			// 		break;
-			// 	case 'htmlFor':
-			// 		if ('for' in props) continue;
-			// 		name = 'for';
-			// 		break;
-			// 	case 'defaultValue':
-			// 		name = 'value';
-			// 		break;
-			// 	case 'defaultChecked':
-			// 		name = 'checked';
-			// 		break;
-			// 	case 'defaultSelected':
-			// 		name = 'selected';
-			// 		break;
-			// 	case 'key':
-			// 	case 'ref':
-			// 	case '__self':
-			// 	case '__source':
-			// 	case 'children':
-			// 		continue;
-			// 	default:
-			// 		if (isSvgMode && XLINK.test(name)) {
-			// 			name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
-			// 		}
-			// }
 
 			if (
 				name === 'key' ||
@@ -295,10 +268,9 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
-			} else if (nodeName === 'textarea' && name === 'value') {
+			} else if (type === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
 				children = v;
-				// html = encodeEntities(v);
 			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
 				if (v === true || v === '') {
 					v = name;
@@ -307,12 +279,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 				}
 
 				if (name === 'value') {
-					if (nodeName === 'select') {
+					if (type === 'select') {
 						selectValue = v;
 						continue;
 					} else if (
 						// If we're looking at an <option> and it's the currently selected one
-						nodeName === 'option' &&
+						type === 'option' &&
 						selectValue == v &&
 						// and the <option> doesn't already have a selected attribute on it
 						!('selected' in props)
@@ -328,25 +300,17 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	let startElement = s;
 	s = s + '>';
 
-	if (UNSAFE_NAME.test(nodeName)) {
-		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
+	if (UNSAFE_NAME.test(type)) {
+		throw new Error(`${type} is not a valid HTML tag name in ${s}`);
 	}
 
 	let pieces = '';
 	let hasChildren = false;
 
-	// let children = isArray(propChildren)
-	// 	? propChildren
-	// 	: propChildren != null
-	// 	? [propChildren]
-	// 	: undefined;
 	if (html) {
-		// return s + html + '</' + nodeName + '>';
-		// s = s + html;
 		pieces = pieces + html;
 		hasChildren = true;
 	} else if (typeof children === 'string') {
-		// s = s + encodeEntities(children);
 		pieces = pieces + encodeEntities(children);
 		hasChildren = true;
 	} else if (isArray(children)) {
@@ -355,12 +319,11 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 			if (child != null && child !== false) {
 				let childSvgMode =
-					nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
+					type === 'svg' || (type !== 'foreignObject' && isSvgMode);
 				let ret = _renderToString(child, context, childSvgMode, selectValue);
 
 				// Skip if we received an empty string
 				if (ret) {
-					// s = s + ret;
 					pieces = pieces + ret;
 					hasChildren = true;
 				}
@@ -368,25 +331,25 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		}
 	} else if (children != null && children !== false && children !== true) {
 		let childSvgMode =
-			nodeName === 'svg' || (nodeName !== 'foreignObject' && isSvgMode);
+			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
 		let ret = _renderToString(children, context, childSvgMode, selectValue);
 
 		// Skip if we received an empty string
 		if (ret) {
-			// s = s + ret;
 			pieces = pieces + ret;
 			hasChildren = true;
 		}
 	}
 
+	if (options[DIFFED]) options[DIFFED](vnode);
+
 	if (hasChildren) {
 		s = s + pieces;
-		// return s + pieces + '</' + nodeName + '>';
-	} else if (VOID_ELEMENTS.test(nodeName)) {
+	} else if (VOID_ELEMENTS.test(type)) {
 		return startElement + ' />';
 	}
 
-	return s + '</' + nodeName + '>';
+	return s + '</' + type + '>';
 }
 
 /** The default export is an alias of `render()`. */

@@ -1154,30 +1154,38 @@ describe('render', () => {
 			if (oldCommit) oldCommit(...args);
 		};
 
-		function Component1({ children }) {
-			return children;
+		const outer = <Outer />;
+		const inner = <Inner />;
+		const div = <div />;
+
+		function Outer() {
+			return inner;
 		}
 
-		function Component2() {
-			return <div />;
+		function Inner() {
+			return div;
 		}
 
-		const vnode2 = <Component2>1</Component2>;
-		const vnode1 = <Component1>{vnode2}</Component1>;
-
-		render(vnode1);
+		render(outer);
 
 		expect(calls).to.deep.equal([
-			['_diff', [vnode1]],
-			['_render', [vnode1]],
-			['diffed', [vnode1]],
-			['_diff', [vnode2]],
-			['_render', [vnode2]],
-			['diffed', [vnode2]],
-			['_commit', [vnode1, []]]
+			['_diff', [outer]], // before diff
+			['_render', [outer]], // render attempt
+
+			['_diff', [inner]], // before diff
+			['_render', [inner]], // render attempt
+
+			// innermost <div>
+			['_diff', [div]], // before diff
+			['diffed', [div]], // after diff
+
+			['diffed', [inner]], // after diff
+			['diffed', [outer]], // after diff
+
+			['_commit', [outer, []]] // commit root
 		]);
 
-		expect(calls.length).to.equal(7);
+		expect(calls.length).to.equal(9);
 
 		options.__b = oldDiff;
 		options.__r = oldRender;
