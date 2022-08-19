@@ -1,13 +1,13 @@
 /* eslint-disable */
-// preact-render-to-string@5.1.22
+// preact-render-to-string@5.1.22 (7cdf4d6)
 import { Fragment as e, options as t } from 'preact';
 var r = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i,
 	n = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/,
 	o = /[\s\n\\/='"\0<>]/,
-	a = /^xlink:?./,
-	i = /["&<]/;
+	i = /^xlink:?./,
+	a = /["&<]/;
 function l(e) {
-	if (!1 === i.test((e += ''))) return e;
+	if (!1 === a.test((e += ''))) return e;
 	for (var t = 0, r = 0, n = '', o = ''; r < e.length; r++) {
 		switch (e.charCodeAt(r)) {
 			case 34:
@@ -79,14 +79,14 @@ function h(e, t) {
 	return null != r ? (n ? n.props.value : r.__) : t;
 }
 var g = [];
-function y(r, i, c, u, d, m) {
+function y(r, a, c, u, d, m) {
 	if (null == r || 'boolean' == typeof r) return '';
 	if ('object' != typeof r) return l(r);
 	var b = c.pretty,
 		x = b && 'string' == typeof b ? b : '\t';
 	if (Array.isArray(r)) {
 		for (var k = '', S = 0; S < r.length; S++)
-			b && S > 0 && (k += '\n'), (k += y(r[S], i, c, u, d, m));
+			b && S > 0 && (k += '\n'), (k += y(r[S], a, c, u, d, m));
 		return k;
 	}
 	var w,
@@ -98,15 +98,15 @@ function y(r, i, c, u, d, m) {
 			if (C === e) {
 				var A = [];
 				return (
-					_(A, r.props.children), y(A, i, c, !1 !== c.shallowHighOrder, d, m)
+					_(A, r.props.children), y(A, a, c, !1 !== c.shallowHighOrder, d, m)
 				);
 			}
 			var F,
-				H = (r.__c = v(r, i));
+				H = (r.__c = v(r, a));
 			t.__b && t.__b(r);
 			var M = t.__r;
 			if (C.prototype && 'function' == typeof C.prototype.render) {
-				var L = h(C, i);
+				var L = h(C, a);
 				((H = r.__c = new C(O, L)).__v = r),
 					(H._dirty = H.__d = !0),
 					(H.props = O),
@@ -132,12 +132,12 @@ function y(r, i, c, u, d, m) {
 					M && M(r),
 					(F = H.render(H.props, H.state, H.context));
 			} else
-				for (var T = h(C, i), E = 0; H.__d && E++ < 25; )
+				for (var T = h(C, a), E = 0; H.__d && E++ < 25; )
 					(H.__d = !1), M && M(r), (F = C.call(r.__c, O, T));
 			return (
-				H.getChildContext && (i = Object.assign({}, i, H.getChildContext())),
+				H.getChildContext && (a = Object.assign({}, a, H.getChildContext())),
 				t.diffed && t.diffed(r),
-				y(F, i, c, !1 !== c.shallowHighOrder, d, m)
+				y(F, a, c, !1 !== c.shallowHighOrder, d, m)
 			);
 		}
 		C =
@@ -181,7 +181,7 @@ function y(r, i, c, u, d, m) {
 						I = 'class';
 					} else
 						d &&
-							a.test(I) &&
+							i.test(I) &&
 							(I = I.toLowerCase().replace(/^xlink:?/, 'xlink:'));
 					if ('htmlFor' === I) {
 						if (O.for) continue;
@@ -192,7 +192,7 @@ function y(r, i, c, u, d, m) {
 							'r' === I[1] &&
 							'boolean' == typeof R &&
 							(R = String(R));
-					var U = c.attributeHook && c.attributeHook(I, R, i, c, j);
+					var U = c.attributeHook && c.attributeHook(I, R, a, c, j);
 					if (U || '' === U) N += U;
 					else if ('dangerouslySetInnerHTML' === I) D = R && R.__html;
 					else if ('textarea' === C && 'value' === I) $ = R;
@@ -233,7 +233,7 @@ function y(r, i, c, u, d, m) {
 		for (var B = b && ~N.indexOf('\n'), G = !1, J = 0; J < q.length; J++) {
 			var K = q[J];
 			if (null != K && !1 !== K) {
-				var Q = y(K, i, c, !0, 'svg' === C || ('foreignObject' !== C && d), m);
+				var Q = y(K, a, c, !0, 'svg' === C || ('foreignObject' !== C && d), m);
 				if ((b && !B && f(Q) && (B = !0), Q))
 					if (b) {
 						var X = Q.length > 0 && '<' != Q[0];
@@ -261,7 +261,7 @@ var b = function (e, t) {
 function k(e, r, n) {
 	r = r || {};
 	var o,
-		a = t.__s;
+		i = t.__s;
 	return (
 		(t.__s = !0),
 		(o =
@@ -276,7 +276,7 @@ function k(e, r, n) {
 				? y(e, r, n)
 				: j(e, r, !1, void 0)),
 		t.__c && t.__c(e, x),
-		(t.__s = a),
+		(t.__s = i),
 		(x.length = 0),
 		o
 	);
@@ -292,7 +292,7 @@ function S(e, t) {
 		? 'checked'
 		: 'defaultSelected' === e
 		? 'selected'
-		: t && a.test(e)
+		: t && i.test(e)
 		? e.toLowerCase().replace(/^xlink:?/, 'xlink:')
 		: e;
 }
@@ -305,118 +305,116 @@ function w(e, t) {
 }
 var C = Array.isArray,
 	O = Object.assign;
-function j(r, a, i, s) {
+function j(r, i, a, s) {
 	if (null == r || !0 === r || !1 === r || '' === r) return '';
 	if ('object' != typeof r) return l(r);
 	if (C(r)) {
-		for (var f = '', c = 0; c < r.length; c++) f += j(r[c], a, i, s);
+		for (var f = '', c = 0; c < r.length; c++) f += j(r[c], i, a, s);
 		return f;
 	}
+	t.__b && t.__b(r);
 	var u = r.type,
 		p = r.props;
 	if ('function' == typeof u) {
-		if (u === e) return j(r.props.children, a, i, s);
+		if (u === e) return j(r.props.children, i, a, s);
 		var _;
-		t.__b && t.__b(r),
-			(_ =
-				u.prototype && 'function' == typeof u.prototype.render
-					? (function (e, r) {
-							var n = e.type,
-								o = h(n, r),
-								a = new n(e.props, o);
-							(e.__c = a),
-								(a.__v = e),
-								(a.__d = !0),
-								(a.props = e.props),
-								null == a.state && (a.state = {}),
-								null == a.__s && (a.__s = a.state),
-								(a.context = o),
-								n.getDerivedStateFromProps
-									? (a.state = O(
-											{},
-											a.state,
-											n.getDerivedStateFromProps(a.props, a.state)
-									  ))
-									: a.componentWillMount &&
-									  (a.componentWillMount(),
-									  (a.state = a.__s !== a.state ? a.__s : a.state));
-							var i = t.__r;
-							return i && i(e), a.render(a.props, a.state, a.context);
-					  })(r, a)
-					: (function (e, r) {
-							var n,
-								o = v(e, r),
-								a = h(e.type, r);
-							e.__c = o;
-							for (var i = t.__r, l = 0; o.__d && l++ < 25; )
-								(o.__d = !1), i && i(e), (n = e.type.call(o, e.props, a));
-							return n;
-					  })(r, a));
+		_ =
+			u.prototype && 'function' == typeof u.prototype.render
+				? (function (e, r) {
+						var n = e.type,
+							o = h(n, r),
+							i = new n(e.props, o);
+						(e.__c = i),
+							(i.__v = e),
+							(i.__d = !0),
+							(i.props = e.props),
+							null == i.state && (i.state = {}),
+							null == i.__s && (i.__s = i.state),
+							(i.context = o),
+							n.getDerivedStateFromProps
+								? (i.state = O(
+										{},
+										i.state,
+										n.getDerivedStateFromProps(i.props, i.state)
+								  ))
+								: i.componentWillMount &&
+								  (i.componentWillMount(),
+								  (i.state = i.__s !== i.state ? i.__s : i.state));
+						var a = t.__r;
+						return a && a(e), i.render(i.props, i.state, i.context);
+				  })(r, i)
+				: (function (e, r) {
+						var n,
+							o = v(e, r),
+							i = h(e.type, r);
+						e.__c = o;
+						for (var a = t.__r, l = 0; o.__d && l++ < 25; )
+							(o.__d = !1), a && a(e), (n = e.type.call(o, e.props, i));
+						return n;
+				  })(r, i);
 		var d = r.__c;
-		return (
-			d.getChildContext && (a = O({}, a, d.getChildContext())),
-			t.diffed && t.diffed(r),
-			j(_, a, i, s)
-		);
+		d.getChildContext && (i = O({}, i, d.getChildContext()));
+		var g = j(_, i, a, s);
+		return t.diffed && t.diffed(r), g;
 	}
-	var g,
-		y,
-		m = '<';
-	if (((m += u), p))
-		for (var b in ((g = p.children), p)) {
-			var x = p[b];
+	var y,
+		m,
+		b = '<';
+	if (((b += u), p))
+		for (var x in ((y = p.children), p)) {
+			var k = p[x];
 			if (
 				!(
-					'key' === b ||
-					'ref' === b ||
-					'__self' === b ||
-					'__source' === b ||
-					'children' === b ||
-					('className' === b && 'class' in p) ||
-					('htmlFor' === b && 'for' in p) ||
-					o.test(b)
+					'key' === x ||
+					'ref' === x ||
+					'__self' === x ||
+					'__source' === x ||
+					'children' === x ||
+					('className' === x && 'class' in p) ||
+					('htmlFor' === x && 'for' in p) ||
+					o.test(x)
 				)
 			)
-				if (((x = w((b = S(b, i)), x)), 'dangerouslySetInnerHTML' === b))
-					y = x && x.__html;
-				else if ('textarea' === u && 'value' === b) g = x;
-				else if ((x || 0 === x || '' === x) && 'function' != typeof x) {
-					if (!0 === x || '' === x) {
-						(x = b), (m = m + ' ' + b);
+				if (((k = w((x = S(x, a)), k)), 'dangerouslySetInnerHTML' === x))
+					m = k && k.__html;
+				else if ('textarea' === u && 'value' === x) y = k;
+				else if ((k || 0 === k || '' === k) && 'function' != typeof k) {
+					if (!0 === k || '' === k) {
+						(k = x), (b = b + ' ' + x);
 						continue;
 					}
-					if ('value' === b) {
+					if ('value' === x) {
 						if ('select' === u) {
-							s = x;
+							s = k;
 							continue;
 						}
-						'option' !== u || s != x || 'selected' in p || (m += ' selected');
+						'option' !== u || s != k || 'selected' in p || (b += ' selected');
 					}
-					m = m + ' ' + b + '="' + l(x) + '"';
+					b = b + ' ' + x + '="' + l(k) + '"';
 				}
 		}
-	var k = m;
-	if (((m += '>'), o.test(u)))
-		throw new Error(u + ' is not a valid HTML tag name in ' + m);
-	var A = '',
-		F = !1;
-	if (y) (A += y), (F = !0);
-	else if ('string' == typeof g) (A += l(g)), (F = !0);
-	else if (C(g))
-		for (var H = 0; H < g.length; H++) {
-			var M = g[H];
-			if (null != M && !1 !== M) {
-				var L = j(M, a, 'svg' === u || ('foreignObject' !== u && i), s);
-				L && ((A += L), (F = !0));
+	var A = b;
+	if (((b += '>'), o.test(u)))
+		throw new Error(u + ' is not a valid HTML tag name in ' + b);
+	var F = '',
+		H = !1;
+	if (m) (F += m), (H = !0);
+	else if ('string' == typeof y) (F += l(y)), (H = !0);
+	else if (C(y))
+		for (var M = 0; M < y.length; M++) {
+			var L = y[M];
+			if (null != L && !1 !== L) {
+				var T = j(L, i, 'svg' === u || ('foreignObject' !== u && a), s);
+				T && ((F += T), (H = !0));
 			}
 		}
-	else if (null != g && !1 !== g && !0 !== g) {
-		var T = j(g, a, 'svg' === u || ('foreignObject' !== u && i), s);
-		T && ((A += T), (F = !0));
+	else if (null != y && !1 !== y && !0 !== y) {
+		var E = j(y, i, 'svg' === u || ('foreignObject' !== u && a), s);
+		E && ((F += E), (H = !0));
 	}
-	if (F) m += A;
-	else if (n.test(u)) return k + ' />';
-	return m + '</' + u + '>';
+	if ((t.diffed && t.diffed(r), H)) b += F;
+	else if (n.test(u)) return A + ' />';
+	return b + '</' + u + '>';
 }
 k.shallowRender = b;
 export default k;
