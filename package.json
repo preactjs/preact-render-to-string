@@ -25,7 +25,7 @@
 	},
 	"scripts": {
 		"bench": "BABEL_ENV=test node -r @babel/register benchmarks index.js",
-		"bench:v8": "BABEL_ENV=test microbundle benchmarks/index.js -f modern --alias benchmarkjs-pretty=benchmarks/lib/benchmark-lite.js --external none --target node --no-compress --no-sourcemap --raw -o benchmarks/.v8.js && v8 --module benchmarks/.v8.modern.js",
+		"bench:v8": "BABEL_ENV=test microbundle benchmarks/index.js -f modern --alias benchmarkjs-pretty=benchmarks/lib/benchmark-lite.js --external none --target node --no-compress --no-sourcemap --raw -o benchmarks/.v8.mjs && v8 --module benchmarks/.v8.mjs",
 		"build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
 		"postbuild": "node ./config/node-13-exports.js && node ./config/node-commonjs.js",
 		"transpile": "microbundle src/index.js -f es,umd --target web --external preact",
@@ -104,8 +104,8 @@
 		"@babel/plugin-transform-react-jsx": "^7.12.12",
 		"@babel/preset-env": "^7.12.11",
 		"@babel/register": "^7.12.10",
-		"@changesets/cli": "^2.18.0",
 		"@changesets/changelog-github": "^0.4.1",
+		"@changesets/cli": "^2.18.0",
 		"benchmarkjs-pretty": "^2.0.1",
 		"chai": "^4.2.0",
 		"copyfiles": "^2.4.1",
@@ -113,7 +113,7 @@
 		"eslint-config-developit": "^1.2.0",
 		"husky": "^4.3.6",
 		"lint-staged": "^10.5.3",
-		"microbundle": "^0.13.0",
+		"microbundle": "^0.15.1",
 		"mocha": "^8.2.1",
 		"preact": "^10.5.7",
 		"prettier": "^2.2.1",
@@ -138,11 +138,6 @@
 	"husky": {
 		"hooks": {
 			"pre-commit": "lint-staged"
-		}
-	},
-	"mangle": {
-		"compress": {
-			"reduce_funcs": false
 		}
 	}
 }
