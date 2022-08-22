@@ -1,17 +1,15 @@
 // DOM properties that should NOT have "px" added when numeric
 export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
-export const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
 const ENCODED_ENTITIES = /["&<]/;
 
+/** @param {string} str */
 export function encodeEntities(str) {
-	// Ensure we're always parsing and returning a string:
-	str += '';
-
 	// Skip all work for strings with no entities needing encoding:
-	if (ENCODED_ENTITIES.test(str) === false) return str;
+	if (str.length === 0 || ENCODED_ENTITIES.test(str) === false) return str;
 
 	let last = 0,
 		i = 0,
@@ -60,19 +58,20 @@ export function styleObjToCss(s) {
 	for (let prop in s) {
 		let val = s[prop];
 		if (val != null && val !== '') {
-			if (str) str += ' ';
-			// str += jsToCss(prop);
-			str +=
+			const name =
 				prop[0] == '-'
 					? prop
 					: JS_TO_CSS[prop] ||
 					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
 
-			if (typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false) {
-				str = str + ': ' + val + 'px;';
-			} else {
-				str = str + ': ' + val + ';';
-			}
+			str =
+				str +
+				name +
+				':' +
+				val +
+				(typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false
+					? 'px;'
+					: ';');
 		}
 	}
 	return str || undefined;
@@ -110,16 +109,4 @@ export function createComponent(vnode, context) {
 		// hooks
 		__h: []
 	};
-}
-
-// Necessary for createContext api. Setting this property will pass
-// the context value as `this.context` just for this component.
-export function getContext(nodeName, context) {
-	let cxType = nodeName.contextType;
-	let provider = cxType && context[cxType.__c];
-	return cxType != null
-		? provider
-			? provider.props.value
-			: cxType.__
-		: context;
 }
