@@ -92,6 +92,11 @@
 			}
 		}
 	},
+	"minify": {
+		"compress": {
+			"reduce_funcs": false
+		}
+	},
 	"author": "Jason Miller <jason@developit.ca>",
 	"license": "MIT",
 	"repository": "developit/preact-render-to-string",
