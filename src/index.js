@@ -265,13 +265,15 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 			name = normalizePropName(name, isSvgMode);
 			v = normalizePropValue(name, v);
-
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
 			} else if (type === 'textarea' && name === 'value') {
 				// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
 				children = v;
-			} else if ((v || v === 0 || v === '') && typeof v !== 'function') {
+			} else if (
+				(v || v === 0 || (name === 'checked' && v === false) || v === '') &&
+				typeof v !== 'function'
+			) {
 				if (v === true || v === '') {
 					v = name;
 					s = s + ' ' + name;

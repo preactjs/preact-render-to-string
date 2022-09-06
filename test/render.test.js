@@ -102,6 +102,12 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should serialize checked prop correctly', () => {
+			let rendered = render(<input type="checkbox" checked={false} />),
+				expected = `<input type="checkbox" checked="false" />`;
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should serialize defaultSelected prop to the selected attribute', () => {
 			let rendered = render(<option defaultSelected />),
 				expected = `<option selected></option>`;
