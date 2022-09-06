@@ -9,6 +9,7 @@ import {
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
+import { signal } from '@preact/signals';
 
 describe('render', () => {
 	describe('Basic JSX', () => {
@@ -17,6 +18,24 @@ describe('render', () => {
 				expected = `<div class="foo">bar</div>`;
 
 			expect(rendered).to.equal(expected);
+		});
+
+		describe('signals', () => {
+			it('should render attribute-signal', () => {
+				const s = signal('foo');
+				let rendered = render(<div class={s}>bar</div>),
+					expected = `<div class="foo">bar</div>`;
+
+				expect(rendered).to.equal(expected);
+			});
+
+			it('should render text-signal', () => {
+				const s = signal('bar');
+				let rendered = render(<div class="foo">{s}</div>),
+					expected = `<div class="foo">bar</div>`;
+
+				expect(rendered).to.equal(expected);
+			});
 		});
 
 		describe('whitespace', () => {

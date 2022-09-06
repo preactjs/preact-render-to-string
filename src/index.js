@@ -187,8 +187,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		return '';
 	}
 
-	// Text VNodes: escape as HTML
-	if (typeof vnode !== 'object') {
+	// #text nodes
+	if (typeof vnode !== 'object' || !vnode.type) {
 		return encodeEntities(vnode);
 	}
 
