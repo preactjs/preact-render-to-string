@@ -48,7 +48,6 @@ renderToString.render = renderToString;
 let shallowRender = (vnode, context) => renderToString(vnode, context, SHALLOW);
 
 const EMPTY_ARR = [];
-const ALL_VNODES = [];
 function renderToString(vnode, context, opts) {
 	context = context || {};
 
@@ -81,14 +80,6 @@ function renderToString(vnode, context, opts) {
 	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
 	options[SKIP_EFFECTS] = previousSkipEffects;
 	EMPTY_ARR.length = 0;
-
-	if (options.unmount) {
-		let c;
-		while ((c = ALL_VNODES.pop())) {
-			options.unmount(c);
-		}
-	}
-	ALL_VNODES.length = 0;
 
 	return res;
 }
@@ -214,8 +205,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 
 	if (options[DIFF]) options[DIFF](vnode);
 
-	ALL_VNODES.push(vnode);
-
 	let type = vnode.type,
 		props = vnode.props;
 
@@ -223,12 +212,15 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	const isComponent = typeof type === 'function';
 	if (isComponent) {
 		if (type === Fragment) {
-			return _renderToString(
+			const result = _renderToString(
 				vnode.props.children,
 				context,
 				isSvgMode,
 				selectValue
 			);
+			if (options.unmount) options.unmount(vnode);
+
+			return result;
 		}
 
 		let rendered;
@@ -246,6 +238,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		// Recurse into children before invoking the after-diff hook
 		const str = _renderToString(rendered, context, isSvgMode, selectValue);
 		if (options[DIFFED]) options[DIFFED](vnode);
+
+		if (options.unmount) options.unmount(vnode);
 		return str;
 	}
 
@@ -354,6 +348,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	}
 
 	if (options[DIFFED]) options[DIFFED](vnode);
+	if (options.unmount) options.unmount(vnode);
 
 	if (hasChildren) {
 		s = s + pieces;
