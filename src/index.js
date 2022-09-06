@@ -188,7 +188,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	}
 
 	// #text nodes
-	if (typeof vnode !== 'object' || !vnode.type) {
+	if (typeof vnode !== 'object') {
 		return encodeEntities(vnode);
 	}
 
