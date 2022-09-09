@@ -196,9 +196,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		return encodeEntities(vnode);
 	}
 
-	vnode[PARENT] = parent;
-  if (options[DIFF]) options[DIFF](vnode);
-
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '';
@@ -212,6 +209,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		return rendered;
 	}
 
+	vnode[PARENT] = parent;
 	if (options[DIFF]) options[DIFF](vnode);
 
 	let type = vnode.type,
