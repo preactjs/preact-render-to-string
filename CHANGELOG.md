@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 5.2.4
+
+### Patch Changes
+
+- [#242](https://github.com/preactjs/preact-render-to-string/pull/242) [`bd5e5eb`](https://github.com/preactjs/preact-render-to-string/commit/bd5e5eb1c97355d81710c17a10208b1cb3b439a0) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - correctly unmount vnodes
+
+* [#237](https://github.com/preactjs/preact-render-to-string/pull/237) [`dec7a7a`](https://github.com/preactjs/preact-render-to-string/commit/dec7a7a575149187942adb92f644c302db4b0599) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - add parent and children for useId
+
 ## 5.2.3
 
 ### Patch Changes
