@@ -1,12 +1,14 @@
 import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util';
-import { options, Fragment } from 'preact';
+import { options, h, Fragment } from 'preact';
 import {
+	CHILDREN,
 	COMMIT,
 	COMPONENT,
 	DIFF,
 	DIFFED,
 	DIRTY,
 	NEXT_STATE,
+	PARENT,
 	RENDER,
 	SKIP_EFFECTS,
 	VNODE
@@ -41,8 +43,11 @@ export default function renderToString(vnode, context) {
 	afterDiff = options[DIFFED];
 	renderHook = options[RENDER];
 
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
 	try {
-		return _renderToString(vnode, context || {}, false, undefined);
+		return _renderToString(vnode, context || {}, false, undefined, parent);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -107,9 +112,10 @@ function renderClassComponent(vnode, context) {
  * @param {any} context
  * @param {boolean} isSvgMode
  * @param {any} selectValue
+ * @param {VNode} parent
  * @returns {string}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue) {
+function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -123,75 +129,85 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '';
+		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			rendered =
-				rendered + _renderToString(vnode[i], context, isSvgMode, selectValue);
+				rendered +
+				_renderToString(vnode[i], context, isSvgMode, selectValue, parent);
 		}
 		return rendered;
 	}
 
+	vnode[PARENT] = parent;
 	if (beforeDiff) beforeDiff(vnode);
 
 	let type = vnode.type,
-		props = vnode.props;
+		props = vnode.props,
+		cctx = context,
+		contextType,
+		rendered,
+		component;
 
 	// Invoke rendering on Components
-	const isComponent = typeof type === 'function';
+	let isComponent = typeof type === 'function';
 	if (isComponent) {
 		if (type === Fragment) {
-			return _renderToString(props.children, context, isSvgMode, selectValue);
-		}
-
-		let cctx = context;
-		let cxType = type.contextType;
-		if (cxType != null) {
-			let provider = context[cxType.__c];
-			cctx = provider ? provider.props.value : cxType.__;
-		}
-
-		let rendered;
-		let component;
-		if (type.prototype && typeof type.prototype.render === 'function') {
-			rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
-			component = vnode[COMPONENT];
+			rendered = props.children;
 		} else {
-			component = {
-				__v: vnode,
-				props,
-				context: cctx,
-				// silently drop state updates
-				setState: markAsDirty,
-				forceUpdate: markAsDirty,
-				__d: true,
-				// hooks
-				__h: []
-			};
-			vnode[COMPONENT] = component;
-
-			// If a hook invokes setState() to invalidate the component during rendering,
-			// re-render it up to 25 times to allow "settling" of memoized states.
-			// Note:
-			//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-			//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
-			// let renderHook = options[RENDER];
-			let count = 0;
-			while (component[DIRTY] && count++ < 25) {
-				component[DIRTY] = false;
-
-				if (renderHook) renderHook(vnode);
-
-				rendered = type.call(component, props, cctx);
+			contextType = type.contextType;
+			if (contextType != null) {
+				let provider = context[contextType.__c];
+				cctx = provider ? provider.props.value : contextType.__;
 			}
-			component[DIRTY] = true;
-		}
 
-		if (component.getChildContext != null) {
-			context = assign({}, context, component.getChildContext());
+			if (type.prototype && typeof type.prototype.render === 'function') {
+				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
+				component = vnode[COMPONENT];
+			} else {
+				component = {
+					__v: vnode,
+					props,
+					context: cctx,
+					// silently drop state updates
+					setState: markAsDirty,
+					forceUpdate: markAsDirty,
+					__d: true,
+					// hooks
+					__h: []
+				};
+				vnode[COMPONENT] = component;
+
+				// If a hook invokes setState() to invalidate the component during rendering,
+				// re-render it up to 25 times to allow "settling" of memoized states.
+				// Note:
+				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
+				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
+				let count = 0;
+				while (component[DIRTY] && count++ < 25) {
+					component[DIRTY] = false;
+
+					if (renderHook) renderHook(vnode);
+
+					rendered = type.call(component, props, cctx);
+				}
+				component[DIRTY] = true;
+			}
+
+			if (component.getChildContext != null) {
+				context = assign({}, context, component.getChildContext());
+			}
 		}
 
 		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(rendered, context, isSvgMode, selectValue);
+		const str = _renderToString(
+			rendered,
+			context,
+			isSvgMode,
+			selectValue,
+			vnode
+		);
 		if (afterDiff) afterDiff(vnode);
+		vnode[PARENT] = undefined;
 		return str;
 	}
 
@@ -302,10 +318,11 @@ function _renderToString(vnode, context, isSvgMode, selectValue) {
 		// recurse into this element VNode's children
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue);
+		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
 	}
 
 	if (afterDiff) afterDiff(vnode);
+	vnode[PARENT] = undefined;
 
 	// Emit self-closing tag for empty void elements:
 	if (!html) {
