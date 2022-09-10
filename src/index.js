@@ -7,7 +7,7 @@ import {
 	XLINK,
 	VOID_ELEMENTS
 } from './util';
-import { options, Fragment } from 'preact';
+import { options, h, Fragment } from 'preact';
 import { _renderToStringPretty } from './pretty';
 import {
 	COMMIT,
@@ -61,6 +61,9 @@ function renderToString(vnode, context, opts) {
 	const previousSkipEffects = options[SKIP_EFFECTS];
 	options[SKIP_EFFECTS] = true;
 
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
 	let res;
 	if (
 		opts &&
@@ -74,9 +77,7 @@ function renderToString(vnode, context, opts) {
 	) {
 		res = _renderToStringPretty(vnode, context, opts);
 	} else {
-		res = _renderToString(vnode, context, false, undefined, {
-			[CHILDREN]: [vnode]
-		});
+		res = _renderToString(vnode, context, false, undefined, parent);
 	}
 
 	// options._commit, we don't schedule any effects in this library right now,
@@ -199,9 +200,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '';
-		parent[CHILDREN] = [];
+		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
-			parent[CHILDREN].push(vnode[i]);
 			rendered =
 				rendered +
 				_renderToString(vnode[i], context, isSvgMode, selectValue, parent);
@@ -329,10 +329,9 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		pieces = pieces + encodeEntities(children);
 		hasChildren = true;
 	} else if (isArray(children)) {
-		vnode[CHILDREN] = [];
+		vnode[CHILDREN] = children;
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
-			vnode[CHILDREN].push(child);
 			if (child != null && child !== false) {
 				let childSvgMode =
 					type === 'svg' || (type !== 'foreignObject' && isSvgMode);
