@@ -218,26 +218,20 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Invoke rendering on Components
 	const isComponent = typeof type === 'function';
 	if (isComponent) {
-		if (type === Fragment) {
-			return _renderToString(
-				vnode.props.children,
-				context,
-				isSvgMode,
-				selectValue,
-				vnode
-			);
-		}
-
 		let rendered;
-		if (type.prototype && typeof type.prototype.render === 'function') {
-			rendered = renderClassComponent(vnode, context);
+		if (type === Fragment) {
+			rendered = props.children;
 		} else {
-			rendered = renderFunctionComponent(vnode, context);
-		}
+			if (type.prototype && typeof type.prototype.render === 'function') {
+				rendered = renderClassComponent(vnode, context);
+			} else {
+				rendered = renderFunctionComponent(vnode, context);
+			}
 
-		let component = vnode[COMPONENT];
-		if (component.getChildContext) {
-			context = assign({}, context, component.getChildContext());
+			let component = vnode[COMPONENT];
+			if (component.getChildContext) {
+				context = assign({}, context, component.getChildContext());
+			}
 		}
 
 		// Recurse into children before invoking the after-diff hook
@@ -249,6 +243,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			vnode
 		);
 		if (options[DIFFED]) options[DIFFED](vnode);
+		vnode[PARENT] = undefined;
 		return str;
 	}
 
@@ -370,6 +365,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	}
 
 	if (options[DIFFED]) options[DIFFED](vnode);
+	vnode[PARENT] = undefined;
 
 	if (hasChildren) {
 		s = s + pieces;
