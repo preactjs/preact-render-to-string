@@ -85,6 +85,7 @@ function renderToString(vnode, context, opts) {
 	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
 	options[SKIP_EFFECTS] = previousSkipEffects;
 	EMPTY_ARR.length = 0;
+
 	return res;
 }
 
@@ -242,8 +243,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			selectValue,
 			vnode
 		);
+
 		if (options[DIFFED]) options[DIFFED](vnode);
 		vnode[PARENT] = undefined;
+
+		if (options.unmount) options.unmount(vnode);
+
 		return str;
 	}
 
@@ -366,6 +371,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	if (options[DIFFED]) options[DIFFED](vnode);
 	vnode[PARENT] = undefined;
+	if (options.unmount) options.unmount(vnode);
 
 	if (hasChildren) {
 		s = s + pieces;
