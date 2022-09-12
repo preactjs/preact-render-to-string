@@ -163,4 +163,8 @@ describe('jsx', () => {
 			<meta charset="utf-8" />
 		`);
 	});
+
+	it('should prevent JSON injection', () => {
+		expect(renderJsx(<div>{{ hello: 'world' }}</div>)).to.equal('<div></div>');
+	});
 });
