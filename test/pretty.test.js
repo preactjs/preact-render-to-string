@@ -228,4 +228,8 @@ describe('pretty', () => {
 			'<div></div>'
 		);
 	});
+
+	it('should not render function children', () => {
+		expect(prettyRender(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
 });

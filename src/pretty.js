@@ -29,6 +29,7 @@ export function _renderToStringPretty(
 
 	// #text nodes
 	if (typeof vnode !== 'object') {
+		if (typeof vnode === 'function') return '';
 		return encodeEntities(vnode);
 	}
 

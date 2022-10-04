@@ -2,4 +2,4 @@
 'preact-render-to-string': patch
 ---
 
-Fix object children being rendered as `undefined`
+Fix object and function children being rendered as `undefined`
