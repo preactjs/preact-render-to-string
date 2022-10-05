@@ -29,6 +29,7 @@ export function _renderToStringPretty(
 
 	// #text nodes
 	if (typeof vnode !== 'object') {
+		if (typeof vnode === 'function') return '';
 		return encodeEntities(vnode);
 	}
 
@@ -52,6 +53,9 @@ export function _renderToStringPretty(
 		}
 		return rendered;
 	}
+
+	// VNodes have {constructor:undefined} to prevent JSON injection:
+	if (vnode.constructor !== undefined) return '';
 
 	let nodeName = vnode.type,
 		props = vnode.props,

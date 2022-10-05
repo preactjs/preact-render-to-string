@@ -1260,4 +1260,12 @@ describe('render', () => {
 			'<select><option selected value="2">2</option></select>'
 		);
 	});
+
+	it('should prevent JSON injection', () => {
+		expect(render(<div>{{ hello: 'world' }}</div>)).to.equal('<div></div>');
+	});
+
+	it('should not render function children', () => {
+		expect(render(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
 });

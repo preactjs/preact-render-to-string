@@ -195,6 +195,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	// Text VNodes: escape as HTML
 	if (typeof vnode !== 'object') {
+		if (typeof vnode === 'function') return '';
 		return encodeEntities(vnode);
 	}
 
@@ -209,6 +210,9 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		}
 		return rendered;
 	}
+
+	// VNodes have {constructor:undefined} to prevent JSON injection:
+	if (vnode.constructor !== undefined) return '';
 
 	vnode[PARENT] = parent;
 	if (options[DIFF]) options[DIFF](vnode);
