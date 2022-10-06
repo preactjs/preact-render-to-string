@@ -239,6 +239,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			}
 		}
 
+		// When a component returns a Fragment node we flatten it in core, so we
+		// need to mirror that logic here too
+		let isTopLevelFragment =
+			rendered != null && rendered.type === Fragment && rendered.key == null;
+		rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
 		// Recurse into children before invoking the after-diff hook
 		const str = _renderToString(
 			rendered,

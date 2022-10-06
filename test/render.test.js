@@ -5,7 +5,8 @@ import {
 	useContext,
 	useEffect,
 	useLayoutEffect,
-	useMemo
+	useMemo,
+	useId
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
@@ -1267,5 +1268,30 @@ describe('render', () => {
 
 	it('should not render function children', () => {
 		expect(render(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
+
+	describe('vnode masks (useId)', () => {
+		it('should skip component top level Fragment child', () => {
+			const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
+
+			function Foo() {
+				const id = useId();
+				return <p>{id}</p>;
+			}
+
+			function App() {
+				const id = useId();
+				return (
+					<div>
+						<p>{id}</p>
+						<Wrapper>
+							<Foo />
+						</Wrapper>
+					</div>
+				);
+			}
+
+			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
+		});
 	});
 });
