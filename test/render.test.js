@@ -1271,33 +1271,6 @@ describe('render', () => {
 	});
 
 	describe('vnode masks (useId)', () => {
-		it('should work with Fragments', () => {
-			const ids = [];
-			function Foo() {
-				const id = useId();
-				ids.push(id);
-				return <p>{id}</p>;
-			}
-
-			function Bar(props) {
-				return props.children;
-			}
-
-			function App() {
-				return (
-					<Bar>
-						<Foo />
-						<Fragment>
-							<Foo />
-						</Fragment>
-					</Bar>
-				);
-			}
-
-			render(<App />);
-			expect(ids[0]).not.to.equal(ids[1]);
-		});
-
 		it('should skip component top level Fragment child', () => {
 			const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
 
