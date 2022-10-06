@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 5.2.5
+
+### Patch Changes
+
+- [#246](https://github.com/preactjs/preact-render-to-string/pull/246) [`ad35c4c`](https://github.com/preactjs/preact-render-to-string/commit/ad35c4c931db37837761038d33ae71fa31ebc9e3) Thanks [@developit](https://github.com/developit) and [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix object and function children being rendered as `undefined`
+
+* [#248](https://github.com/preactjs/preact-render-to-string/pull/248) [`aa12b3c`](https://github.com/preactjs/preact-render-to-string/commit/aa12b3c61528813c7a3978410d1d551afbdb08ba) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix vnode masks not matching with core due to top level component Fragments
+
 ## 5.2.4
 
 ### Patch Changes
