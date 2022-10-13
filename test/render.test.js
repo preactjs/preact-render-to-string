@@ -5,7 +5,8 @@ import {
 	useContext,
 	useEffect,
 	useLayoutEffect,
-	useMemo
+	useMemo,
+	useId
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
@@ -1186,30 +1187,38 @@ describe('render', () => {
 			if (oldCommit) oldCommit(...args);
 		};
 
-		function Component1({ children }) {
-			return children;
+		const outer = <Outer />;
+		const inner = <Inner />;
+		const div = <div />;
+
+		function Outer() {
+			return inner;
 		}
 
-		function Component2() {
-			return <div />;
+		function Inner() {
+			return div;
 		}
 
-		const vnode2 = <Component2>1</Component2>;
-		const vnode1 = <Component1>{vnode2}</Component1>;
-
-		render(vnode1);
+		render(outer);
 
 		expect(calls).to.deep.equal([
-			['_diff', [vnode1]],
-			['_render', [vnode1]],
-			['diffed', [vnode1]],
-			['_diff', [vnode2]],
-			['_render', [vnode2]],
-			['diffed', [vnode2]],
-			['_commit', [vnode1, []]]
+			['_diff', [outer]], // before diff
+			['_render', [outer]], // render attempt
+
+			['_diff', [inner]], // before diff
+			['_render', [inner]], // render attempt
+
+			// innermost <div>
+			['_diff', [div]], // before diff
+			['diffed', [div]], // after diff
+
+			['diffed', [inner]], // after diff
+			['diffed', [outer]], // after diff
+
+			['_commit', [outer, []]] // commit root
 		]);
 
-		expect(calls.length).to.equal(7);
+		expect(calls.length).to.equal(9);
 
 		options.__b = oldDiff;
 		options.__r = oldRender;
@@ -1283,5 +1292,38 @@ describe('render', () => {
 		expect(res).to.equal(
 			'<select><option selected value="2">2</option></select>'
 		);
+	});
+
+	it('should prevent JSON injection', () => {
+		expect(render(<div>{{ hello: 'world' }}</div>)).to.equal('<div></div>');
+	});
+
+	it('should not render function children', () => {
+		expect(render(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
+
+	describe('vnode masks (useId)', () => {
+		it('should skip component top level Fragment child', () => {
+			const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
+
+			function Foo() {
+				const id = useId();
+				return <p>{id}</p>;
+			}
+
+			function App() {
+				const id = useId();
+				return (
+					<div>
+						<p>{id}</p>
+						<Wrapper>
+							<Foo />
+						</Wrapper>
+					</div>
+				);
+			}
+
+			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
+		});
 	});
 });
