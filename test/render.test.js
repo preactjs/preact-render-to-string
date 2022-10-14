@@ -301,6 +301,11 @@ describe('render', () => {
 				`<svg><image xlink:href="#"></image><foreignObject><div xlinkHref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
+
+		it('should not render invalid HTML comments', () => {
+			let rendered = render(h('!--foo--', null, 'test'));
+			expect(rendered).to.equal(`<!--foo-->test<!--foo-->`);
+		});
 	});
 
 	describe('Functional Components', () => {

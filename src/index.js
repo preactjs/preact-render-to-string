@@ -389,6 +389,10 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		return startElement + ' />';
 	}
 
+	if (type.startsWith('!--')) {
+		return s + '<' + type + '>';
+	}
+
 	return s + '</' + type + '>';
 }
 
