@@ -60,7 +60,8 @@
 			"new-cap": 0,
 			"curly": "off",
 			"brace-style": "off",
-			"indent": "off"
+			"indent": "off",
+			"lines-around-comment": "off"
 		},
 		"settings": {
 			"react": {
