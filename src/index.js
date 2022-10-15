@@ -89,7 +89,14 @@ function renderToString(vnode, context, opts) {
 	return res;
 }
 
+/**
+ * @param {VNode} vnode
+ * @param {Record<string, unknown>} context
+ * @returns {string}
+ */
 function renderFunctionComponent(vnode, context) {
+	// eslint-disable-next-line lines-around-comment
+	/** @type {string} */
 	let rendered,
 		c = createComponent(vnode, context),
 		cctx = getContext(vnode.type, context);
@@ -115,11 +122,16 @@ function renderFunctionComponent(vnode, context) {
 	return rendered;
 }
 
+/**
+ * @param {VNode} vnode
+ * @param {Record<string, unknown>} context
+ * @returns {VNode}
+ */
 function renderClassComponent(vnode, context) {
 	let nodeName = vnode.type,
 		cctx = getContext(nodeName, context);
 
-	// c = new nodeName(props, context);
+	/** @type {import("preact").Component} */
 	let c = new nodeName(vnode.props, cctx);
 	vnode[COMPONENT] = c;
 	c[VNODE] = vnode;
@@ -153,6 +165,11 @@ function renderClassComponent(vnode, context) {
 	return c.render(c.props, c.state, c.context);
 }
 
+/**
+ * @param {string} name
+ * @param {boolean} isSvgMode
+ * @returns {string}
+ */
 function normalizePropName(name, isSvgMode) {
 	if (name === 'className') {
 		return 'class';
@@ -171,6 +188,11 @@ function normalizePropName(name, isSvgMode) {
 	return name;
 }
 
+/**
+ * @param {string} name
+ * @param {string | Record<string, unknown>} v
+ * @returns {string}
+ */
 function normalizePropValue(name, v) {
 	if (name === 'style' && v != null && typeof v === 'object') {
 		return styleObjToCss(v);
@@ -186,7 +208,15 @@ function normalizePropValue(name, v) {
 const isArray = Array.isArray;
 const assign = Object.assign;
 
-/** The default export is an alias of `render()`. */
+/**
+ * The default export is an alias of `render()`.
+ * @param {any} vnode
+ * @param {Record<string, unknown>} context
+ * @param {boolean} isSvgMode
+ * @param {any} selectValue
+ * @param {VNode | null} parent
+ * @returns {string}
+ */
 function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
