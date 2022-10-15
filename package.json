@@ -23,6 +23,18 @@
 			"import": "./dist/jsx.mjs",
 			"require": "./dist/jsx.js"
 		},
+		"./stream": {
+			"types": "./stream.d.ts",
+			"import": "./dist/stream.mjs",
+			"browser": "./dist/stream.module.js",
+			"require": "./dist/stream.js"
+		},
+		"./stream-node": {
+			"types": "./stream-node.d.ts",
+			"import": "./dist/stream-node.mjs",
+			"browser": "./dist/stream-node.module.js",
+			"require": "./dist/stream-node.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"scripts": {
@@ -64,7 +76,8 @@
 			"new-cap": 0,
 			"curly": "off",
 			"brace-style": "off",
-			"indent": "off"
+			"indent": "off",
+			"lines-around-comment": "off"
 		},
 		"settings": {
 			"react": {

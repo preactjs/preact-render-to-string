@@ -1,4 +1,13 @@
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util';
+import {
+	encodeEntities,
+	styleObjToCss,
+	getContext,
+	createComponent,
+	UNSAFE_NAME,
+	XLINK,
+	VOID_ELEMENTS,
+	Deferred
+} from './util';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -11,8 +20,13 @@ import {
 	PARENT,
 	RENDER,
 	SKIP_EFFECTS,
-	VNODE
+	VNODE,
+	CHILDREN,
+	CHILD_DID_SUSPEND,
+	CATCH_ERROR,
+	MASK
 } from './constants';
+import { createSubtree, createInitScript } from './client';
 
 /** @typedef {import('preact').VNode} VNode */
 
@@ -72,6 +86,70 @@ function markAsDirty() {
 const EMPTY_OBJ = {};
 
 /**
+ * The suspended state of a loading boundary. Stores the renderer state to
+ * be able to continue rendering later.
+ * @typedef {{ id: string, promise: Promise<any>, context: any, isSvgMode: boolean, selectValue: any, vnode: VNode, parent: VNode | null}} Suspended
+ */
+
+/**
+ * @typedef {{ suspended: Suspended[], abortSignal: AbortSignal | undefined, start: number, onWrite: (str: string) => void }} RendererState
+ */
+
+/**
+ * @param {VNode} vnode
+ * @param {{ context?: any, onWrite: (str: string) => void, abortSignal?: AbortSignal }} options
+ * @returns {Promise<void>}
+ */
+export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
+	context = context || {};
+
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	/** @type {RendererState} */
+	const renderer = {
+		start: Date.now(),
+		abortSignal,
+		onWrite,
+		suspended: []
+	};
+
+	// Synchronously render the shell
+	const shell = _renderToString(
+		vnode,
+		context,
+		false,
+		undefined,
+		parent,
+		renderer
+	);
+	onWrite(shell);
+
+	// Wait for any suspended sub-trees if there are any
+	const len = renderer.suspended.length;
+	if (len > 0) {
+		onWrite('<div hidden>');
+		onWrite(createInitScript(len));
+		await Promise.all(renderer.suspended.map((s) => s.promise));
+		onWrite('</div>');
+	}
+
+	// options._commit, we don't schedule any effects in this library right now,
+	// so we can pass an empty queue to this hook.
+	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+	options[SKIP_EFFECTS] = previousSkipEffects;
+	EMPTY_ARR.length = 0;
+}
+
+/**
  * @param {VNode} vnode
  * @param {Record<string, unknown>} context
  */
@@ -119,10 +197,18 @@ function renderClassComponent(vnode, context) {
  * @param {any} context
  * @param {boolean} isSvgMode
  * @param {any} selectValue
- * @param {VNode} parent
+ * @param {VNode | null} parent
+ * @param {RendererState | undefined} renderer
  * @returns {string}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
+function _renderToString(
+	vnode,
+	context,
+	isSvgMode,
+	selectValue,
+	parent,
+	renderer
+) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -144,7 +230,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 			rendered =
 				rendered +
-				_renderToString(child, context, isSvgMode, selectValue, parent);
+				_renderToString(
+					vnode[i],
+					context,
+					isSvgMode,
+					selectValue,
+					parent,
+					renderer
+				);
 		}
 		return rendered;
 	}
@@ -218,19 +311,93 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
-		if (afterDiff) afterDiff(vnode);
-		vnode[PARENT] = undefined;
 
-		if (ummountHook) ummountHook(vnode);
+		try {
+			const str = _renderToString(
+				rendered,
+				context,
+				isSvgMode,
+				selectValue,
+				vnode,
+				renderer
+			);
 
-		return str;
+			if (options[DIFFED]) options[DIFFED](vnode);
+			vnode[PARENT] = undefined;
+
+			if (options.unmount) options.unmount(vnode);
+
+			return str;
+		} catch (error) {
+			if (renderer !== undefined && error.then) {
+				/** @type {import('./internal').Component} */
+				let component;
+				let susVNode = vnode;
+
+				for (; (susVNode = susVNode[PARENT]); ) {
+					if (
+						(component = susVNode[COMPONENT]) &&
+						component[CHILD_DID_SUSPEND]
+					) {
+						const id = 'preact-' + susVNode[MASK] + renderer.suspended.length;
+
+						const abortSignal = renderer.abortSignal;
+
+						const race = new Deferred();
+						if (abortSignal) {
+							if (abortSignal.aborted) race.resolve();
+							else {
+								abortSignal.addEventListener('abort', race.resolve);
+							}
+						}
+
+						renderer.suspended.push({
+							id,
+							context,
+							isSvgMode,
+							parent,
+							selectValue,
+							vnode: susVNode,
+							promise: Promise.race([
+								error.then(() => {
+									if (abortSignal && abortSignal.aborted) {
+										return;
+									}
+
+									const str = _renderToString(
+										susVNode.props.children,
+										context,
+										isSvgMode,
+										selectValue,
+										susVNode,
+										renderer
+									);
+
+									renderer.onWrite(createSubtree(id, str));
+								}),
+								race.promise
+							])
+						});
+
+						const fallback = _renderToString(
+							susVNode.props.fallback,
+							context,
+							isSvgMode,
+							selectValue,
+							susVNode,
+							renderer
+						);
+
+						return `<preact-island data-id="${id}">${fallback}</preact-island>`;
+					}
+				}
+			}
+
+			console.log('WOA', error, renderer);
+			let errorHook = options[CATCH_ERROR];
+			if (errorHook) errorHook(error, vnode);
+			return '';
+		}
 	}
 
 	// Serialize Element VNodes to HTML
@@ -339,13 +506,49 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	if (html) {
 		// dangerouslySetInnerHTML defined this node's contents
 	} else if (typeof children === 'string') {
-		// single text child
-		html = encodeEntities(children);
+		pieces = pieces + encodeEntities(children);
+		hasChildren = true;
+	} else if (isArray(children)) {
+		vnode[CHILDREN] = children;
+		for (let i = 0; i < children.length; i++) {
+			let child = children[i];
+			if (child != null && child !== false) {
+				let childSvgMode =
+					type === 'svg' || (type !== 'foreignObject' && isSvgMode);
+				let ret = _renderToString(
+					child,
+					context,
+					childSvgMode,
+					selectValue,
+					vnode,
+					renderer
+				);
+
+				// Skip if we received an empty string
+				if (ret) {
+					pieces = pieces + ret;
+					hasChildren = true;
+				}
+			}
+		}
 	} else if (children != null && children !== false && children !== true) {
 		// recurse into this element VNode's children
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
+		let ret = _renderToString(
+			children,
+			context,
+			childSvgMode,
+			selectValue,
+			vnode,
+			renderer
+		);
+
+		// Skip if we received an empty string
+		if (ret) {
+			pieces = pieces + ret;
+			hasChildren = true;
+		}
 	}
 
 	if (afterDiff) afterDiff(vnode);

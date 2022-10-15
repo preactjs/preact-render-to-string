@@ -148,3 +148,29 @@ export function createComponent(vnode, context) {
 		__h: []
 	};
 }
+
+// Necessary for createContext api. Setting this property will pass
+// the context value as `this.context` just for this component.
+export function getContext(nodeName, context) {
+	let cxType = nodeName.contextType;
+	let provider = cxType && context[cxType.__c];
+	return cxType != null
+		? provider
+			? provider.props.value
+			: cxType.__
+		: context;
+}
+
+/**
+ * @template T
+ */
+export class Deferred {
+	constructor() {
+		// eslint-disable-next-line lines-around-comment
+		/** @type {Promise<T>} */
+		this.promise = new Promise((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+		});
+	}
+}
