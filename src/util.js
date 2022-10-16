@@ -123,3 +123,17 @@ export function getContext(nodeName, context) {
 			: cxType.__
 		: context;
 }
+
+/**
+ * @template T
+ */
+export class Deferred {
+	constructor() {
+		// eslint-disable-next-line lines-around-comment
+		/** @type {Promise<T>} */
+		this.promise = new Promise((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+		});
+	}
+}

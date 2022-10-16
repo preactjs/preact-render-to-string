@@ -21,6 +21,18 @@
 			"browser": "./dist/jsx.module.js",
 			"require": "./dist/jsx.js"
 		},
+		"./stream": {
+			"types": "./stream.d.ts",
+			"import": "./dist/stream.mjs",
+			"browser": "./dist/stream.module.js",
+			"require": "./dist/stream.js"
+		},
+		"./stream-node": {
+			"types": "./stream-node.d.ts",
+			"import": "./dist/stream-node.mjs",
+			"browser": "./dist/stream-node.module.js",
+			"require": "./dist/stream-node.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"scripts": {

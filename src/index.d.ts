@@ -13,4 +13,12 @@ export function renderToString(
 	options?: Options
 ): string;
 export function shallowRender(vnode: VNode, context?: any): string;
+
+export interface ChunkedOptions {
+	onWrite(chunk: string): void;
+	context?: any;
+	abortSignal?: AbortSignal;
+}
+export function renderChunked(vnode: VNode, options: ChunkedOptions): void;
+
 export default render;

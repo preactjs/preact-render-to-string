@@ -5,7 +5,8 @@ import {
 	createComponent,
 	UNSAFE_NAME,
 	XLINK,
-	VOID_ELEMENTS
+	VOID_ELEMENTS,
+	Deferred
 } from './util';
 import { options, h, Fragment } from 'preact';
 import { _renderToStringPretty } from './pretty';
@@ -20,8 +21,12 @@ import {
 	RENDER,
 	SKIP_EFFECTS,
 	VNODE,
-	CHILDREN
+	CHILDREN,
+	CHILD_DID_SUSPEND,
+	CATCH_ERROR,
+	MASK
 } from './constants';
+import { createSubtree, ISLAND_SCRIPT, createCleanupScript } from './client';
 
 /** @typedef {import('preact').VNode} VNode */
 
@@ -87,6 +92,68 @@ function renderToString(vnode, context, opts) {
 	EMPTY_ARR.length = 0;
 
 	return res;
+}
+
+/**
+ * The suspended state of a loading boundary. Stores the renderer state to
+ * be able to continue rendering later.
+ * @typedef {{ id: string, promise: Promise<any>, context: any, isSvgMode: boolean, selectValue: any, vnode: VNode, parent: VNode | null}} Suspended
+ */
+
+/**
+ * @typedef {{ suspended: Suspended[], abortSignal: AbortSignal | undefined, start: number, onWrite: (str: string) => void }} RendererState
+ */
+
+/**
+ * @param {VNode} vnode
+ * @param {{ context?: any, onWrite: (str: string) => void, abortSignal?: AbortSignal }} options
+ * @returns {Promise<void>}
+ */
+export async function renderChunked(vnode, { context, onWrite, abortSignal }) {
+	context = context || {};
+
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	/** @type {RendererState} */
+	const renderer = {
+		start: Date.now(),
+		abortSignal,
+		onWrite,
+		suspended: []
+	};
+
+	// Synchronously render the shell
+	const shell = _renderToString(
+		vnode,
+		context,
+		false,
+		undefined,
+		parent,
+		renderer
+	);
+	onWrite(shell);
+
+	// Wait for any suspended sub-trees if there are any
+	if (renderer.suspended.length > 0) {
+		onWrite(ISLAND_SCRIPT);
+		await Promise.all(renderer.suspended.map((s) => s.promise));
+		onWrite(createCleanupScript());
+	}
+
+	// options._commit, we don't schedule any effects in this library right now,
+	// so we can pass an empty queue to this hook.
+	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+	options[SKIP_EFFECTS] = previousSkipEffects;
+	EMPTY_ARR.length = 0;
 }
 
 /**
@@ -215,9 +282,17 @@ const assign = Object.assign;
  * @param {boolean} isSvgMode
  * @param {any} selectValue
  * @param {VNode | null} parent
+ * @param {RendererState | undefined} renderer
  * @returns {string}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
+function _renderToString(
+	vnode,
+	context,
+	isSvgMode,
+	selectValue,
+	parent,
+	renderer
+) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -236,7 +311,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		for (let i = 0; i < vnode.length; i++) {
 			rendered =
 				rendered +
-				_renderToString(vnode[i], context, isSvgMode, selectValue, parent);
+				_renderToString(
+					vnode[i],
+					context,
+					isSvgMode,
+					selectValue,
+					parent,
+					renderer
+				);
 		}
 		return rendered;
 	}
@@ -276,20 +358,94 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
 
-		if (options[DIFFED]) options[DIFFED](vnode);
-		vnode[PARENT] = undefined;
+		try {
+			const str = _renderToString(
+				rendered,
+				context,
+				isSvgMode,
+				selectValue,
+				vnode,
+				renderer
+			);
 
-		if (options.unmount) options.unmount(vnode);
+			if (options[DIFFED]) options[DIFFED](vnode);
+			vnode[PARENT] = undefined;
 
-		return str;
+			if (options.unmount) options.unmount(vnode);
+
+			return str;
+		} catch (error) {
+			if (renderer !== undefined && error.then) {
+				/** @type {import('./internal').Component} */
+				let component;
+				let susVNode = vnode;
+
+				for (; (susVNode = susVNode[PARENT]); ) {
+					if (
+						(component = susVNode[COMPONENT]) &&
+						component[CHILD_DID_SUSPEND]
+					) {
+						const id =
+							'preact-island-' + susVNode[MASK] + renderer.suspended.length;
+
+						const abortSignal = renderer.abortSignal;
+
+						const race = new Deferred();
+						if (abortSignal) {
+							if (abortSignal.aborted) race.resolve();
+							else {
+								abortSignal.addEventListener('abort', race.resolve);
+							}
+						}
+
+						renderer.suspended.push({
+							id,
+							context,
+							isSvgMode,
+							parent,
+							selectValue,
+							vnode: susVNode,
+							promise: Promise.race([
+								error.then(() => {
+									if (abortSignal && abortSignal.aborted) {
+										return;
+									}
+
+									const str = _renderToString(
+										susVNode.props.children,
+										context,
+										isSvgMode,
+										selectValue,
+										susVNode,
+										renderer
+									);
+
+									renderer.onWrite(createSubtree(id, str));
+								}),
+								race.promise
+							])
+						});
+
+						const fallback = _renderToString(
+							susVNode.props.fallback,
+							context,
+							isSvgMode,
+							selectValue,
+							susVNode,
+							renderer
+						);
+
+						return `<!--${id}-->${fallback}<!--/${id}-->`;
+					}
+				}
+			}
+
+			console.log('WOA', error, renderer);
+			let errorHook = options[CATCH_ERROR];
+			if (errorHook) errorHook(error, vnode);
+			return '';
+		}
 	}
 
 	// Serialize Element VNodes to HTML
@@ -380,7 +536,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					context,
 					childSvgMode,
 					selectValue,
-					vnode
+					vnode,
+					renderer
 				);
 
 				// Skip if we received an empty string
@@ -399,7 +556,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			context,
 			childSvgMode,
 			selectValue,
-			vnode
+			vnode,
+			renderer
 		);
 
 		// Skip if we received an empty string
