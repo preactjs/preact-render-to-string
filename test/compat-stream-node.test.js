@@ -1,8 +1,3 @@
-import { h } from 'preact';
-import { expect } from 'chai';
-import { Deferred } from '../src/util';
-import { renderToReadableStream } from '../src/stream';
-
 /**
  * @param {ReadableStream} input
  */
@@ -37,11 +32,4 @@ function createSink(input) {
 	};
 }
 
-describe('renderToReadableStream', () => {
-	it('should render non-suspended JSX in one go', async () => {
-		const stream = renderToReadableStream(<p>hello</p>);
-		const state = createSink(stream);
-		const result = await state.promise;
-		expect(result).to.deep.equal(['<p>hello</p>']);
-	});
-});
+describe('', () => {});

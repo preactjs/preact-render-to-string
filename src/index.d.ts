@@ -19,6 +19,9 @@ export interface ChunkedOptions {
 	context?: any;
 	abortSignal?: AbortSignal;
 }
-export function renderChunked(vnode: VNode, options: ChunkedOptions): void;
+export function renderToChunks(
+	vnode: VNode,
+	options: ChunkedOptions
+): Promise<void>;
 
 export default render;

@@ -26,7 +26,7 @@ import {
 	CATCH_ERROR,
 	MASK
 } from './constants';
-import { createSubtree, ISLAND_SCRIPT, createCleanupScript } from './client';
+import { createSubtree, createInitScript } from './client';
 
 /** @typedef {import('preact').VNode} VNode */
 
@@ -109,7 +109,7 @@ function renderToString(vnode, context, opts) {
  * @param {{ context?: any, onWrite: (str: string) => void, abortSignal?: AbortSignal }} options
  * @returns {Promise<void>}
  */
-export async function renderChunked(vnode, { context, onWrite, abortSignal }) {
+export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	context = context || {};
 
 	// Performance optimization: `renderToString` is synchronous and we
@@ -143,10 +143,12 @@ export async function renderChunked(vnode, { context, onWrite, abortSignal }) {
 	onWrite(shell);
 
 	// Wait for any suspended sub-trees if there are any
-	if (renderer.suspended.length > 0) {
-		onWrite(ISLAND_SCRIPT);
+	const len = renderer.suspended.length;
+	if (len > 0) {
+		onWrite('<div hidden>');
+		onWrite(createInitScript(len));
 		await Promise.all(renderer.suspended.map((s) => s.promise));
-		onWrite(createCleanupScript());
+		onWrite('</div>');
 	}
 
 	// options._commit, we don't schedule any effects in this library right now,
@@ -386,8 +388,7 @@ function _renderToString(
 						(component = susVNode[COMPONENT]) &&
 						component[CHILD_DID_SUSPEND]
 					) {
-						const id =
-							'preact-island-' + susVNode[MASK] + renderer.suspended.length;
+						const id = 'preact-' + susVNode[MASK] + renderer.suspended.length;
 
 						const abortSignal = renderer.abortSignal;
 
@@ -436,7 +437,7 @@ function _renderToString(
 							renderer
 						);
 
-						return `<!--${id}-->${fallback}<!--/${id}-->`;
+						return `<preact-island id="${id}">${fallback}</preact-island>`;
 					}
 				}
 			}

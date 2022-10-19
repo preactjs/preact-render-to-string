@@ -1,49 +1,53 @@
+/* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
+
 /**
- * @param {string} id
+ * @param {number} c Total number of hydration islands
  */
-function initPreactIsland(id) {
-	const el = document.getElementById(id);
-	if (!el) return;
-	const stack = [document.body];
-	let item;
-
-	let startComment;
-	while ((item = stack.pop()) !== undefined) {
-		if (
-			item.nodeType === 8 &&
-			/** @type {Comment} **/
-			item.data === id
-		) {
-			startComment = item;
-			break;
+function initPreactIslands(c) {
+	var el = document.currentScript.parentNode;
+	if (!document.getElementById('praect-island-style')) {
+		var s = document.createElement('style');
+		s.id = 'preact-island-style';
+		s.textContent = 'preact-island{display:contents}';
+		document.head.appendChild(s);
+	}
+	var o = new MutationObserver(function (m) {
+		for (var i = 0; i < m.length; i++) {
+			var added = m[i].addedNodes;
+			for (var j = 0; j < added.length; j++) {
+				if (added[j].nodeType !== 1) continue;
+				var id = added[j].getAttribute('data-id');
+				var target = document.getElementById(id);
+				if (target) {
+					while (target.firstChild !== null) {
+						target.removeChild(target.firstChild);
+					}
+					while (added[j].firstChild !== null) {
+						target.appendChild(added[j].firstChild);
+					}
+					target.hydrate = true;
+				}
+				if (--c === 0) {
+					o.disconnect();
+					el.parentNode.removeChild(el);
+				}
+			}
 		}
-
-		// eslint-disable-next-line prefer-spread
-		stack.push.apply(stack, item.childNodes);
-	}
-
-	const parent = startComment.parentNode;
-	let next = startComment.nextSibling;
-	let endComment;
-	while (next !== null) {
-		if (next.nodeType === 8 && next.data === '/' + id) {
-			endComment = next;
-			break;
-		}
-
-		const node = next;
-		next = next.nextSibling;
-		parent.removeChild(node);
-	}
-
-	while (el.childNodes.length > 0) {
-		parent.insertBefore(el.firstChild, endComment);
-	}
-
-	el.parentNode.removeChild(el);
+	});
+	o.observe(el, { childList: true, subtree: false });
 }
 
-export const ISLAND_SCRIPT = `<script id="preact-island-script">${initPreactIsland.toString()}</script>`;
+const fn = initPreactIslands.toString();
+const INIT_SCRIPT = fn
+	.slice(fn.indexOf('{') + 1, fn.lastIndexOf('}'))
+	.replace(/\n\s+/gm, '');
+
+/**
+ * @param {number} total
+ */
+export function createInitScript(total) {
+	return `<script>(function(){var c=${total};${INIT_SCRIPT}}())</script>`;
+}
 
 /**
  * @param {string} id
@@ -51,9 +55,5 @@ export const ISLAND_SCRIPT = `<script id="preact-island-script">${initPreactIsla
  * @returns {string}
  */
 export function createSubtree(id, content) {
-	return `<div hidden id="${id}">${content}</div><script>${initPreactIsland.name}("${id}");var s=document.currentScript;if(s)s.parentNode.removeChild(s);</script>`;
-}
-
-export function createCleanupScript() {
-	return `<script>var s=document.getElementById('preact-island-script');if(s)s.parentNode.removeChild(s);var c=document.currentScript;if(c)c.parentNode.removeChild(c);</script>`;
+	return `<div data-id="${id}">${content}</div>`;
 }

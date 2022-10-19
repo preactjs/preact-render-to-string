@@ -1,18 +1,14 @@
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
-import { renderChunked } from '../src/index';
-import {
-	createCleanupScript,
-	createSubtree,
-	ISLAND_SCRIPT
-} from '../src/client';
+import { renderToChunks } from '../src/index';
+import { createSubtree, createInitScript } from '../src/client';
 import { createSuspender } from './utils';
 
-describe('renderChunked', () => {
+describe('renderToChunks', () => {
 	it('should render non-suspended JSX in one go', async () => {
 		const result = [];
-		await renderChunked(<div class="foo">bar</div>, {
+		await renderToChunks(<div class="foo">bar</div>, {
 			onWrite: (s) => result.push(s)
 		});
 
@@ -23,7 +19,7 @@ describe('renderChunked', () => {
 		const { Suspender, suspended } = createSuspender();
 
 		const result = [];
-		const promise = renderChunked(
+		const promise = renderToChunks(
 			<div>
 				<Suspense fallback="loading...">
 					<Suspender />
@@ -36,10 +32,11 @@ describe('renderChunked', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island-00-->loading...<!--/preact-island-00--></div>',
-			ISLAND_SCRIPT,
-			createSubtree('preact-island-00', '<p>it works</p>'),
-			createCleanupScript()
+			'<div><preact-island id="preact-00">loading...</preact-island></div>',
+			'<div hidden>',
+			createInitScript(1),
+			createSubtree('preact-00', '<p>it works</p>'),
+			'</div>'
 		]);
 	});
 
@@ -48,7 +45,7 @@ describe('renderChunked', () => {
 
 		const controller = new AbortController();
 		const result = [];
-		const promise = renderChunked(
+		const promise = renderToChunks(
 			<div>
 				<Suspense fallback="loading...">
 					<Suspender />
@@ -63,9 +60,10 @@ describe('renderChunked', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island-00-->loading...<!--/preact-island-00--></div>',
-			ISLAND_SCRIPT,
-			createCleanupScript()
+			'<div><preact-island id="preact-00">loading...</preact-island></div>',
+			'<div hidden>',
+			createInitScript(1),
+			'</div>'
 		]);
 	});
 });

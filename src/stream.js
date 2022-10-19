@@ -1,5 +1,5 @@
 import { Deferred } from './util';
-import { renderChunked } from './index';
+import { renderToChunks } from './index';
 
 /** @typedef {ReadableStream<Uint8Array> & { allReady: Promise<void>}} RenderStream */
 
@@ -11,30 +11,17 @@ import { renderChunked } from './index';
 export function renderToReadableStream(vnode, context) {
 	/** @type {Deferred<void>} */
 	const allReady = new Deferred();
-	/** @type {Deferred<void>} */
-	const suspended = new Deferred();
 	const encoder = new TextEncoder('utf-8');
-
-	renderChunked(vnode, context);
-
-	const ctx = {
-		suspended: []
-	};
-
-	setTimeout(() => suspended.resolve(), 1000);
 
 	/** @type {RenderStream} */
 	const stream = new ReadableStream({
 		start(controller) {
-			controller.enqueue(encoder.encode(shell));
-
-			if (ctx.suspended.length === 0) {
-				controller.close();
-				allReady.resolve();
-				return;
-			}
-
-			suspended.promise
+			renderToChunks(vnode, {
+				context,
+				onWrite(s) {
+					controller.enqueue(encoder.encode(s));
+				}
+			})
 				.then(() => {
 					controller.close();
 					allReady.resolve();
@@ -43,6 +30,7 @@ export function renderToReadableStream(vnode, context) {
 					controller.error(error);
 					allReady.reject(error);
 				});
+			// controller.enqueue(encoder.encode(shell));
 		}
 	});
 
