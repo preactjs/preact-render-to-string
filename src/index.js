@@ -437,7 +437,7 @@ function _renderToString(
 							renderer
 						);
 
-						return `<preact-island id="${id}">${fallback}</preact-island>`;
+						return `<preact-island data-id="${id}">${fallback}</preact-island>`;
 					}
 				}
 			}

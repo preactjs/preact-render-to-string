@@ -16,8 +16,8 @@ function initPreactIslands(c) {
 			var added = m[i].addedNodes;
 			for (var j = 0; j < added.length; j++) {
 				if (added[j].nodeType !== 1) continue;
-				var id = added[j].getAttribute('data-id');
-				var target = document.getElementById(id);
+				var id = added[j].getAttribute('data-target');
+				var target = document.querySelector('[data-id="' + id + '"]');
 				if (target) {
 					while (target.firstChild !== null) {
 						target.removeChild(target.firstChild);
@@ -55,5 +55,5 @@ export function createInitScript(total) {
  * @returns {string}
  */
 export function createSubtree(id, content) {
-	return `<div data-id="${id}">${content}</div>`;
+	return `<div data-target="${id}">${content}</div>`;
 }
