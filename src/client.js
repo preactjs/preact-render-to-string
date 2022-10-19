@@ -34,7 +34,7 @@ function initPreactIslands(c) {
 			}
 		}
 	});
-	o.observe(el, { childList: true, subtree: false });
+	o.observe(el, { childList: true });
 }
 
 const fn = initPreactIslands.toString();
