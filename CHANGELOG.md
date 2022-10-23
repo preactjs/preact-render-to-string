@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 5.2.6
+
+### Patch Changes
+
+- [#257](https://github.com/preactjs/preact-render-to-string/pull/257) [`8b944b2`](https://github.com/preactjs/preact-render-to-string/commit/8b944b28be64d470a947f999153c9b64b078f7a8) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix `preact/debug` incorrectly throwing errors on text children
+
 ## 5.2.5
 
 ### Patch Changes
