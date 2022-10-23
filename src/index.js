@@ -166,6 +166,23 @@ function renderClassComponent(vnode, context) {
 }
 
 /**
+ * @param {any} vnode
+ * @returns {VNode}
+ */
+function normalizeVNode(vnode) {
+	if (vnode == null || typeof vnode == 'boolean') {
+		return null;
+	} else if (
+		typeof vnode == 'string' ||
+		typeof vnode == 'number' ||
+		typeof vnode == 'bigint'
+	) {
+		return h(null, null, vnode);
+	}
+	return vnode;
+}
+
+/**
  * @param {string} name
  * @param {boolean} isSvgMode
  * @returns {string}
@@ -237,6 +254,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered =
 				rendered +
 				_renderToString(vnode[i], context, isSvgMode, selectValue, parent);
+
+			vnode[i] = normalizeVNode(vnode[i]);
 		}
 		return rendered;
 	}
@@ -372,6 +391,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		vnode[CHILDREN] = children;
 		for (let i = 0; i < children.length; i++) {
 			let child = children[i];
+			children[i] = normalizeVNode(child);
+
 			if (child != null && child !== false) {
 				let childSvgMode =
 					type === 'svg' || (type !== 'foreignObject' && isSvgMode);
@@ -391,7 +412,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			}
 		}
 	} else if (children != null && children !== false && children !== true) {
-		vnode[CHILDREN] = [children];
+		vnode[CHILDREN] = [normalizeVNode(children)];
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
 		let ret = _renderToString(
