@@ -18,6 +18,10 @@ export function renderToReadableStream(vnode, context) {
 		start(controller) {
 			renderToChunks(vnode, {
 				context,
+				onError: (error) => {
+					allReady.reject(error);
+					controller.abort(error);
+				},
 				onWrite(s) {
 					controller.enqueue(encoder.encode(s));
 				}

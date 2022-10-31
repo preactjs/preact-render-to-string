@@ -15,6 +15,7 @@ export function renderToString(
 export function shallowRender(vnode: VNode, context?: any): string;
 
 export interface ChunkedOptions {
+	onError(error: unknown): void;
 	onWrite(chunk: string): void;
 	context?: any;
 	abortSignal?: AbortSignal;

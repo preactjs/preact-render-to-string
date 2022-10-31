@@ -1,7 +1,10 @@
 import { h } from 'preact';
 import { expect } from 'chai';
-import { Deferred } from '../src/util';
+import { Suspense } from 'preact/compat';
+import { createSubtree, createInitScript } from '../src/client';
 import { renderToReadableStream } from '../src/stream';
+import { Deferred } from '../src/util';
+import { createSuspender } from './utils';
 
 /**
  * @param {ReadableStream} input
@@ -39,9 +42,35 @@ function createSink(input) {
 
 describe('renderToReadableStream', () => {
 	it('should render non-suspended JSX in one go', async () => {
-		const stream = renderToReadableStream(<p>hello</p>);
-		const state = createSink(stream);
-		const result = await state.promise;
-		expect(result).to.deep.equal(['<p>hello</p>']);
+		const stream = await renderToReadableStream(<div class="foo">bar</div>);
+		const sink = createSink(stream);
+		const result = await sink.promise;
+
+		expect(result).to.deep.equal(['<div class="foo">bar</div>']);
+	});
+
+	it('should render fallback + attach loaded subtree on suspend', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		const sink = createSink(stream);
+		suspended.resolve();
+
+		const result = await sink.promise;
+
+		expect(result).to.deep.equal([
+			'<div><!--preact-island:00-->loading...<!--/preact-island:00--></div>',
+			'<div hidden>',
+			createInitScript(),
+			createSubtree('00', '<p>it works</p>'),
+			'</div>'
+		]);
 	});
 });
