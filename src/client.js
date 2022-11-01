@@ -10,16 +10,10 @@ function initPreactIslandElement() {
 
 			var d = this;
 			function f(el) {
-				var a = [];
-				for (var j = 0; j < el.childNodes.length; j++) {
-					var n = el.childNodes[j];
-					if (n.nodeType === 8) {
-						a.push(n);
-					} else {
-						a.push(...f(n));
-					}
-				}
-				return a;
+				let r = [];
+				let c = document.createNodeIterator(el, NodeFilter.SHOW_COMMENT);
+				while (c.nextNode()) r.push(c.referenceNode);
+				return r;
 			}
 			var s, e;
 			for (var n of f(document)) {
