@@ -8,28 +8,25 @@ function initPreactIslandElement() {
 			let i = this.getAttribute('data-target');
 			if (!i) return;
 
-			var d = this;
-			function f(el) {
-				let r = [];
-				let c = document.createNodeIterator(el, NodeFilter.SHOW_COMMENT);
-				while (c.nextNode()) r.push(c.referenceNode);
-				return r;
-			}
-			var s, e;
-			for (var n of f(document)) {
+			var d = this,
+				s,
+				e,
+				c = document.createNodeIterator(document, NodeFilter.SHOW_COMMENT);
+			while (c.nextNode()) {
+				let n = c.referenceNode;
 				if (n.data == 'preact-island:' + i) s = n;
 				else if (n.data == '/preact-island:' + i) e = n;
 				if (s && e) break;
 			}
 			if (s && e) {
 				var p = e.previousSibling;
-				for (; p != s; ) {
+				while (p != s) {
 					if (!p || p == s) break;
 
 					e.parentNode.removeChild(p);
 					p = e.previousSibling;
 				}
-				for (; d.firstChild; ) {
+				while (d.firstChild) {
 					e.parentNode.insertBefore(d.firstChild, e);
 				}
 				d.parentNode.removeChild(d);
