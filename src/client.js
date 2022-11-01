@@ -3,13 +3,13 @@
 function initPreactIslandElement() {
 	class PreactIslandElement extends HTMLElement {
 		connectedCallback() {
-			if (!this.isConnected) return;
+			var d = this;
+			if (!d.isConnected) return;
 
 			let i = this.getAttribute('data-target');
 			if (!i) return;
 
-			var d = this,
-				s,
+			var s,
 				e,
 				c = document.createNodeIterator(document, NodeFilter.SHOW_COMMENT);
 			while (c.nextNode()) {
