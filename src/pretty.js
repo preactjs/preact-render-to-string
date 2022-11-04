@@ -8,7 +8,8 @@ import {
 	getContext,
 	UNSAFE_NAME,
 	XLINK,
-	VOID_ELEMENTS
+	VOID_ELEMENTS,
+	isSignalLike
 } from './util';
 import { options, Fragment } from 'preact';
 
@@ -55,7 +56,7 @@ export function _renderToStringPretty(
 	}
 
 	// VNodes have {constructor:undefined} to prevent JSON injection:
-	if (vnode.constructor !== undefined) return '';
+	if (vnode.constructor !== undefined && !isSignalLike(vnode)) return '';
 
 	let nodeName = vnode.type,
 		props = vnode.props,

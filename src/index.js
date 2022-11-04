@@ -5,7 +5,8 @@ import {
 	createComponent,
 	UNSAFE_NAME,
 	XLINK,
-	VOID_ELEMENTS
+	VOID_ELEMENTS,
+	isSignalLike
 } from './util';
 import { options, h, Fragment } from 'preact';
 import { _renderToStringPretty } from './pretty';
@@ -261,7 +262,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	}
 
 	// VNodes have {constructor:undefined} to prevent JSON injection:
-	if (vnode.constructor !== undefined) return '';
+	if (vnode.constructor !== undefined && !isSignalLike(vnode)) return '';
 
 	vnode[PARENT] = parent;
 	if (options[DIFF]) options[DIFF](vnode);

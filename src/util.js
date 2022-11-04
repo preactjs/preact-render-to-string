@@ -6,6 +6,15 @@ export const XLINK = /^xlink:?./;
 
 const ENCODED_ENTITIES = /["&<]/;
 
+export function isSignalLike(x) {
+	return (
+		x !== null &&
+		typeof x === 'object' &&
+		typeof x.peek === 'function' &&
+		'value' in x
+	);
+}
+
 export function encodeEntities(str) {
 	// Ensure we're always parsing and returning a string:
 	str += '';

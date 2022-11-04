@@ -107,6 +107,7 @@
 		"@babel/register": "^7.12.10",
 		"@changesets/cli": "^2.18.0",
 		"@changesets/changelog-github": "^0.4.1",
+		"@preact/signals": "^1.1.0",
 		"benchmarkjs-pretty": "^2.0.1",
 		"chai": "^4.2.0",
 		"copyfiles": "^2.4.1",
