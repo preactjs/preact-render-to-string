@@ -10,7 +10,6 @@ import {
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
-import { useSignal } from '@preact/signals';
 
 describe('render', () => {
 	describe('Basic JSX', () => {
@@ -1293,17 +1292,6 @@ describe('render', () => {
 			}
 
 			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
-		});
-	});
-
-	describe('signals', () => {
-		it('should render text signals', () => {
-			function App() {
-				const text = useSignal('hello world');
-				return <p>{text}</p>;
-			}
-
-			expect(render(<App />)).to.equal('<p>hello world</p>');
 		});
 	});
 });
