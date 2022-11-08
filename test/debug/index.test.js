@@ -1,5 +1,5 @@
 import 'preact/debug';
-import { render } from '../src';
+import { render } from '../../src';
 import { h } from 'preact';
 import { expect } from 'chai';
 
