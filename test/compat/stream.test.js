@@ -1,10 +1,10 @@
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
-import { createSubtree, createInitScript } from '../src/client';
-import { renderToReadableStream } from '../src/stream';
-import { Deferred } from '../src/util';
-import { createSuspender } from './utils';
+import { createSubtree, createInitScript } from '../../src/client';
+import { renderToReadableStream } from '../../src/stream';
+import { Deferred } from '../../src/util';
+import { createSuspender } from '../utils';
 
 /**
  * @param {ReadableStream} input

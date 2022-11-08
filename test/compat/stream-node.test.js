@@ -2,10 +2,10 @@ import { PassThrough } from 'node:stream';
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
-import { createSubtree, createInitScript } from '../src/client';
-import { renderToPipeableStream } from '../src/stream-node';
-import { Deferred } from '../src/util';
-import { createSuspender } from './utils';
+import { createSubtree, createInitScript } from '../../src/client';
+import { renderToPipeableStream } from '../../src/stream-node';
+import { Deferred } from '../../src/util';
+import { createSuspender } from '../utils';
 
 function streamToString(stream) {
 	const decoder = new TextDecoder();

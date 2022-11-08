@@ -1,9 +1,9 @@
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
-import { renderToChunks } from '../src/index';
-import { createSubtree, createInitScript } from '../src/client';
-import { createSuspender } from './utils';
+import { renderToChunks } from '../../src/index';
+import { createSubtree, createInitScript } from '../../src/client';
+import { createSuspender } from '../utils';
 
 describe('renderToChunks', () => {
 	it('should render non-suspended JSX in one go', async () => {
