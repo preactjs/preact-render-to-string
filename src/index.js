@@ -106,7 +106,7 @@ function renderToString(vnode, context, opts) {
 
 /**
  * @param {VNode} vnode
- * @param {{ context?: any, onWrite: (str: string) => void, abortSignal?: AbortSignal }} options
+ * @param {{ context?: any, onError: (error: unknown) => void, onWrite: (str: string) => void, abortSignal?: AbortSignal }} options
  * @returns {Promise<void>}
  */
 export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
@@ -388,7 +388,7 @@ function _renderToString(
 						(component = susVNode[COMPONENT]) &&
 						component[CHILD_DID_SUSPEND]
 					) {
-						const id = 'preact-' + susVNode[MASK] + renderer.suspended.length;
+						const id = susVNode[MASK] + renderer.suspended.length;
 
 						const abortSignal = renderer.abortSignal;
 
@@ -408,22 +408,31 @@ function _renderToString(
 							selectValue,
 							vnode: susVNode,
 							promise: Promise.race([
-								error.then(() => {
-									if (abortSignal && abortSignal.aborted) {
-										return;
+								error.then(
+									() => {
+										if (abortSignal && abortSignal.aborted) {
+											return;
+										}
+
+										const str = _renderToString(
+											susVNode.props.children,
+											context,
+											isSvgMode,
+											selectValue,
+											susVNode,
+											renderer
+										);
+
+										renderer.onWrite(createSubtree(id, str));
+									},
+									(error) => {
+										// TODO: Abort and send hydration code snippet to client
+										// to attempt to recover during hydration
+										if (renderer.onError) {
+											renderer.onError(error);
+										}
 									}
-
-									const str = _renderToString(
-										susVNode.props.children,
-										context,
-										isSvgMode,
-										selectValue,
-										susVNode,
-										renderer
-									);
-
-									renderer.onWrite(createSubtree(id, str));
-								}),
+								),
 								race.promise
 							])
 						});
@@ -437,12 +446,12 @@ function _renderToString(
 							renderer
 						);
 
-						return `<preact-island data-id="${id}">${fallback}</preact-island>`;
+						return `<!--preact-island:${id}-->${fallback}<!--/preact-island:${id}-->`;
 					}
 				}
 			}
 
-			console.log('WOA', error, renderer);
+			// console.log('WOA', error, renderer);
 			let errorHook = options[CATCH_ERROR];
 			if (errorHook) errorHook(error, vnode);
 			return '';

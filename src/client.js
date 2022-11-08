@@ -1,52 +1,48 @@
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
-/**
- * @param {number} c Total number of hydration islands
- */
-function initPreactIslands(c) {
-	var el = document.currentScript.parentNode;
-	if (!document.getElementById('praect-island-style')) {
-		var s = document.createElement('style');
-		s.id = 'preact-island-style';
-		s.textContent = 'preact-island{display:contents}';
-		document.head.appendChild(s);
-	}
-	var o = new MutationObserver(function (m) {
-		for (var i = 0; i < m.length; i++) {
-			var added = m[i].addedNodes;
-			for (var j = 0; j < added.length; j++) {
-				if (added[j].nodeType !== 1) continue;
-				var id = added[j].getAttribute('data-target');
-				var target = document.querySelector('[data-id="' + id + '"]');
-				if (target) {
-					while (target.firstChild !== null) {
-						target.removeChild(target.firstChild);
-					}
-					while (added[j].firstChild !== null) {
-						target.appendChild(added[j].firstChild);
-					}
-					target.hydrate = true;
+function initPreactIslandElement() {
+	class PreactIslandElement extends HTMLElement {
+		connectedCallback() {
+			var d = this;
+			if (!d.isConnected) return;
+
+			let i = this.getAttribute('data-target');
+			if (!i) return;
+
+			var s,
+				e,
+				c = document.createNodeIterator(document, 128);
+			while (c.nextNode()) {
+				let n = c.referenceNode;
+				if (n.data == 'preact-island:' + i) s = n;
+				else if (n.data == '/preact-island:' + i) e = n;
+				if (s && e) break;
+			}
+			if (s && e) {
+				var p = e.previousSibling;
+				while (p != s) {
+					if (!p || p == s) break;
+
+					e.parentNode.removeChild(p);
+					p = e.previousSibling;
 				}
-				if (--c === 0) {
-					o.disconnect();
-					el.parentNode.removeChild(el);
-				}
+				while (d.firstChild) e.parentNode.insertBefore(d.firstChild, e);
+
+				d.parentNode.removeChild(d);
 			}
 		}
-	});
-	o.observe(el, { childList: true });
+	}
+
+	customElements.define('preact-island', PreactIslandElement);
 }
 
-const fn = initPreactIslands.toString();
+const fn = initPreactIslandElement.toString();
 const INIT_SCRIPT = fn
 	.slice(fn.indexOf('{') + 1, fn.lastIndexOf('}'))
 	.replace(/\n\s+/gm, '');
 
-/**
- * @param {number} total
- */
-export function createInitScript(total) {
-	return `<script>(function(){var c=${total};${INIT_SCRIPT}}())</script>`;
+export function createInitScript() {
+	return `<script>(function(){${INIT_SCRIPT}}())</script>`;
 }
 
 /**
@@ -55,5 +51,5 @@ export function createInitScript(total) {
  * @returns {string}
  */
 export function createSubtree(id, content) {
-	return `<div data-target="${id}">${content}</div>`;
+	return `<preact-island hidden data-target="${id}">${content}</preact-island>`;
 }

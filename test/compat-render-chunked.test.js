@@ -32,10 +32,10 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><preact-island data-id="preact-00">loading...</preact-island></div>',
+			'<div><!--preact-island:00-->loading...<!--/preact-island:00--></div>',
 			'<div hidden>',
-			createInitScript(1),
-			createSubtree('preact-00', '<p>it works</p>'),
+			createInitScript(),
+			createSubtree('00', '<p>it works</p>'),
 			'</div>'
 		]);
 	});
@@ -60,7 +60,7 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			'<div><preact-island data-id="preact-00">loading...</preact-island></div>',
+			'<div><!--preact-island:00-->loading...<!--/preact-island:00--></div>',
 			'<div hidden>',
 			createInitScript(1),
 			'</div>'
