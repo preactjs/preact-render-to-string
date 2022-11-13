@@ -65,6 +65,7 @@ function _renderToStringPretty(
 
 	// #text nodes
 	if (typeof vnode !== 'object') {
+		if (typeof vnode === 'function') return '';
 		return encodeEntities(vnode + '');
 	}
 
@@ -90,6 +91,9 @@ function _renderToStringPretty(
 	}
 
 	if (options[DIFF]) options[DIFF](vnode);
+
+	// VNodes have {constructor:undefined} to prevent JSON injection:
+	if (vnode.constructor !== undefined) return '';
 
 	let nodeName = vnode.type,
 		props = vnode.props,

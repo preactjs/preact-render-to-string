@@ -222,4 +222,14 @@ describe('pretty', () => {
 			</p>
 		`);
 	});
+
+	it('should prevent JSON injection', () => {
+		expect(prettyRender(<div>{{ hello: 'world' }}</div>)).to.equal(
+			'<div></div>'
+		);
+	});
+
+	it('should not render function children', () => {
+		expect(prettyRender(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
 });

@@ -1,5 +1,35 @@
 # preact-render-to-string
 
+## 5.2.6
+
+### Patch Changes
+
+- [#257](https://github.com/preactjs/preact-render-to-string/pull/257) [`8b944b2`](https://github.com/preactjs/preact-render-to-string/commit/8b944b28be64d470a947f999153c9b64b078f7a8) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix `preact/debug` incorrectly throwing errors on text children
+
+## 5.2.5
+
+### Patch Changes
+
+- [#246](https://github.com/preactjs/preact-render-to-string/pull/246) [`ad35c4c`](https://github.com/preactjs/preact-render-to-string/commit/ad35c4c931db37837761038d33ae71fa31ebc9e3) Thanks [@developit](https://github.com/developit) and [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix object and function children being rendered as `undefined`
+
+* [#248](https://github.com/preactjs/preact-render-to-string/pull/248) [`aa12b3c`](https://github.com/preactjs/preact-render-to-string/commit/aa12b3c61528813c7a3978410d1d551afbdb08ba) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix vnode masks not matching with core due to top level component Fragments
+
+## 5.2.4
+
+### Patch Changes
+
+- [#242](https://github.com/preactjs/preact-render-to-string/pull/242) [`bd5e5eb`](https://github.com/preactjs/preact-render-to-string/commit/bd5e5eb1c97355d81710c17a10208b1cb3b439a0) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - correctly unmount vnodes
+
+* [#237](https://github.com/preactjs/preact-render-to-string/pull/237) [`dec7a7a`](https://github.com/preactjs/preact-render-to-string/commit/dec7a7a575149187942adb92f644c302db4b0599) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - add parent and children for useId
+
+## 5.2.3
+
+### Patch Changes
+
+- [#232](https://github.com/preactjs/preact-render-to-string/pull/232) [`2d5ca74`](https://github.com/preactjs/preact-render-to-string/commit/2d5ca74646f2f9f2e9ddeb20ed9c3fc47171c264) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Performance enhancements
+
+* [#238](https://github.com/preactjs/preact-render-to-string/pull/238) [`7cdf4d6`](https://github.com/preactjs/preact-render-to-string/commit/7cdf4d67abba622124902e53e016affbbebc647e) Thanks [@developit](https://github.com/developit)! - Fix the order of invocation for the "before diff" (`__b`) and "diffed" [options hooks](https://preactjs.com/guide/v10/options/).
+
 ## 5.2.2
 
 ### Patch Changes

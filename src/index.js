@@ -64,10 +64,10 @@ function markAsDirty() {
 
 /**
  * @param {VNode} vnode
- * @param {any} context
+ * @param {Record<string, unknown>} context
  */
 function renderClassComponent(vnode, context) {
-	let type = vnode.type;
+	let type = /** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
 
 	let c = new type(vnode.props, context);
 
@@ -123,6 +123,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	// Text VNodes: escape as HTML
 	if (typeof vnode !== 'object') {
+		if (typeof vnode === 'function') return '';
 		return encodeEntities(vnode + '');
 	}
 
@@ -131,12 +132,27 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		let rendered = '';
 		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
+			let child = vnode[i];
+			if (child == null || typeof child === 'boolean') continue;
+
 			rendered =
 				rendered +
-				_renderToString(vnode[i], context, isSvgMode, selectValue, parent);
+				_renderToString(child, context, isSvgMode, selectValue, parent);
+
+			if (
+				typeof child === 'string' ||
+				typeof child === 'number' ||
+				typeof child === 'bigint'
+			) {
+				// @ts-ignore manually constructing a Text vnode
+				vnode[i] = h(null, null, child);
+			}
 		}
 		return rendered;
 	}
+
+	// VNodes have {constructor:undefined} to prevent JSON injection:
+	if (vnode.constructor !== undefined) return '';
 
 	vnode[PARENT] = parent;
 	if (beforeDiff) beforeDiff(vnode);
@@ -198,6 +214,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			}
 		}
 
+		// When a component returns a Fragment node we flatten it in core, so we
+		// need to mirror that logic here too
+		let isTopLevelFragment =
+			rendered != null && rendered.type === Fragment && rendered.key == null;
+		rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
 		// Recurse into children before invoking the after-diff hook
 		const str = _renderToString(
 			rendered,
@@ -208,6 +230,9 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		);
 		if (afterDiff) afterDiff(vnode);
 		vnode[PARENT] = undefined;
+
+		if (options.unmount) options.unmount(vnode);
+
 		return str;
 	}
 
