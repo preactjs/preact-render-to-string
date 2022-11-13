@@ -1,7 +1,14 @@
 import render from '../src';
 import renderToStringPretty from '../src/pretty';
 import renderToStringJSX from '../src/jsx';
-import { h, Component, createContext, Fragment, options } from 'preact';
+import {
+	h,
+	Component,
+	createContext,
+	Fragment,
+	options,
+	createRef
+} from 'preact';
 import {
 	useState,
 	useContext,
@@ -80,7 +87,7 @@ describe('render', () => {
 		});
 
 		it('should omit ref attribute', () => {
-			let rendered = render(<div ref="test" />),
+			let rendered = render(<div ref={createRef()} />),
 				expected = `<div></div>`;
 
 			expect(rendered).to.equal(expected);
