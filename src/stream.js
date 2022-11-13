@@ -4,7 +4,7 @@ import { renderToChunks } from './index';
 /** @typedef {ReadableStream<Uint8Array> & { allReady: Promise<void>}} RenderStream */
 
 /**
- * @param {VNode} vnode
+ * @param {import('preact').VNode} vnode
  * @param {any} [context]
  * @returns {RenderStream}
  */

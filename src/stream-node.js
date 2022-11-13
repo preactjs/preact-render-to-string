@@ -6,11 +6,11 @@ import { renderToChunks } from './index';
  * @typedef {object} RenderToPipeableStreamOptions
  * @property {() => void} [onShellReady]
  * @property {() => void} [onAllReady]
- * @property {() => void} [onError]
+ * @property {(error) => void} [onError]
  */
 
 /**
- * @param {VNode} vnode
+ * @param {import('preact').VNode} vnode
  * @param {RenderToPipeableStreamOptions} options
  * @param {any} [context]
  * @returns {{}}
