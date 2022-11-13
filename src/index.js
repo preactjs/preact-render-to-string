@@ -348,6 +348,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	if (afterDiff) afterDiff(vnode);
 	vnode[PARENT] = undefined;
+	if (options.unmount) options.unmount(vnode);
 
 	// Emit self-closing tag for empty void elements:
 	if (!html) {
