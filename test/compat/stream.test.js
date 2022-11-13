@@ -1,3 +1,4 @@
+/*global globalThis*/
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
@@ -41,6 +42,21 @@ function createSink(input) {
 }
 
 describe('renderToReadableStream', () => {
+	before(async () => {
+		// attempt to use native web streams in Node 18, otherwise fall back to a polyfill:
+		let streams;
+		try {
+			streams = await import('node:stream/web');
+		} catch (e) {
+			streams = await import('web-streams-polyfill/ponyfill');
+		}
+		const { ReadableStream, WritableStream, CountQueuingStrategy } = streams;
+
+		globalThis.ReadableStream = ReadableStream;
+		globalThis.WritableStream = WritableStream;
+		globalThis.CountQueuingStrategy = CountQueuingStrategy;
+	});
+
 	it('should render non-suspended JSX in one go', async () => {
 		const stream = await renderToReadableStream(<div class="foo">bar</div>);
 		const sink = createSink(stream);
