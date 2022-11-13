@@ -2,9 +2,9 @@
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
-import { createSubtree, createInitScript } from '../../src/client';
+import { createSubtree, createInitScript } from '../../src/lib/client';
 import { renderToReadableStream } from '../../src/stream';
-import { Deferred } from '../../src/util';
+import { Deferred } from '../../src/lib/util';
 import { createSuspender } from '../utils';
 
 /**
