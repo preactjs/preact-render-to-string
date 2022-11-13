@@ -90,10 +90,10 @@ function _renderToStringPretty(
 		return rendered;
 	}
 
-	if (options[DIFF]) options[DIFF](vnode);
-
 	// VNodes have {constructor:undefined} to prevent JSON injection:
 	if (vnode.constructor !== undefined) return '';
+
+	if (options[DIFF]) options[DIFF](vnode);
 
 	let nodeName = vnode.type,
 		props = vnode.props,
