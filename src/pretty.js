@@ -133,7 +133,6 @@ function _renderToStringPretty(
 				!nodeName.prototype ||
 				typeof nodeName.prototype.render !== 'function'
 			) {
-				// let cctx = getContext(nodeName, context);
 
 				// If a hook invokes setState() to invalidate the component during rendering,
 				// re-render it up to 25 times to allow "settling" of memoized states.
@@ -150,7 +149,6 @@ function _renderToStringPretty(
 					rendered = nodeName.call(vnode.__c, props, cctx);
 				}
 			} else {
-				// let cctx = getContext(nodeName, context);
 
 				// c = new nodeName(props, context);
 				c = vnode.__c = new nodeName(props, cctx);

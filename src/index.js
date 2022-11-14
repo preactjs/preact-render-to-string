@@ -99,9 +99,7 @@ function renderClassComponent(vnode, context) {
 		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
 	}
 
-	// let renderHook = options[RENDER];
 	if (renderHook) renderHook(vnode);
-	// if (options[RENDER]) options[RENDER](vnode);
 
 	return c.render(c.props, c.state, context);
 }
