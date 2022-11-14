@@ -1,4 +1,4 @@
-import { shallowRender } from '../src';
+import { shallowRender } from '../src/jsx';
 import { h, Fragment } from 'preact';
 import { expect } from 'chai';
 import { spy } from 'sinon';
@@ -18,7 +18,9 @@ describe('shallowRender()', () => {
 				<Test foo={1}>
 					<span>asdf</span>
 				</Test>
-			</section>
+			</section>,
+			null,
+			{ pretty: false, jsx: false }
 		);
 
 		expect(rendered).to.equal(
@@ -39,7 +41,9 @@ describe('shallowRender()', () => {
 		let rendered = shallowRender(
 			<Test foo={1}>
 				<span>asdf</span>
-			</Test>
+			</Test>,
+			null,
+			{ pretty: false, jsx: false }
 		);
 
 		expect(rendered).to.equal(

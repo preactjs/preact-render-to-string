@@ -5,17 +5,53 @@ import {
 	styleObjToCss,
 	getChildren,
 	createComponent,
-	getContext,
 	UNSAFE_NAME,
 	XLINK,
 	VOID_ELEMENTS
 } from './util';
+import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './constants';
 import { options, Fragment } from 'preact';
+
+/** @typedef {import('preact').VNode} VNode */
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
 
-export function _renderToStringPretty(
+const EMPTY_ARR = [];
+
+/**
+ * Render Preact JSX + Components to a pretty-printed HTML-like string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @param {Object} [opts={}] Rendering options
+ * @param {Boolean} [opts.shallow=false] Serialize nested Components (`<Foo a="b" />`) instead of rendering
+ * @param {Boolean} [opts.xml=false] Use self-closing tags for elements without children
+ * @param {Boolean} [opts.pretty=false] Add whitespace for readability
+ * @param {RegExp|undefined} [opts.voidElements] RegeEx to define which element types are self-closing
+ * @param {boolean} [_inner]
+ * @returns {String} a pretty-printed HTML-like string
+ */
+export default function renderToStringPretty(vnode, context, opts, _inner) {
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	try {
+		return _renderToStringPretty(vnode, context || {}, opts, _inner);
+	} finally {
+		// options._commit, we don't schedule any effects in this library right now,
+		// so we can pass an empty queue to this hook.
+		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+		options[SKIP_EFFECTS] = previousSkipEffects;
+		EMPTY_ARR.length = 0;
+	}
+}
+
+function _renderToStringPretty(
 	vnode,
 	context,
 	opts,
@@ -30,7 +66,7 @@ export function _renderToStringPretty(
 	// #text nodes
 	if (typeof vnode !== 'object') {
 		if (typeof vnode === 'function') return '';
-		return encodeEntities(vnode);
+		return encodeEntities(vnode + '');
 	}
 
 	let pretty = opts.pretty,
@@ -57,6 +93,8 @@ export function _renderToStringPretty(
 	// VNodes have {constructor:undefined} to prevent JSON injection:
 	if (vnode.constructor !== undefined) return '';
 
+	if (options[DIFF]) options[DIFF](vnode);
+
 	let nodeName = vnode.type,
 		props = vnode.props,
 		isComponent = false;
@@ -82,17 +120,19 @@ export function _renderToStringPretty(
 
 			let c = (vnode.__c = createComponent(vnode, context));
 
-			// options._diff
-			if (options.__b) options.__b(vnode);
+			let renderHook = options[RENDER];
 
-			// options._render
-			let renderHook = options.__r;
+			let cctx = context;
+			let cxType = nodeName.contextType;
+			if (cxType != null) {
+				let provider = context[cxType.__c];
+				cctx = provider ? provider.props.value : cxType.__;
+			}
 
 			if (
 				!nodeName.prototype ||
 				typeof nodeName.prototype.render !== 'function'
 			) {
-				let cctx = getContext(nodeName, context);
 
 				// If a hook invokes setState() to invalidate the component during rendering,
 				// re-render it up to 25 times to allow "settling" of memoized states.
@@ -109,7 +149,6 @@ export function _renderToStringPretty(
 					rendered = nodeName.call(vnode.__c, props, cctx);
 				}
 			} else {
-				let cctx = getContext(nodeName, context);
 
 				// c = new nodeName(props, context);
 				c = vnode.__c = new nodeName(props, cctx);
@@ -152,8 +191,7 @@ export function _renderToStringPretty(
 				context = Object.assign({}, context, c.getChildContext());
 			}
 
-			if (options.diffed) options.diffed(vnode);
-			return _renderToStringPretty(
+			const res = _renderToStringPretty(
 				rendered,
 				context,
 				opts,
@@ -161,6 +199,10 @@ export function _renderToStringPretty(
 				isSvgMode,
 				selectValue
 			);
+
+			if (options[DIFFED]) options[DIFFED](vnode);
+
+			return res;
 		}
 	}
 
@@ -259,7 +301,7 @@ export function _renderToStringPretty(
 						s = s + ` selected`;
 					}
 				}
-				s = s + ` ${name}="${encodeEntities(v)}"`;
+				s = s + ` ${name}="${encodeEntities(v + '')}"`;
 			}
 		}
 	}
@@ -342,6 +384,8 @@ export function _renderToStringPretty(
 			}
 		}
 	}
+
+	if (options[DIFFED]) options[DIFFED](vnode);
 
 	if (pieces.length || html) {
 		s = s + pieces.join('');
