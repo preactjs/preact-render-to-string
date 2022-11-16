@@ -21,7 +21,7 @@ const isArray = Array.isArray;
 const assign = Object.assign;
 
 // Global state for the current render pass
-let beforeDiff, afterDiff, renderHook;
+let beforeDiff, afterDiff, renderHook, ummountHook;
 
 /**
  * Render Preact JSX + Components to an HTML string.
@@ -42,6 +42,7 @@ export default function renderToString(vnode, context) {
 	beforeDiff = options[DIFF];
 	afterDiff = options[DIFFED];
 	renderHook = options[RENDER];
+	ummountHook = options.unmount;
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
@@ -229,7 +230,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		if (afterDiff) afterDiff(vnode);
 		vnode[PARENT] = undefined;
 
-		if (options.unmount) options.unmount(vnode);
+		if (ummountHook) ummountHook(vnode);
 
 		return str;
 	}
@@ -346,7 +347,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	if (afterDiff) afterDiff(vnode);
 	vnode[PARENT] = undefined;
-	if (options.unmount) options.unmount(vnode);
+	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
 	if (!html) {
