@@ -116,8 +116,8 @@ const Main = () => {
 ```
 
 ```jsx
-impor { render } from "preact-render-to-string"
-impor prepass from "preact-ssr-prepass"
+import { render } from "preact-render-to-string"
+import prepass from "preact-ssr-prepass"
 import { Main } from "./main"
 
 const main = async () => {
