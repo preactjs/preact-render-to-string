@@ -88,16 +88,16 @@ app.get('/:fox', (req, res) => {
 
 ### `Suspense` & `lazy` components with [`preact/compat`](https://www.npmjs.com/package/preact) & [`preact-ssr-prepass`](https://www.npmjs.com/package/preact-ssr-prepass)
 
+```bash
+npm install preact preact-render-to-string preact-ssr-prepass
+```
+
 ```jsx
 export default () => {
   return (
     <h1>Home page</h1>
   )
 }
-```
-
-```bash
-npm install preact
 ```
 
 ```jsx
@@ -113,10 +113,6 @@ const Main = () => {
     </Suspense>
   )
 }
-```
-
-```bash
-npm install preact-ssr-prepass
 ```
 
 ```jsx
