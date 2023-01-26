@@ -14,8 +14,7 @@ import {
 	useContext,
 	useEffect,
 	useLayoutEffect,
-	useMemo,
-	useId
+	useMemo
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
@@ -1294,28 +1293,28 @@ describe('render', () => {
 	});
 
 	// is not in v11 yet
-	describe.skip('vnode masks (useId)', () => {
-		it('should skip component top level Fragment child', () => {
-			const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
+	// describe.skip('vnode masks (useId)', () => {
+	// 	it('should skip component top level Fragment child', () => {
+	// 		const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
 
-			function Foo() {
-				const id = useId();
-				return <p>{id}</p>;
-			}
+	// 		function Foo() {
+	// 			const id = useId();
+	// 			return <p>{id}</p>;
+	// 		}
 
-			function App() {
-				const id = useId();
-				return (
-					<div>
-						<p>{id}</p>
-						<Wrapper>
-							<Foo />
-						</Wrapper>
-					</div>
-				);
-			}
+	// 		function App() {
+	// 			const id = useId();
+	// 			return (
+	// 				<div>
+	// 					<p>{id}</p>
+	// 					<Wrapper>
+	// 						<Foo />
+	// 					</Wrapper>
+	// 				</div>
+	// 			);
+	// 		}
 
-			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
-		});
-	});
+	// 		expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
+	// 	});
+	// });
 });
