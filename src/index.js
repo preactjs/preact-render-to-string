@@ -1,18 +1,22 @@
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util';
-import { options, h, Fragment } from 'preact';
 import {
-	CHILDREN,
+	createInternalFromVnode,
+	encodeEntities,
+	styleObjToCss,
+	UNSAFE_NAME,
+	XLINK
+} from './util';
+import { options, h, Fragment } from 'preact';
+
+import {
 	COMMIT,
 	COMPONENT,
 	DIFF,
 	DIFFED,
-	DIRTY,
 	NEXT_STATE,
-	PARENT,
 	RENDER,
-	SKIP_EFFECTS,
-	VNODE
+	SKIP_EFFECTS
 } from './constants';
+import { DIRTY_BIT } from '../../src/constants';
 
 /** @typedef {import('preact').VNode} VNode */
 
@@ -43,11 +47,8 @@ export default function renderToString(vnode, context) {
 	afterDiff = options[DIFFED];
 	renderHook = options[RENDER];
 
-	const parent = h(Fragment, null);
-	parent[CHILDREN] = [vnode];
-
 	try {
-		return _renderToString(vnode, context || {}, false, undefined, parent);
+		return _renderToString(vnode, context || {}, false, undefined);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -59,25 +60,25 @@ export default function renderToString(vnode, context) {
 
 // Installed as setState/forceUpdate for function components
 function markAsDirty() {
-	this.__d = true;
+	this.__i.flags |= DIRTY_BIT;
 }
 
 /**
  * @param {VNode} vnode
  * @param {Record<string, unknown>} context
  */
-function renderClassComponent(vnode, context) {
-	let type = /** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
+function renderClassComponent(internal, vnode, context) {
+	let type =
+		/** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
 
 	let c = new type(vnode.props, context);
 
-	vnode[COMPONENT] = c;
-	c[VNODE] = vnode;
+	internal[COMPONENT] = c;
+	c.__i = internal;
 
 	c.props = vnode.props;
 	c.context = context;
-	// turn off stateful re-rendering:
-	c[DIRTY] = true;
+	internal.flags |= DIRTY_BIT;
 
 	if (c.state == null) c.state = {};
 
@@ -99,7 +100,7 @@ function renderClassComponent(vnode, context) {
 		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
 	}
 
-	if (renderHook) renderHook(vnode);
+	if (renderHook) renderHook(internal);
 
 	return c.render(c.props, c.state, context);
 }
@@ -110,10 +111,9 @@ function renderClassComponent(vnode, context) {
  * @param {any} context
  * @param {boolean} isSvgMode
  * @param {any} selectValue
- * @param {VNode} parent
  * @returns {string}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
+function _renderToString(vnode, context, isSvgMode, selectValue) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -128,14 +128,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '';
-		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			let child = vnode[i];
 			if (child == null || typeof child === 'boolean') continue;
 
 			rendered =
-				rendered +
-				_renderToString(child, context, isSvgMode, selectValue, parent);
+				rendered + _renderToString(child, context, isSvgMode, selectValue);
 
 			if (
 				typeof child === 'string' ||
@@ -152,8 +150,9 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// VNodes have {constructor:undefined} to prevent JSON injection:
 	if (vnode.constructor !== undefined) return '';
 
-	vnode[PARENT] = parent;
-	if (beforeDiff) beforeDiff(vnode);
+	const internal = createInternalFromVnode(vnode, context);
+
+	if (beforeDiff) beforeDiff(internal);
 
 	let type = vnode.type,
 		props = vnode.props,
@@ -175,8 +174,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			}
 
 			if (type.prototype && typeof type.prototype.render === 'function') {
-				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
-				component = vnode[COMPONENT];
+				rendered = /**#__NOINLINE__**/ renderClassComponent(
+					internal,
+					vnode,
+					cctx
+				);
+				component = internal[COMPONENT];
 			} else {
 				component = {
 					__v: vnode,
@@ -185,26 +188,20 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					// silently drop state updates
 					setState: markAsDirty,
 					forceUpdate: markAsDirty,
-					__d: true,
-					// hooks
-					__h: []
+					__i: internal
 				};
-				vnode[COMPONENT] = component;
+				internal[COMPONENT] = component;
+				internal.flags |= DIRTY_BIT;
 
-				// If a hook invokes setState() to invalidate the component during rendering,
-				// re-render it up to 25 times to allow "settling" of memoized states.
-				// Note:
-				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
 				let count = 0;
-				while (component[DIRTY] && count++ < 25) {
-					component[DIRTY] = false;
+				while (internal.flags & DIRTY_BIT && count++ < 25) {
+					internal.flags &= ~DIRTY_BIT;
 
-					if (renderHook) renderHook(vnode);
+					if (renderHook) renderHook(internal);
 
 					rendered = type.call(component, props, cctx);
 				}
-				component[DIRTY] = true;
+				internal.flags |= DIRTY_BIT;
 			}
 
 			if (component.getChildContext != null) {
@@ -219,17 +216,11 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
-		if (afterDiff) afterDiff(vnode);
-		vnode[PARENT] = undefined;
+		const str = _renderToString(rendered, context, isSvgMode, selectValue);
 
-		if (options.unmount) options.unmount(vnode);
+		if (afterDiff) afterDiff(internal);
+
+		if (options.unmount) options.unmount(internal);
 
 		return str;
 	}
@@ -341,12 +332,11 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		// recurse into this element VNode's children
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
+		html = _renderToString(children, context, childSvgMode, selectValue);
 	}
 
-	if (afterDiff) afterDiff(vnode);
-	vnode[PARENT] = undefined;
-	if (options.unmount) options.unmount(vnode);
+	if (afterDiff) afterDiff(internal);
+	if (options.unmount) options.unmount(internal);
 
 	// Emit self-closing tag for empty void elements:
 	if (!html) {

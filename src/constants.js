@@ -7,10 +7,6 @@ export const SKIP_EFFECTS = '__s';
 
 // VNode properties
 export const COMPONENT = '__c';
-export const CHILDREN = '__k';
-export const PARENT = '__';
 
 // Component properties
-export const VNODE = '__v';
-export const DIRTY = '__d';
 export const NEXT_STATE = '__s';

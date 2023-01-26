@@ -1,6 +1,8 @@
+import { DIRTY_BIT } from '../../src/constants';
+
 // DOM properties that should NOT have "px" added when numeric
 export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
-export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+export const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
@@ -93,20 +95,33 @@ export function getChildren(accumulator, children) {
 	return accumulator;
 }
 
-function markAsDirty() {
-	this.__d = true;
+export function createInternalFromVnode(vnode, context) {
+	return {
+		type: vnode.type,
+		props: vnode.props,
+		rerender: markAsDirtyInternal,
+		data: {
+			_hooks: [],
+			_context: context
+		}
+	};
 }
 
-export function createComponent(vnode, context) {
+function markAsDirtyInternal() {
+	this.flags |= DIRTY_BIT;
+}
+
+function markAsDirtyComponent() {
+	this.__i.flags |= DIRTY_BIT;
+}
+
+export function createComponent(internal, vnode, context) {
 	return {
-		__v: vnode,
+		__i: internal,
 		context,
 		props: vnode.props,
 		// silently drop state updates
-		setState: markAsDirty,
-		forceUpdate: markAsDirty,
-		__d: true,
-		// hooks
-		__h: []
+		setState: markAsDirtyComponent,
+		forceUpdate: markAsDirtyComponent
 	};
 }
