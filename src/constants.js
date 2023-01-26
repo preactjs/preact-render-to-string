@@ -10,3 +10,4 @@ export const COMPONENT = '__c';
 
 // Component properties
 export const NEXT_STATE = '__s';
+export const DIRTY_BIT = 1 << 14;

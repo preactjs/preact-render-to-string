@@ -14,9 +14,9 @@ import {
 	DIFFED,
 	NEXT_STATE,
 	RENDER,
-	SKIP_EFFECTS
+	SKIP_EFFECTS,
+	DIRTY_BIT
 } from './constants';
-import { DIRTY_BIT } from '../../src/constants';
 
 /** @typedef {import('preact').VNode} VNode */
 

@@ -10,9 +10,8 @@ import {
 	VOID_ELEMENTS,
 	createInternalFromVnode
 } from './util';
-import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './constants';
+import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS, DIRTY_BIT } from './constants';
 import { options, Fragment } from 'preact';
-import { DIRTY_BIT } from '../../src/constants';
 
 /** @typedef {import('preact').VNode} VNode */
 
