@@ -1,6 +1,5 @@
 import { PassThrough } from 'node:stream';
-
-import { renderToChunks } from './index';
+import { renderToChunks } from './lib/chunked';
 
 /**
  * @typedef {object} RenderToPipeableStreamOptions

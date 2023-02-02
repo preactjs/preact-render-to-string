@@ -1,8 +1,8 @@
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
-import { renderToChunks } from '../../src/index';
-import { createSubtree, createInitScript } from '../../src/client';
+import { renderToChunks } from '../../src/lib/chunked';
+import { createSubtree, createInitScript } from '../../src/lib/client';
 import { createSuspender } from '../utils';
 
 describe('renderToChunks', () => {
