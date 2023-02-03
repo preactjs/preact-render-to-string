@@ -16,6 +16,10 @@ export default function renderToStringPretty(
 	options?: Options
 ): string;
 
-export function shallowRender(vnode: VNode, context?: any): string;
+export function shallowRender(
+	vnode: VNode,
+	context?: any,
+	options?: Options
+): string;
 
 export default render;

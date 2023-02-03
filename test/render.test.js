@@ -21,6 +21,7 @@ import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
 
 function shallowRender(vnode) {
+	const context = {};
 	return renderToStringJSX(vnode, context, {
 		jsx: false,
 		xml: false,
