@@ -47,7 +47,13 @@ export default function renderToString(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		return _renderToString(vnode, context || {}, false, undefined, parent);
+		return _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent
+		);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -61,6 +67,8 @@ export default function renderToString(vnode, context) {
 function markAsDirty() {
 	this.__d = true;
 }
+
+const EMPTY_OBJ = {};
 
 /**
  * @param {VNode} vnode
@@ -79,7 +87,7 @@ function renderClassComponent(vnode, context) {
 	// turn off stateful re-rendering:
 	c[DIRTY] = true;
 
-	if (c.state == null) c.state = {};
+	if (c.state == null) c.state = EMPTY_OBJ;
 
 	if (c[NEXT_STATE] == null) {
 		c[NEXT_STATE] = c.state;
