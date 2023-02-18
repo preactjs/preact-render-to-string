@@ -163,8 +163,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		component;
 
 	// Invoke rendering on Components
-	let isComponent = typeof type === 'function';
-	if (isComponent) {
+	if (typeof type === 'function') {
 		if (type === Fragment) {
 			rendered = props.children;
 		} else {
