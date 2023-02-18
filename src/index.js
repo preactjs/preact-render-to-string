@@ -306,15 +306,16 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				}
 				break;
 
-			default:
+			default: {
 				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
 				} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
 					// serialize boolean aria-xyz attribute values as strings
 					v += '';
 				}
+			}
 		}
 
 		// write this attribute to the buffer
@@ -355,6 +356,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	return s + '>' + html + '</' + type + '>';
 }
 
+const XLINK_REPLACE_REGEX = /^xlink:?/;
 const SELF_CLOSING = new Set([
 	'area',
 	'base',

@@ -1,9 +1,9 @@
-// DOM properties that should NOT have "px" added when numeric
-export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/;
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
+// DOM properties that should NOT have "px" added when numeric
+const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/;
 const ENCODED_ENTITIES = /["&<]/;
 
 /** @param {string} str */
@@ -50,6 +50,7 @@ export let isLargeString = (s, length, ignoreLines) =>
 	String(s).indexOf('<') !== -1;
 
 const JS_TO_CSS = {};
+const SUFFIX_CACHE = {};
 
 const CSS_REGEX = /([A-Z])/g;
 // Convert an Object style to a CSSText string
@@ -64,15 +65,17 @@ export function styleObjToCss(s) {
 					: JS_TO_CSS[prop] ||
 					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
 
-			str =
-				str +
-				name +
-				':' +
-				val +
-				(typeof val === 'number' &&
+			let suffix = ';';
+			if (SUFFIX_CACHE[name]) {
+				suffix = 'px';
+			} else if (
+				typeof val === 'number' &&
 				IS_NON_DIMENSIONAL.test(prop.toLowerCase()) === false
-					? 'px;'
-					: ';');
+			) {
+				SUFFIX_CACHE[name] = true;
+				suffix = 'px';
+			}
+			str = str + name + ':' + val + suffix;
 		}
 	}
 	return str || undefined;
