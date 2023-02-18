@@ -349,25 +349,26 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	if (options.unmount) options.unmount(vnode);
 
 	// Emit self-closing tag for empty void elements:
-	if (!html) {
-		switch (type) {
-			case 'area':
-			case 'base':
-			case 'br':
-			case 'col':
-			case 'embed':
-			case 'hr':
-			case 'img':
-			case 'input':
-			case 'link':
-			case 'meta':
-			case 'param':
-			case 'source':
-			case 'track':
-			case 'wbr':
-				return s + ' />';
-		}
+	if (!html && SELF_CLOSING.has(type)) {
+		return s + ' />';
 	}
 
 	return s + '>' + html + '</' + type + '>';
 }
+
+const SELF_CLOSING = new Set([
+	'area',
+	'base',
+	'br',
+	'col',
+	'embed',
+	'hr',
+	'img',
+	'input',
+	'link',
+	'meta',
+	'param',
+	'source',
+	'track',
+	'wbr'
+]);
