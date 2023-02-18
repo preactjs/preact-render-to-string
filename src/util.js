@@ -1,5 +1,5 @@
 // DOM properties that should NOT have "px" added when numeric
-export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
+export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/;
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
@@ -69,7 +69,8 @@ export function styleObjToCss(s) {
 				name +
 				':' +
 				val +
-				(typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false
+				(typeof val === 'number' &&
+				IS_NON_DIMENSIONAL.test(prop.toLowerCase()) === false
 					? 'px;'
 					: ';');
 		}

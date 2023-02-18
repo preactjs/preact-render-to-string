@@ -239,28 +239,28 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		html = '',
 		children;
 
-	for (let name in props) {
+	Object.getOwnPropertyNames(props).forEach((name) => {
 		let v = props[name];
 
 		switch (name) {
-			case 'children':
+			case 'children': {
 				children = v;
-				continue;
-
+				return;
+			}
 			// VDOM-specific props
 			case 'key':
 			case 'ref':
 			case '__self':
 			case '__source':
-				continue;
+				return;
 
 			// prefer for/class over htmlFor/className
 			case 'htmlFor':
-				if ('for' in props) continue;
+				if ('for' in props) return;
 				name = 'for';
 				break;
 			case 'className':
-				if ('class' in props) continue;
+				if ('class' in props) return;
 				name = 'class';
 				break;
 
@@ -280,12 +280,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
 					case 'textarea':
 						children = v;
-						continue;
+						return;
 
 					// <select value> is serialized as a selected attribute on the matching option child
 					case 'select':
 						selectValue = v;
-						continue;
+						return;
 
 					// Add a selected attribute to <option> if its value matches the parent <select> value
 					case 'option':
@@ -298,7 +298,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 			case 'dangerouslySetInnerHTML':
 				html = v && v.__html;
-				continue;
+				return;
 
 			// serialize object styles to a CSS string
 			case 'style':
@@ -311,7 +311,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				if (isSvgMode && XLINK.test(name)) {
 					name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
 				} else if (UNSAFE_NAME.test(name)) {
-					continue;
+					return;
 				} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
 					// serialize boolean aria-xyz attribute values as strings
 					v += '';
@@ -326,7 +326,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				s = s + ' ' + name + '="' + encodeEntities(v + '') + '"';
 			}
 		}
-	}
+	});
 
 	if (UNSAFE_NAME.test(type)) {
 		throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
