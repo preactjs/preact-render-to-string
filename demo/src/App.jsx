@@ -14,10 +14,12 @@ export function App({ head }) {
 		<html>
 			<head dangerouslySetInnerHTML={{ __html: head }} />
 			<body>
-				<div>Hello world</div>
-				<Suspense fallback={<p>Loading...</p>}>
-					<Counter />
-				</Suspense>
+				<main>
+					<h1>Our Counter application</h1>
+					<Suspense fallback={<p>Loading...</p>}>
+						<Counter />
+					</Suspense>
+				</main>
 				{import.meta.env.DEV && (
 					<script type="module" src="/src/entry-client.jsx" />
 				)}

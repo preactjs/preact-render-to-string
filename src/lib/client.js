@@ -14,6 +14,7 @@ function initPreactIslandElement() {
 				c = document.createNodeIterator(document, 128);
 			while (c.nextNode()) {
 				let n = c.referenceNode;
+
 				if (n.data == 'preact-island:' + i) s = n;
 				else if (n.data == '/preact-island:' + i) e = n;
 				if (s && e) break;
@@ -22,13 +23,18 @@ function initPreactIslandElement() {
 				var p = e.previousSibling;
 				while (p != s) {
 					if (!p || p == s) break;
-
 					e.parentNode.removeChild(p);
 					p = e.previousSibling;
 				}
-				while (d.firstChild) e.parentNode.insertBefore(d.firstChild, e);
 
-				d.parentNode.removeChild(d);
+				requestAnimationFrame(() => {
+					for (let i = 0; i <= d.children.length; i++) {
+						const child = d.children[i];
+						e.parentNode.insertBefore(child, e);
+					}
+
+					d.parentNode.removeChild(d);
+				});
 			}
 		}
 	}
