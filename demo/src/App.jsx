@@ -1,16 +1,15 @@
 import { h } from 'preact';
 import { Suspense, lazy } from 'preact/compat';
 
-const Counter = lazy(
-	() =>
-		new Promise((res) => {
-			setTimeout(() => {
-				res(import('./Counter.jsx'));
-			}, 3000);
-		})
-);
-
 export function App({ head }) {
+	const Counter = lazy(
+		() =>
+			new Promise((res) => {
+				setTimeout(() => {
+					res(import('./Counter.jsx'));
+				}, 3000);
+			})
+	);
 	return (
 		<html>
 			<head dangerouslySetInnerHTML={{ __html: head }} />

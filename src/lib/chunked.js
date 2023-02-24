@@ -24,7 +24,6 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	// @ts-ignore - using third internal RendererState argument
 	const shell = renderToString(vnode, context, renderer);
 	onWrite(shell);
-
 	// Wait for any suspended sub-trees if there are any
 	const len = renderer.suspended.length;
 	if (len > 0) {
@@ -49,7 +48,7 @@ function handleError(error, vnode, renderChild) {
 
 	if (!vnode) return;
 
-	const id = vnode[MASK] + this.suspended.length;
+	const id = (vnode[MASK] || vnode.__v) + this.suspended.length;
 
 	const race = new Deferred();
 
