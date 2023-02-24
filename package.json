@@ -134,7 +134,7 @@
 		"lint-staged": "^10.5.3",
 		"microbundle": "^0.15.1",
 		"mocha": "^8.2.1",
-		"preact": "^10.12.0",
+		"preact": "^10.11.1",
 		"prettier": "^2.2.1",
 		"sinon": "^9.2.2",
 		"sinon-chai": "^3.5.0",
