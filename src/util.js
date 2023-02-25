@@ -66,14 +66,15 @@ export function styleObjToCss(s) {
 					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
 
 			let suffix = ';';
-			if (SUFFIX_CACHE[name]) {
-				suffix = 'px';
+			let isNumber = typeof val === 'number';
+			if (isNumber && SUFFIX_CACHE[name]) {
+				suffix = 'px;';
 			} else if (
-				typeof val === 'number' &&
+				isNumber &&
 				IS_NON_DIMENSIONAL.test(prop.toLowerCase()) === false
 			) {
 				SUFFIX_CACHE[name] = true;
-				suffix = 'px';
+				suffix = 'px;';
 			}
 			str = str + name + ':' + val + suffix;
 		}
