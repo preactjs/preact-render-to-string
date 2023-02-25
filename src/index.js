@@ -47,7 +47,13 @@ export default function renderToString(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		return _renderToString(vnode, context || {}, false, undefined, parent);
+		return _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent
+		);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -61,6 +67,8 @@ export default function renderToString(vnode, context) {
 function markAsDirty() {
 	this.__d = true;
 }
+
+const EMPTY_OBJ = {};
 
 /**
  * @param {VNode} vnode
@@ -79,7 +87,7 @@ function renderClassComponent(vnode, context) {
 	// turn off stateful re-rendering:
 	c[DIRTY] = true;
 
-	if (c.state == null) c.state = {};
+	if (c.state == null) c.state = EMPTY_OBJ;
 
 	if (c[NEXT_STATE] == null) {
 		c[NEXT_STATE] = c.state;
@@ -163,8 +171,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		component;
 
 	// Invoke rendering on Components
-	let isComponent = typeof type === 'function';
-	if (isComponent) {
+	if (typeof type === 'function') {
 		if (type === Fragment) {
 			rendered = props.children;
 		} else {
@@ -307,15 +314,16 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				}
 				break;
 
-			default:
+			default: {
 				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
 				} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
 					// serialize boolean aria-xyz attribute values as strings
 					v += '';
 				}
+			}
 		}
 
 		// write this attribute to the buffer
@@ -349,25 +357,29 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	if (options.unmount) options.unmount(vnode);
 
 	// Emit self-closing tag for empty void elements:
-	if (!html) {
-		switch (type) {
-			case 'area':
-			case 'base':
-			case 'br':
-			case 'col':
-			case 'embed':
-			case 'hr':
-			case 'img':
-			case 'input':
-			case 'link':
-			case 'meta':
-			case 'param':
-			case 'source':
-			case 'track':
-			case 'wbr':
-				return s + ' />';
-		}
+	if (!html && SELF_CLOSING.has(type)) {
+		return s + ' />';
 	}
 
 	return s + '>' + html + '</' + type + '>';
 }
+
+const XLINK_REPLACE_REGEX = /^xlink:?/;
+const SELF_CLOSING = new Set([
+	'area',
+	'base',
+	'br',
+	'col',
+	'command',
+	'embed',
+	'hr',
+	'img',
+	'input',
+	'keygen',
+	'link',
+	'meta',
+	'param',
+	'source',
+	'track',
+	'wbr'
+]);
