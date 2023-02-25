@@ -145,15 +145,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered =
 				rendered +
 				_renderToString(child, context, isSvgMode, selectValue, parent);
-
-			if (
-				typeof child === 'string' ||
-				typeof child === 'number' ||
-				typeof child === 'bigint'
-			) {
-				// @ts-ignore manually constructing a Text vnode
-				vnode[i] = h(null, null, child);
-			}
 		}
 		return rendered;
 	}
