@@ -68,7 +68,7 @@ export function styleObjToCss(s) {
 			let suffix = ';';
 			let isNumber = typeof val === 'number';
 			if (isNumber && SUFFIX_CACHE[name]) {
-				suffix = 'px';
+				suffix = 'px;';
 			} else if (
 				isNumber &&
 				IS_NON_DIMENSIONAL.test(prop.toLowerCase()) === false
