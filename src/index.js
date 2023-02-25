@@ -113,6 +113,156 @@ function renderClassComponent(vnode, context) {
 	return c.render(c.props, c.state, context);
 }
 
+const FRAGMENT_TYPE = 0;
+const LIST_TYPE = 1;
+const CLASS_COMPONENT_TYPE = 2;
+const FN_COMPONENT_TYPE = 3;
+const DOM_NODE_TYPE = 4;
+const TEXT_NODE_TYPE = 5;
+const NULL_NODE_TYPE = 6;
+const FAUX_NODE_TYPE = 7;
+
+function getStep(vnode) {
+	if (vnode == null || vnode === true || vnode === false || vnode === '') {
+		return NULL_NODE_TYPE;
+	} else if (typeof vnode != 'object') {
+		return TEXT_NODE_TYPE;
+	} else if (isArray(vnode)) {
+		return LIST_TYPE;
+	} else if (vnode.constructor !== undefined) {
+		return FAUX_NODE_TYPE;
+	} else if (vnode.type === Fragment) {
+		return FRAGMENT_TYPE;
+	} else if (
+		typeof vnode.type == 'function' &&
+		vnode.type.prototype &&
+		typeof vnode.type.prototype.render === 'function'
+	) {
+		return CLASS_COMPONENT_TYPE;
+	} else if (typeof vnode.type == 'function') {
+		return FN_COMPONENT_TYPE;
+	}
+
+	return DOM_NODE_TYPE;
+}
+
+function normalizeTopLevelFragment(rendered) {
+	const isTopLevelFragment =
+		rendered != null && rendered.type === Fragment && rendered.key == null;
+	return isTopLevelFragment ? rendered.props.children : rendered;
+}
+
+// TODO: invoke options.diffed and options.unmount correctly
+// TODO: carrying mechanism for context, parent, selectValue and svgMode
+// TODO: ensure we set and unset both _children and _parent
+function _renderToStringStackIterator(initialVNode, initialContext) {
+	const stack = [{ type: FRAGMENT_TYPE, node: initialVNode }];
+	let item;
+	let output = '';
+
+	while ((item = stack.pop())) {
+		const vnode = item.vnode;
+		switch (item.type) {
+			case LIST_TYPE: {
+				// TODO: verify whether this equals parent[CHILDREN] = vnode from recursion
+				item.vnode[PARENT][CHILDREN] = vnode;
+
+				// Iterate over node and assemble new steps
+				for (let i = 0; i < vnode.length; i++) {
+					stack.push({ type: getStep(vnode[i]), node: vnode[i] });
+				}
+
+				break;
+			}
+			case FAUX_NODE_TYPE:
+			case NULL_NODE_TYPE: {
+				break;
+			}
+			case TEXT_NODE_TYPE: {
+				if (typeof vnode !== 'function') {
+					output += encodeEntities('' + vnode);
+				}
+				break;
+			}
+			// TODO: we need options._diff and diffed for these
+			case FRAGMENT_TYPE: {
+				vnode[PARENT] = parent;
+				if (beforeDiff) beforeDiff(vnode);
+
+				const rendered = normalizeTopLevelFragment(vnode.props.children);
+				stack.push({ type: getStep(rendered), node: rendered });
+
+				break;
+			}
+			case FN_COMPONENT_TYPE: {
+				vnode[PARENT] = parent;
+				if (beforeDiff) beforeDiff(vnode);
+
+				const contextType = vnode.type.contextType;
+				let cctx, rendered;
+				if (contextType != null) {
+					const provider = context[contextType.__c];
+					cctx = provider ? provider.props.value : contextType.__;
+				}
+
+				const component = {
+					__v: vnode,
+					props: vnode.props,
+					context: cctx,
+					// silently drop state updates
+					setState: markAsDirty,
+					forceUpdate: markAsDirty,
+					__d: true,
+					// hooks
+					__h: []
+				};
+
+				vnode[COMPONENT] = component;
+
+				// If a hook invokes setState() to invalidate the component during rendering,
+				// re-render it up to 25 times to allow "settling" of memoized states.
+				// Note:
+				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
+				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
+				let count = 0;
+				while (component[DIRTY] && count++ < 25) {
+					component[DIRTY] = false;
+
+					if (renderHook) renderHook(vnode);
+
+					rendered = vnode.type.call(component, vnode.props, cctx);
+				}
+				component[DIRTY] = true;
+
+				if (component.getChildContext != null) {
+					// TODO
+				}
+
+				rendered = normalizeTopLevelFragment(rendered);
+				stack.push({ type: getStep(rendered), node: rendered });
+
+				break;
+			}
+			case CLASS_COMPONENT_TYPE: {
+				vnode[PARENT] = parent;
+				if (beforeDiff) beforeDiff(vnode);
+
+				break;
+			}
+			case DOM_NODE_TYPE: {
+				vnode[PARENT] = parent;
+				if (beforeDiff) beforeDiff(vnode);
+
+				break;
+			}
+		}
+
+		// Push into ending sequence iterator as well
+	}
+
+	return output;
+}
+
 /**
  * Recursively render VNodes to HTML.
  * @param {VNode|any} vnode
@@ -123,44 +273,6 @@ function renderClassComponent(vnode, context) {
  * @returns {string}
  */
 function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
-	// Ignore non-rendered VNodes/values
-	if (vnode == null || vnode === true || vnode === false || vnode === '') {
-		return '';
-	}
-
-	// Text VNodes: escape as HTML
-	if (typeof vnode !== 'object') {
-		if (typeof vnode === 'function') return '';
-		return encodeEntities(vnode + '');
-	}
-
-	// Recurse into children / Arrays
-	if (isArray(vnode)) {
-		let rendered = '';
-		parent[CHILDREN] = vnode;
-		for (let i = 0; i < vnode.length; i++) {
-			let child = vnode[i];
-			if (child == null || typeof child === 'boolean') continue;
-
-			rendered =
-				rendered +
-				_renderToString(child, context, isSvgMode, selectValue, parent);
-
-			if (
-				typeof child === 'string' ||
-				typeof child === 'number' ||
-				typeof child === 'bigint'
-			) {
-				// @ts-ignore manually constructing a Text vnode
-				vnode[i] = h(null, null, child);
-			}
-		}
-		return rendered;
-	}
-
-	// VNodes have {constructor:undefined} to prevent JSON injection:
-	if (vnode.constructor !== undefined) return '';
-
 	vnode[PARENT] = parent;
 	if (beforeDiff) beforeDiff(vnode);
 
