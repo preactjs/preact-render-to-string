@@ -178,14 +178,14 @@ function _renderToStringStackIterator(
 		if (current[1] >= current[0].length) {
 			const lastItem = current[0][current[1] - 1];
 
-			if (afterDiff) afterDiff(lastItem.node);
-
 			if (
-				ummountHook &&
-				(typeof lastItem.node.type === 'function' ||
-					typeof lastItem.node.type === 'string')
-			)
-				ummountHook(lastItem.node);
+				typeof lastItem.node.type === 'function' ||
+				typeof lastItem.node.type === 'string'
+			) {
+				lastItem.node[PARENT] = undefined;
+				if (afterDiff) afterDiff(lastItem.node);
+				if (ummountHook) ummountHook(lastItem.node);
+			}
 
 			if (
 				!Array.isArray(lastItem.node) &&
@@ -220,6 +220,8 @@ function _renderToStringStackIterator(
 				const data = [];
 				for (let i = 0; i < node.length; i++) {
 					let child = node[i];
+					if (child == null || typeof child === 'boolean') continue;
+
 					data.push({
 						node: child,
 						context,
@@ -227,6 +229,15 @@ function _renderToStringStackIterator(
 						isSvgMode,
 						selectValue
 					});
+
+					if (
+						typeof child === 'string' ||
+						typeof child === 'number' ||
+						typeof child === 'bigint'
+					) {
+						// @ts-ignore manually constructing a Text vnode
+						node[i] = h(null, null, child);
+					}
 				}
 				stack.push([data, 0]);
 				current[1]++;
