@@ -179,6 +179,7 @@ function _renderToStringStackIterator(
 			const lastItem = current[0][current[1] - 1];
 
 			// TODO: this is currently bugged we have to look for the closest dom-parent and close that
+			// TODO: invoke options.unmount and afterDIff
 			if (typeof lastItem.node.type === 'string') {
 				output += '</' + lastItem.node.type + '>';
 			}
@@ -197,6 +198,8 @@ function _renderToStringStackIterator(
 			case FAUX_NODE_TYPE: {
 				continue;
 			}
+			// TODO: set CHILDREN and PARENT for every step here
+
 			// We discover a new array, we have to gather all children
 			// in a shape that allows us to handle them within our iteration.
 			// this means that we will convert them to our item shape and
@@ -218,9 +221,96 @@ function _renderToStringStackIterator(
 				current = stack[stack.length - 1];
 				continue;
 			}
+
+			// FN-types, these produce more children
 			// Similar to a list-type but with extra steps.
+
+			// TODO: invoke options before diff for every step underneath
 			case FRAGMENT_TYPE: {
 				const rendered = normalizeTopLevelFragment(node.props.children);
+				const data = [
+					{
+						node: rendered,
+						context,
+						parent: node,
+						isSvgMode,
+						selectValue
+					}
+				];
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			case CLASS_COMPONENT_TYPE: {
+				let contextType = node.type.contextType,
+					cctx = context;
+				if (contextType != null) {
+					let provider = context[contextType.__c];
+					cctx = provider ? provider.props.value : contextType.__;
+				}
+
+				const rendered = normalizeTopLevelFragment(
+					/**#__NOINLINE__**/ renderClassComponent(node, cctx)
+				);
+				const component = node[COMPONENT];
+
+				if (component.getChildContext != null) {
+					context = assign({}, context, component.getChildContext());
+				}
+
+				const data = [
+					{
+						node: rendered,
+						context,
+						parent: node,
+						isSvgMode,
+						selectValue
+					}
+				];
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			case FN_COMPONENT_TYPE: {
+				let contextType = node.type.contextType,
+					cctx = context;
+				if (contextType != null) {
+					let provider = context[contextType.__c];
+					cctx = provider ? provider.props.value : contextType.__;
+				}
+
+				const component = {
+					__v: node,
+					props: node.props,
+					context: cctx,
+					// silently drop state updates
+					setState: markAsDirty,
+					forceUpdate: markAsDirty,
+					__d: true,
+					// hooks
+					__h: []
+				};
+				node[COMPONENT] = component;
+
+				let count = 0,
+					rendered;
+				while (component[DIRTY] && count++ < 25) {
+					component[DIRTY] = false;
+
+					if (renderHook) renderHook(node);
+
+					rendered = node.type.call(component, node.props, cctx);
+				}
+				component[DIRTY] = true;
+
+				if (component.getChildContext != null) {
+					context = assign({}, context, component.getChildContext());
+				}
+
+				rendered = normalizeTopLevelFragment(rendered);
+
 				const data = [
 					{
 						node: rendered,
@@ -355,7 +445,9 @@ function _renderToStringStackIterator(
 						{
 							node: children,
 							context,
-							parent: node
+							parent: node,
+							isSvgMode,
+							selectValue
 						}
 					];
 					stack.push([data, 0]);
