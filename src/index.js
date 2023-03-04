@@ -17,6 +17,7 @@ import {
 /** @typedef {import('preact').VNode} VNode */
 
 const EMPTY_ARR = [];
+const EMPTY_OBJ = {};
 const isArray = Array.isArray;
 const assign = Object.assign;
 
@@ -413,8 +414,6 @@ export default function renderToString(vnode, ctx) {
 function markAsDirty() {
 	this.__d = true;
 }
-
-const EMPTY_OBJ = {};
 
 /**
  * @param {VNode} vnode
