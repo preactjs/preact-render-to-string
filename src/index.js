@@ -111,15 +111,6 @@ export default function renderToString(vnode, ctx) {
 						data.push(
 							createStackItem(child, context, parent, isSvgMode, selectValue)
 						);
-
-						if (
-							childType === 'string' ||
-							childType === 'number' ||
-							childType === 'bigint'
-						) {
-							// @ts-ignore manually constructing a Text vnode
-							node[i] = h(null, null, child);
-						}
 					}
 
 					stack.push([data, 0]);
