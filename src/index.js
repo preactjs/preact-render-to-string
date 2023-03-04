@@ -48,13 +48,7 @@ export default function renderToString(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		return _renderToString(
-			vnode,
-			context || EMPTY_OBJ,
-			false,
-			undefined,
-			parent
-		);
+		return _renderToStringStackIterator(vnode, context || EMPTY_OBJ, parent);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -152,329 +146,257 @@ function normalizeTopLevelFragment(rendered) {
 	return isTopLevelFragment ? rendered.props.children : rendered;
 }
 
-// TODO: invoke options.diffed and options.unmount correctly
-// TODO: carrying mechanism for context, parent, selectValue and svgMode
-// TODO: ensure we set and unset both _children and _parent
-function _renderToStringStackIterator(initialVNode, initialContext) {
-	const stack = [{ type: FRAGMENT_TYPE, node: initialVNode }];
-	let item;
+function _renderToStringStackIterator(
+	initialVNode,
+	initialContext,
+	initialParent
+) {
+	// the itemized shape allows us to hold a vnode, the context up to that point and
+	// a backref to the parent vnode.
+	const data = [
+		{
+			node: initialVNode,
+			context: initialContext,
+			parent: initialParent,
+			isSvgMode: false,
+			selectValue: undefined
+		}
+	];
+	// [0] is the array we are currently handling.
+	// [1] is the pointer for the item in the array we are handling.
+	let current = [data, 0];
+	// our stack contains the history of what we are handling and have
+	// handled while we do a depth-first traversal of the vnode-tree.
+	const stack = [current];
+	// The stringified output for the depth-first traversal of our vnode-tree
 	let output = '';
 
-	while ((item = stack.pop())) {
-		const vnode = item.vnode;
-		switch (item.type) {
-			case LIST_TYPE: {
-				// TODO: verify whether this equals parent[CHILDREN] = vnode from recursion
-				item.vnode[PARENT][CHILDREN] = vnode;
+	while (stack.length) {
+		// When we see that the length of our children got exceeded
+		// we know that we can go back up a level.
+		// we can use this to close dom-tags
+		if (current[1] >= current[0].length) {
+			const lastItem = current[0][current[1] - 1];
 
-				// Iterate over node and assemble new steps
-				for (let i = 0; i < vnode.length; i++) {
-					stack.push({ type: getStep(vnode[i]), node: vnode[i] });
-				}
-
-				break;
+			// TODO: this is currently bugged we have to look for the closest dom-parent and close that
+			if (typeof lastItem.node.type === 'string') {
+				output += '</' + lastItem.node.type + '>';
 			}
-			case FAUX_NODE_TYPE:
-			case NULL_NODE_TYPE: {
-				break;
-			}
-			case TEXT_NODE_TYPE: {
-				if (typeof vnode !== 'function') {
-					output += encodeEntities('' + vnode);
-				}
-				break;
-			}
-			// TODO: we need options._diff and diffed for these
-			case FRAGMENT_TYPE: {
-				vnode[PARENT] = parent;
-				if (beforeDiff) beforeDiff(vnode);
-
-				const rendered = normalizeTopLevelFragment(vnode.props.children);
-				stack.push({ type: getStep(rendered), node: rendered });
-
-				break;
-			}
-			case FN_COMPONENT_TYPE: {
-				vnode[PARENT] = parent;
-				if (beforeDiff) beforeDiff(vnode);
-
-				const contextType = vnode.type.contextType;
-				let cctx, rendered;
-				if (contextType != null) {
-					const provider = context[contextType.__c];
-					cctx = provider ? provider.props.value : contextType.__;
-				}
-
-				const component = {
-					__v: vnode,
-					props: vnode.props,
-					context: cctx,
-					// silently drop state updates
-					setState: markAsDirty,
-					forceUpdate: markAsDirty,
-					__d: true,
-					// hooks
-					__h: []
-				};
-
-				vnode[COMPONENT] = component;
-
-				// If a hook invokes setState() to invalidate the component during rendering,
-				// re-render it up to 25 times to allow "settling" of memoized states.
-				// Note:
-				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
-				let count = 0;
-				while (component[DIRTY] && count++ < 25) {
-					component[DIRTY] = false;
-
-					if (renderHook) renderHook(vnode);
-
-					rendered = vnode.type.call(component, vnode.props, cctx);
-				}
-				component[DIRTY] = true;
-
-				if (component.getChildContext != null) {
-					// TODO
-				}
-
-				rendered = normalizeTopLevelFragment(rendered);
-				stack.push({ type: getStep(rendered), node: rendered });
-
-				break;
-			}
-			case CLASS_COMPONENT_TYPE: {
-				vnode[PARENT] = parent;
-				if (beforeDiff) beforeDiff(vnode);
-
-				break;
-			}
-			case DOM_NODE_TYPE: {
-				vnode[PARENT] = parent;
-				if (beforeDiff) beforeDiff(vnode);
-
-				break;
-			}
+			stack.pop();
+			current = stack[stack.length - 1];
+			continue;
 		}
 
-		// Push into ending sequence iterator as well
+		const item = current[0][current[1]];
+		const { node, parent } = item;
+		let { context, selectValue, isSvgMode } = item;
+
+		switch (getStep(node)) {
+			// Cases that result in null
+			case NULL_NODE_TYPE:
+			case FAUX_NODE_TYPE: {
+				continue;
+			}
+			// We discover a new array, we have to gather all children
+			// in a shape that allows us to handle them within our iteration.
+			// this means that we will convert them to our item shape and
+			// add them to our stack as data-points.
+			case LIST_TYPE: {
+				const data = [];
+				for (let i = 0; i < node.length; i++) {
+					let child = node[i];
+					data.push({
+						node: child,
+						context,
+						parent,
+						isSvgMode,
+						selectValue
+					});
+				}
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			// Similar to a list-type but with extra steps.
+			case FRAGMENT_TYPE: {
+				const rendered = normalizeTopLevelFragment(node.props.children);
+				const data = [
+					{
+						node: rendered,
+						context,
+						parent: node,
+						isSvgMode,
+						selectValue
+					}
+				];
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+
+			// DOM TYPES, these produce output
+			case TEXT_NODE_TYPE: {
+				if (typeof node === 'function') return '';
+				output += encodeEntities(node + '');
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			case DOM_NODE_TYPE: {
+				const { props, type } = node;
+				let children,
+					html = '',
+					s = '<' + type;
+				node[PARENT] = parent;
+
+				for (let name in props) {
+					let v = props[name];
+
+					switch (name) {
+						case 'children':
+							children = v;
+							continue;
+
+						// VDOM-specific props
+						case 'key':
+						case 'ref':
+						case '__self':
+						case '__source':
+							continue;
+
+						// prefer for/class over htmlFor/className
+						case 'htmlFor':
+							if ('for' in props) continue;
+							name = 'for';
+							break;
+						case 'className':
+							if ('class' in props) continue;
+							name = 'class';
+							break;
+
+						// Form element reflected properties
+						case 'defaultChecked':
+							name = 'checked';
+							break;
+						case 'defaultSelected':
+							name = 'selected';
+							break;
+
+						// Special value attribute handling
+						case 'defaultValue':
+						case 'value':
+							name = 'value';
+							switch (type) {
+								// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
+								case 'textarea':
+									children = v;
+									continue;
+
+								// <select value> is serialized as a selected attribute on the matching option child
+								case 'select':
+									selectValue = v;
+									continue;
+
+								// Add a selected attribute to <option> if its value matches the parent <select> value
+								case 'option':
+									if (selectValue == v && !('selected' in props)) {
+										s = s + ' selected';
+									}
+									break;
+							}
+							break;
+
+						case 'dangerouslySetInnerHTML':
+							html = v && v.__html;
+							continue;
+
+						// serialize object styles to a CSS string
+						case 'style':
+							if (typeof v === 'object') {
+								v = styleObjToCss(v);
+							}
+							break;
+
+						default: {
+							if (isSvgMode && XLINK.test(name)) {
+								name = name
+									.toLowerCase()
+									.replace(XLINK_REPLACE_REGEX, 'xlink:');
+							} else if (UNSAFE_NAME.test(name)) {
+								continue;
+							} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
+								// serialize boolean aria-xyz attribute values as strings
+								v += '';
+							}
+						}
+					}
+
+					// write this attribute to the buffer
+					if (v != null && v !== false && typeof v !== 'function') {
+						if (v === true || v === '') {
+							s = s + ' ' + name;
+						} else {
+							s = s + ' ' + name + '="' + encodeEntities(v + '') + '"';
+						}
+					}
+				}
+
+				if (UNSAFE_NAME.test(type)) {
+					throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
+				}
+
+				if (html) {
+					// dangerouslySetInnerHTML defined this node's contents
+				} else if (typeof children === 'string') {
+					// single text child
+					const data = [
+						{
+							node: children,
+							context,
+							parent: node
+						}
+					];
+					stack.push([data, 0]);
+					current[1]++;
+					current = stack[stack.length - 1];
+				} else if (
+					children != null &&
+					children !== false &&
+					children !== true
+				) {
+					const data = [
+						{
+							node: children,
+							context,
+							parent: node
+						}
+					];
+					stack.push([data, 0]);
+					current[1]++;
+					current = stack[stack.length - 1];
+				}
+
+				if (!html && SELF_CLOSING.has(type)) {
+					output += s + ' />';
+				} else if (html) {
+					output += s + '>' + html + '</' + type + '>';
+				} else {
+					output += s + '>';
+				}
+
+				continue;
+			}
+			default: {
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+		}
 	}
 
 	return output;
-}
-
-/**
- * Recursively render VNodes to HTML.
- * @param {VNode|any} vnode
- * @param {any} context
- * @param {boolean} isSvgMode
- * @param {any} selectValue
- * @param {VNode} parent
- * @returns {string}
- */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
-	vnode[PARENT] = parent;
-	if (beforeDiff) beforeDiff(vnode);
-
-	let type = vnode.type,
-		props = vnode.props,
-		cctx = context,
-		contextType,
-		rendered,
-		component;
-
-	// Invoke rendering on Components
-	if (typeof type === 'function') {
-		if (type === Fragment) {
-			rendered = props.children;
-		} else {
-			contextType = type.contextType;
-			if (contextType != null) {
-				let provider = context[contextType.__c];
-				cctx = provider ? provider.props.value : contextType.__;
-			}
-
-			if (type.prototype && typeof type.prototype.render === 'function') {
-				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
-				component = vnode[COMPONENT];
-			} else {
-				component = {
-					__v: vnode,
-					props,
-					context: cctx,
-					// silently drop state updates
-					setState: markAsDirty,
-					forceUpdate: markAsDirty,
-					__d: true,
-					// hooks
-					__h: []
-				};
-				vnode[COMPONENT] = component;
-
-				// If a hook invokes setState() to invalidate the component during rendering,
-				// re-render it up to 25 times to allow "settling" of memoized states.
-				// Note:
-				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
-				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
-				let count = 0;
-				while (component[DIRTY] && count++ < 25) {
-					component[DIRTY] = false;
-
-					if (renderHook) renderHook(vnode);
-
-					rendered = type.call(component, props, cctx);
-				}
-				component[DIRTY] = true;
-			}
-
-			if (component.getChildContext != null) {
-				context = assign({}, context, component.getChildContext());
-			}
-		}
-
-		// When a component returns a Fragment node we flatten it in core, so we
-		// need to mirror that logic here too
-		let isTopLevelFragment =
-			rendered != null && rendered.type === Fragment && rendered.key == null;
-		rendered = isTopLevelFragment ? rendered.props.children : rendered;
-
-		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
-		if (afterDiff) afterDiff(vnode);
-		vnode[PARENT] = undefined;
-
-		if (ummountHook) ummountHook(vnode);
-
-		return str;
-	}
-
-	// Serialize Element VNodes to HTML
-	let s = '<' + type,
-		html = '',
-		children;
-
-	for (let name in props) {
-		let v = props[name];
-
-		switch (name) {
-			case 'children':
-				children = v;
-				continue;
-
-			// VDOM-specific props
-			case 'key':
-			case 'ref':
-			case '__self':
-			case '__source':
-				continue;
-
-			// prefer for/class over htmlFor/className
-			case 'htmlFor':
-				if ('for' in props) continue;
-				name = 'for';
-				break;
-			case 'className':
-				if ('class' in props) continue;
-				name = 'class';
-				break;
-
-			// Form element reflected properties
-			case 'defaultChecked':
-				name = 'checked';
-				break;
-			case 'defaultSelected':
-				name = 'selected';
-				break;
-
-			// Special value attribute handling
-			case 'defaultValue':
-			case 'value':
-				name = 'value';
-				switch (type) {
-					// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
-					case 'textarea':
-						children = v;
-						continue;
-
-					// <select value> is serialized as a selected attribute on the matching option child
-					case 'select':
-						selectValue = v;
-						continue;
-
-					// Add a selected attribute to <option> if its value matches the parent <select> value
-					case 'option':
-						if (selectValue == v && !('selected' in props)) {
-							s = s + ' selected';
-						}
-						break;
-				}
-				break;
-
-			case 'dangerouslySetInnerHTML':
-				html = v && v.__html;
-				continue;
-
-			// serialize object styles to a CSS string
-			case 'style':
-				if (typeof v === 'object') {
-					v = styleObjToCss(v);
-				}
-				break;
-
-			default: {
-				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
-				} else if (UNSAFE_NAME.test(name)) {
-					continue;
-				} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
-					// serialize boolean aria-xyz attribute values as strings
-					v += '';
-				}
-			}
-		}
-
-		// write this attribute to the buffer
-		if (v != null && v !== false && typeof v !== 'function') {
-			if (v === true || v === '') {
-				s = s + ' ' + name;
-			} else {
-				s = s + ' ' + name + '="' + encodeEntities(v + '') + '"';
-			}
-		}
-	}
-
-	if (UNSAFE_NAME.test(type)) {
-		throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
-	}
-
-	if (html) {
-		// dangerouslySetInnerHTML defined this node's contents
-	} else if (typeof children === 'string') {
-		// single text child
-		html = encodeEntities(children);
-	} else if (children != null && children !== false && children !== true) {
-		// recurse into this element VNode's children
-		let childSvgMode =
-			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
-	}
-
-	if (afterDiff) afterDiff(vnode);
-	vnode[PARENT] = undefined;
-	if (ummountHook) ummountHook(vnode);
-
-	// Emit self-closing tag for empty void elements:
-	if (!html && SELF_CLOSING.has(type)) {
-		return s + ' />';
-	}
-
-	return s + '>' + html + '</' + type + '>';
 }
 
 const XLINK_REPLACE_REGEX = /^xlink:?/;

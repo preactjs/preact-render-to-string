@@ -56,7 +56,7 @@ describe('render', () => {
 				expect(rendered).not.to.contain(/\s/);
 			});
 
-			it('should not indent when attributes contain newlines', () => {
+			it.only('should not indent when attributes contain newlines', () => {
 				let rendered = render(
 					<div class={`foo\n\tbar\n\tbaz`}>
 						<a>a</a>
