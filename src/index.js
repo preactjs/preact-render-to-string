@@ -479,6 +479,8 @@ function _renderToStringStackIterator(
 				} else if (html) {
 					// dangerouslySetInnerHTML defined this node's contents
 					output += s + '>' + html + '</' + type + '>';
+				} else if (typeof children === 'string') {
+					output += s + '>' + encodeEntities(children) + '</' + type + '>';
 				} else if (children != null && typeof children !== 'boolean') {
 					output += s + '>';
 
