@@ -146,6 +146,16 @@ function normalizeTopLevelFragment(rendered) {
 	return isTopLevelFragment ? rendered.props.children : rendered;
 }
 
+function createStackItem(child, context, parent, isSvgMode, selectValue) {
+	return {
+		node: child,
+		context,
+		parent,
+		isSvgMode,
+		selectValue
+	};
+}
+
 function _renderToStringStackIterator(
 	initialVNode,
 	initialContext,
@@ -154,13 +164,13 @@ function _renderToStringStackIterator(
 	// the itemized shape allows us to hold a vnode, the context up to that point and
 	// a backref to the parent vnode.
 	const data = [
-		{
-			node: initialVNode,
-			context: initialContext,
-			parent: initialParent,
-			isSvgMode: false,
-			selectValue: undefined
-		}
+		createStackItem(
+			initialVNode,
+			initialContext,
+			initialParent,
+			false,
+			undefined
+		)
 	];
 	// [0] is the array we are currently handling.
 	// [1] is the pointer for the item in the array we are handling.
@@ -177,11 +187,9 @@ function _renderToStringStackIterator(
 		// we can use this to close dom-tags
 		if (current[1] >= current[0].length) {
 			const lastItem = current[0][current[1] - 1];
+			const nodeType = typeof lastItem.node.type;
 
-			if (
-				typeof lastItem.node.type === 'function' ||
-				typeof lastItem.node.type === 'string'
-			) {
+			if (nodeType === 'function' || nodeType === 'string') {
 				lastItem.node[PARENT] = undefined;
 				if (afterDiff) afterDiff(lastItem.node);
 				if (ummountHook) ummountHook(lastItem.node);
@@ -220,25 +228,23 @@ function _renderToStringStackIterator(
 				const data = [];
 				for (let i = 0; i < node.length; i++) {
 					let child = node[i];
-					if (child == null || typeof child === 'boolean') continue;
+					const childType = typeof child;
+					if (child == null || childType === 'boolean') continue;
 
-					data.push({
-						node: child,
-						context,
-						parent,
-						isSvgMode,
-						selectValue
-					});
+					data.push(
+						createStackItem(child, context, parent, isSvgMode, selectValue)
+					);
 
 					if (
-						typeof child === 'string' ||
-						typeof child === 'number' ||
-						typeof child === 'bigint'
+						childType === 'string' ||
+						childType === 'number' ||
+						childType === 'bigint'
 					) {
 						// @ts-ignore manually constructing a Text vnode
 						node[i] = h(null, null, child);
 					}
 				}
+
 				stack.push([data, 0]);
 				current[1]++;
 				current = stack[stack.length - 1];
@@ -251,16 +257,16 @@ function _renderToStringStackIterator(
 				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
 
-				const rendered = normalizeTopLevelFragment(node.props.children);
 				const data = [
-					{
-						node: rendered,
+					createStackItem(
+						normalizeTopLevelFragment(node.props.children),
 						context,
-						parent: node,
+						node,
 						isSvgMode,
 						selectValue
-					}
+					)
 				];
+
 				stack.push([data, 0]);
 				current[1]++;
 				current = stack[stack.length - 1];
@@ -272,6 +278,7 @@ function _renderToStringStackIterator(
 
 				let contextType = node.type.contextType,
 					cctx = context;
+
 				if (contextType != null) {
 					let provider = context[contextType.__c];
 					cctx = provider ? provider.props.value : contextType.__;
@@ -287,14 +294,9 @@ function _renderToStringStackIterator(
 				}
 
 				const data = [
-					{
-						node: rendered,
-						context,
-						parent: node,
-						isSvgMode,
-						selectValue
-					}
+					createStackItem(rendered, context, node, isSvgMode, selectValue)
 				];
+
 				stack.push([data, 0]);
 				current[1]++;
 				current = stack[stack.length - 1];
@@ -339,17 +341,16 @@ function _renderToStringStackIterator(
 					context = assign({}, context, component.getChildContext());
 				}
 
-				rendered = normalizeTopLevelFragment(rendered);
-
 				const data = [
-					{
-						node: rendered,
+					createStackItem(
+						normalizeTopLevelFragment(rendered),
 						context,
-						parent: node,
+						node,
 						isSvgMode,
 						selectValue
-					}
+					)
 				];
+
 				stack.push([data, 0]);
 				current[1]++;
 				current = stack[stack.length - 1];
@@ -474,20 +475,6 @@ function _renderToStringStackIterator(
 				} else if (html) {
 					// dangerouslySetInnerHTML defined this node's contents
 					output += s + '>' + html + '</' + type + '>';
-				} else if (typeof children === 'string') {
-					// single text child
-					output += s + '>';
-
-					const data = [
-						{
-							node: children,
-							context,
-							parent: node,
-							isSvgMode,
-							selectValue
-						}
-					];
-					stack.push([data, 0]);
 				} else if (
 					children != null &&
 					children !== false &&
@@ -496,14 +483,13 @@ function _renderToStringStackIterator(
 					output += s + '>';
 
 					const data = [
-						{
-							node: children,
+						createStackItem(
+							children,
 							context,
-							parent: node,
-							isSvgMode:
-								type === 'svg' || (type !== 'foreignObject' && isSvgMode),
+							node,
+							type === 'svg' || (type !== 'foreignObject' && isSvgMode),
 							selectValue
-						}
+						)
 					];
 					stack.push([data, 0]);
 				} else if (!SELF_CLOSING.has(type) && children === undefined) {
