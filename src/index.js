@@ -284,9 +284,7 @@ function _renderToStringStackIterator(
 					cctx = provider ? provider.props.value : contextType.__;
 				}
 
-				const rendered = normalizeTopLevelFragment(
-					/**#__NOINLINE__**/ renderClassComponent(node, cctx)
-				);
+				const rendered = renderClassComponent(node, cctx);
 				const component = node[COMPONENT];
 
 				if (component.getChildContext != null) {
@@ -294,7 +292,13 @@ function _renderToStringStackIterator(
 				}
 
 				const data = [
-					createStackItem(rendered, context, node, isSvgMode, selectValue)
+					createStackItem(
+						normalizeTopLevelFragment(rendered),
+						context,
+						node,
+						isSvgMode,
+						selectValue
+					)
 				];
 
 				stack.push([data, 0]);
@@ -475,11 +479,7 @@ function _renderToStringStackIterator(
 				} else if (html) {
 					// dangerouslySetInnerHTML defined this node's contents
 					output += s + '>' + html + '</' + type + '>';
-				} else if (
-					children != null &&
-					children !== false &&
-					children !== true
-				) {
+				} else if (children != null && typeof children !== 'boolean') {
 					output += s + '>';
 
 					const data = [
