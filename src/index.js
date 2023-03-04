@@ -217,6 +217,7 @@ function _renderToStringStackIterator(
 			// this means that we will convert them to our item shape and
 			// add them to our stack as data-points.
 			case LIST_TYPE: {
+				parent[CHILDREN] = node;
 				const data = [];
 				for (let i = 0; i < node.length; i++) {
 					let child = node[i];
@@ -239,7 +240,9 @@ function _renderToStringStackIterator(
 
 			// TODO: invoke options before diff for every step underneath
 			case FRAGMENT_TYPE: {
+				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
+
 				const rendered = normalizeTopLevelFragment(node.props.children);
 				const data = [
 					{
@@ -256,7 +259,9 @@ function _renderToStringStackIterator(
 				continue;
 			}
 			case CLASS_COMPONENT_TYPE: {
+				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
+
 				let contextType = node.type.contextType,
 					cctx = context;
 				if (contextType != null) {
@@ -288,7 +293,9 @@ function _renderToStringStackIterator(
 				continue;
 			}
 			case FN_COMPONENT_TYPE: {
+				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
+
 				let contextType = node.type.contextType,
 					cctx = context;
 				if (contextType != null) {
@@ -343,8 +350,6 @@ function _renderToStringStackIterator(
 
 			// DOM TYPES, these produce output
 			case TEXT_NODE_TYPE: {
-				if (beforeDiff) beforeDiff(node);
-
 				if (typeof node === 'function') {
 					current[1]++;
 					current = stack[stack.length - 1];
@@ -357,6 +362,7 @@ function _renderToStringStackIterator(
 				continue;
 			}
 			case DOM_NODE_TYPE: {
+				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
 
 				const { props, type } = node;
@@ -489,24 +495,27 @@ function _renderToStringStackIterator(
 							node: children,
 							context,
 							parent: node,
-							isSvgMode,
+							isSvgMode:
+								type === 'svg' || (type !== 'foreignObject' && isSvgMode),
 							selectValue
 						}
 					];
 					stack.push([data, 0]);
 					current[1]++;
 					current = stack[stack.length - 1];
-				} else {
+				} else if (!SELF_CLOSING.has(type) && children === undefined) {
 					current[1]++;
 					current = stack[stack.length - 1];
 				}
 
-				if (!html && SELF_CLOSING.has(type)) {
+				if (children === undefined && !html && SELF_CLOSING.has(type)) {
 					output += s + ' />';
 					current[1]++;
 					current = stack[stack.length - 1];
 				} else if (html) {
 					output += s + '>' + html + '</' + type + '>';
+				} else if (children === undefined) {
+					output += s + '></' + type + '>';
 				} else {
 					output += s + '>';
 				}
