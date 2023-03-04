@@ -178,11 +178,15 @@ function _renderToStringStackIterator(
 		if (current[1] >= current[0].length) {
 			const lastItem = current[0][current[1] - 1];
 
+			if (
+				!Array.isArray(lastItem.node) &&
+				typeof lastItem.parent.type === 'string'
+			) {
+				output += '</' + lastItem.parent.type + '>';
+			}
 			// TODO: this is currently bugged we have to look for the closest dom-parent and close that
 			// TODO: invoke options.unmount and afterDIff
-			if (typeof lastItem.node.type === 'string') {
-				output += '</' + lastItem.node.type + '>';
-			}
+
 			stack.pop();
 			current = stack[stack.length - 1];
 			continue;
@@ -196,6 +200,8 @@ function _renderToStringStackIterator(
 			// Cases that result in null
 			case NULL_NODE_TYPE:
 			case FAUX_NODE_TYPE: {
+				current[1]++;
+				current = stack[stack.length - 1];
 				continue;
 			}
 			// TODO: set CHILDREN and PARENT for every step here
@@ -328,7 +334,11 @@ function _renderToStringStackIterator(
 
 			// DOM TYPES, these produce output
 			case TEXT_NODE_TYPE: {
-				if (typeof node === 'function') return '';
+				if (typeof node === 'function') {
+					current[1]++;
+					current = stack[stack.length - 1];
+					continue;
+				}
 				output += encodeEntities(node + '');
 				current[1]++;
 				current = stack[stack.length - 1];
@@ -439,6 +449,8 @@ function _renderToStringStackIterator(
 
 				if (html) {
 					// dangerouslySetInnerHTML defined this node's contents
+					current[1]++;
+					current = stack[stack.length - 1];
 				} else if (typeof children === 'string') {
 					// single text child
 					const data = [
@@ -468,10 +480,15 @@ function _renderToStringStackIterator(
 					stack.push([data, 0]);
 					current[1]++;
 					current = stack[stack.length - 1];
+				} else {
+					current[1]++;
+					current = stack[stack.length - 1];
 				}
 
 				if (!html && SELF_CLOSING.has(type)) {
 					output += s + ' />';
+					current[1]++;
+					current = stack[stack.length - 1];
 				} else if (html) {
 					output += s + '>' + html + '</' + type + '>';
 				} else {
