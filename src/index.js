@@ -177,7 +177,13 @@ function _renderToStringStackIterator(
 		// we can use this to close dom-tags
 		if (current[1] >= current[0].length) {
 			const lastItem = current[0][current[1] - 1];
-
+			if (afterDiff) afterDiff(lastItem.node);
+			if (
+				ummountHook &&
+				(typeof lastItem.node.type === 'function' ||
+					typeof lastItem.node.type === 'string')
+			)
+				ummountHook(lastItem.node);
 			if (
 				!Array.isArray(lastItem.node) &&
 				typeof lastItem.parent.type === 'string'
@@ -233,6 +239,7 @@ function _renderToStringStackIterator(
 
 			// TODO: invoke options before diff for every step underneath
 			case FRAGMENT_TYPE: {
+				if (beforeDiff) beforeDiff(node);
 				const rendered = normalizeTopLevelFragment(node.props.children);
 				const data = [
 					{
@@ -249,6 +256,7 @@ function _renderToStringStackIterator(
 				continue;
 			}
 			case CLASS_COMPONENT_TYPE: {
+				if (beforeDiff) beforeDiff(node);
 				let contextType = node.type.contextType,
 					cctx = context;
 				if (contextType != null) {
@@ -280,6 +288,7 @@ function _renderToStringStackIterator(
 				continue;
 			}
 			case FN_COMPONENT_TYPE: {
+				if (beforeDiff) beforeDiff(node);
 				let contextType = node.type.contextType,
 					cctx = context;
 				if (contextType != null) {
@@ -334,17 +343,22 @@ function _renderToStringStackIterator(
 
 			// DOM TYPES, these produce output
 			case TEXT_NODE_TYPE: {
+				if (beforeDiff) beforeDiff(node);
+
 				if (typeof node === 'function') {
 					current[1]++;
 					current = stack[stack.length - 1];
 					continue;
 				}
+
 				output += encodeEntities(node + '');
 				current[1]++;
 				current = stack[stack.length - 1];
 				continue;
 			}
 			case DOM_NODE_TYPE: {
+				if (beforeDiff) beforeDiff(node);
+
 				const { props, type } = node;
 				let children,
 					html = '',
@@ -474,7 +488,9 @@ function _renderToStringStackIterator(
 						{
 							node: children,
 							context,
-							parent: node
+							parent: node,
+							isSvgMode,
+							selectValue
 						}
 					];
 					stack.push([data, 0]);
