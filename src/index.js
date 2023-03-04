@@ -177,21 +177,22 @@ function _renderToStringStackIterator(
 		// we can use this to close dom-tags
 		if (current[1] >= current[0].length) {
 			const lastItem = current[0][current[1] - 1];
+
 			if (afterDiff) afterDiff(lastItem.node);
+
 			if (
 				ummountHook &&
 				(typeof lastItem.node.type === 'function' ||
 					typeof lastItem.node.type === 'string')
 			)
 				ummountHook(lastItem.node);
+
 			if (
 				!Array.isArray(lastItem.node) &&
 				typeof lastItem.parent.type === 'string'
 			) {
 				output += '</' + lastItem.parent.type + '>';
 			}
-			// TODO: this is currently bugged we have to look for the closest dom-parent and close that
-			// TODO: invoke options.unmount and afterDIff
 
 			stack.pop();
 			current = stack[stack.length - 1];
@@ -210,8 +211,6 @@ function _renderToStringStackIterator(
 				current = stack[stack.length - 1];
 				continue;
 			}
-			// TODO: set CHILDREN and PARENT for every step here
-
 			// We discover a new array, we have to gather all children
 			// in a shape that allows us to handle them within our iteration.
 			// this means that we will convert them to our item shape and
@@ -237,8 +236,6 @@ function _renderToStringStackIterator(
 
 			// FN-types, these produce more children
 			// Similar to a list-type but with extra steps.
-
-			// TODO: invoke options before diff for every step underneath
 			case FRAGMENT_TYPE: {
 				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
@@ -350,13 +347,10 @@ function _renderToStringStackIterator(
 
 			// DOM TYPES, these produce output
 			case TEXT_NODE_TYPE: {
-				if (typeof node === 'function') {
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
+				if (typeof node !== 'function') {
+					output += encodeEntities(node + '');
 				}
 
-				output += encodeEntities(node + '');
 				current[1]++;
 				current = stack[stack.length - 1];
 				continue;
@@ -369,6 +363,7 @@ function _renderToStringStackIterator(
 				let children,
 					html = '',
 					s = '<' + type;
+
 				node[PARENT] = parent;
 
 				for (let name in props) {
@@ -465,14 +460,13 @@ function _renderToStringStackIterator(
 
 				if (UNSAFE_NAME.test(type)) {
 					throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
-				}
-
-				if (html) {
+				} else if (html) {
 					// dangerouslySetInnerHTML defined this node's contents
-					current[1]++;
-					current = stack[stack.length - 1];
+					output += s + '>' + html + '</' + type + '>';
 				} else if (typeof children === 'string') {
 					// single text child
+					output += s + '>';
+
 					const data = [
 						{
 							node: children,
@@ -483,13 +477,13 @@ function _renderToStringStackIterator(
 						}
 					];
 					stack.push([data, 0]);
-					current[1]++;
-					current = stack[stack.length - 1];
 				} else if (
 					children != null &&
 					children !== false &&
 					children !== true
 				) {
+					output += s + '>';
+
 					const data = [
 						{
 							node: children,
@@ -501,25 +495,14 @@ function _renderToStringStackIterator(
 						}
 					];
 					stack.push([data, 0]);
-					current[1]++;
-					current = stack[stack.length - 1];
 				} else if (!SELF_CLOSING.has(type) && children === undefined) {
-					current[1]++;
-					current = stack[stack.length - 1];
-				}
-
-				if (children === undefined && !html && SELF_CLOSING.has(type)) {
-					output += s + ' />';
-					current[1]++;
-					current = stack[stack.length - 1];
-				} else if (html) {
-					output += s + '>' + html + '</' + type + '>';
-				} else if (children === undefined) {
 					output += s + '></' + type + '>';
-				} else {
-					output += s + '>';
+				} else if (SELF_CLOSING.has(type)) {
+					output += s + ' />';
 				}
 
+				current[1]++;
+				current = stack[stack.length - 1];
 				continue;
 			}
 			default: {
