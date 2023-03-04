@@ -187,18 +187,16 @@ function _renderToStringStackIterator(
 		// we can use this to close dom-tags
 		if (current[1] >= current[0].length) {
 			const lastItem = current[0][current[1] - 1];
-			const nodeType = typeof lastItem.node.type;
+			const lastVNode = lastItem.node;
+			const nodeType = typeof lastVNode.type;
 
 			if (nodeType === 'function' || nodeType === 'string') {
-				lastItem.node[PARENT] = undefined;
-				if (afterDiff) afterDiff(lastItem.node);
-				if (ummountHook) ummountHook(lastItem.node);
+				lastVNode[PARENT] = undefined;
+				if (afterDiff) afterDiff(lastVNode);
+				if (ummountHook) ummountHook(lastVNode);
 			}
 
-			if (
-				!Array.isArray(lastItem.node) &&
-				typeof lastItem.parent.type === 'string'
-			) {
+			if (!isArray(lastVNode) && typeof lastItem.parent.type === 'string') {
 				output += '</' + lastItem.parent.type + '>';
 			}
 
