@@ -89,7 +89,7 @@ export default function renderToString(vnode, ctx) {
 			const { node, parent } = item;
 			let { context, selectValue, isSvgMode } = item;
 
-			switch (getStep(node)) {
+			switch (/**#__NOINLINE__**/ getStep(node)) {
 				// Cases that result in null
 				case NULL_NODE_TYPE: {
 					current[1]++;
@@ -162,7 +162,7 @@ export default function renderToString(vnode, ctx) {
 						cctx = provider ? provider.props.value : contextType.__;
 					}
 
-					let rendered = renderClassComponent(node, cctx);
+					let rendered = /**#__NOINLINE__**/ renderClassComponent(node, cctx);
 					const component = node[COMPONENT];
 
 					if (component.getChildContext != null) {
@@ -388,11 +388,6 @@ export default function renderToString(vnode, ctx) {
 						output += s + ' />';
 					}
 
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-				default: {
 					current[1]++;
 					current = stack[stack.length - 1];
 					continue;
