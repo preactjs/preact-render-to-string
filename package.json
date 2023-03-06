@@ -28,7 +28,7 @@
 		"bench:v8": "BABEL_ENV=test microbundle benchmarks/index.js -f modern --alias benchmarkjs-pretty=benchmarks/lib/benchmark-lite.js --external none --target node --no-compress --no-sourcemap --raw -o benchmarks/.v8.mjs && v8 --module benchmarks/.v8.mjs",
 		"build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
 		"postbuild": "node ./config/node-13-exports.js && node ./config/node-commonjs.js",
-		"transpile": "microbundle src/index.js -f es,umd --target web --external preact",
+		"transpile": "microbundle src/index.js -f es,cjs --target web --external preact",
 		"transpile:jsx": "microbundle src/jsx.js -o dist/jsx.js --target web --external preact && microbundle dist/jsx.js -o dist/jsx.js -f cjs --external preact",
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
 		"test": "eslint src test && tsc && npm run test:mocha && npm run test:mocha:compat && npm run test:mocha:debug && npm run bench",
