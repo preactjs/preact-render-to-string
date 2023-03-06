@@ -47,355 +47,10 @@ export default function renderToString(vnode, ctx) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
+	const context = ctx || {};
 
 	try {
-		// the itemized shape allows us to hold a vnode, the context up to that point and
-		// a backref to the parent vnode.
-		const data = [createStackItem(vnode, ctx || {}, parent, false, undefined)];
-		// [0] is the array we are currently handling.
-		// [1] is the pointer for the item in the array we are handling.
-		let current = [data, 0];
-		// our stack contains the history of what we are handling and have
-		// handled while we do a depth-first traversal of the vnode-tree.
-		const stack = [current];
-		// The stringified output for the depth-first traversal of our vnode-tree
-		let output = '';
-
-		while (stack.length) {
-			// When we see that the length of our children got exceeded
-			// we know that we can go back up a level.
-			// we can use this to close dom-tags
-			if (current[1] >= current[0].length) {
-				const lastItem = current[0][current[1] - 1];
-				const lastVNode = lastItem.node;
-				const nodeType = typeof lastVNode.type;
-
-				if (nodeType === 'function' || nodeType === 'string') {
-					lastVNode[PARENT] = undefined;
-					if (afterDiff) afterDiff(lastVNode);
-					if (ummountHook) ummountHook(lastVNode);
-				}
-
-				if (!isArray(lastVNode) && typeof lastItem.parent.type === 'string') {
-					output += '</' + lastItem.parent.type + '>';
-				}
-
-				stack.pop();
-				current = stack[stack.length - 1];
-				continue;
-			}
-
-			const item = current[0][current[1]];
-			const { node, parent } = item;
-			let { context, selectValue, isSvgMode } = item;
-
-			switch (/**#__NOINLINE__**/ getStep(node)) {
-				// Cases that result in null
-				case NULL_NODE_TYPE: {
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-				// We discover a new array, we have to gather all children
-				// in a shape that allows us to handle them within our iteration.
-				// this means that we will convert them to our item shape and
-				// add them to our stack as data-points.
-				case LIST_TYPE: {
-					parent[CHILDREN] = node;
-					const data = [];
-					for (let i = 0; i < node.length; i++) {
-						let child = node[i];
-						const childType = typeof child;
-						if (child == null || childType === 'boolean') continue;
-
-						data.push(
-							createStackItem(child, context, parent, isSvgMode, selectValue)
-						);
-
-						if (
-							childType === 'string' ||
-							childType === 'number' ||
-							childType === 'bigint'
-						) {
-							// @ts-ignore manually constructing a Text vnode
-							node[i] = h(null, null, child);
-						}
-					}
-
-					stack.push([data, 0]);
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-
-				// FN-types, these produce more children
-				// Similar to a list-type but with extra steps.
-				case FRAGMENT_TYPE: {
-					node[PARENT] = parent;
-					if (beforeDiff) beforeDiff(node);
-
-					let rendered = node.props.children;
-					const isTopLevelFragment =
-						rendered != null &&
-						rendered.type === Fragment &&
-						rendered.key == null;
-					rendered = isTopLevelFragment ? rendered.props.children : rendered;
-
-					const data = [
-						createStackItem(rendered, context, node, isSvgMode, selectValue)
-					];
-
-					stack.push([data, 0]);
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-				case CLASS_COMPONENT_TYPE: {
-					node[PARENT] = parent;
-					if (beforeDiff) beforeDiff(node);
-
-					let contextType = node.type.contextType,
-						cctx = context;
-
-					if (contextType != null) {
-						let provider = context[contextType.__c];
-						cctx = provider ? provider.props.value : contextType.__;
-					}
-
-					let rendered = /**#__NOINLINE__**/ renderClassComponent(node, cctx);
-					const component = node[COMPONENT];
-
-					if (component.getChildContext != null) {
-						context = assign({}, context, component.getChildContext());
-					}
-
-					const isTopLevelFragment =
-						rendered != null &&
-						rendered.type === Fragment &&
-						rendered.key == null;
-
-					const data = [
-						createStackItem(
-							isTopLevelFragment ? rendered.props.children : rendered,
-							context,
-							node,
-							isSvgMode,
-							selectValue
-						)
-					];
-
-					stack.push([data, 0]);
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-				case FN_COMPONENT_TYPE: {
-					node[PARENT] = parent;
-					if (beforeDiff) beforeDiff(node);
-
-					let contextType = node.type.contextType,
-						cctx = context;
-					if (contextType != null) {
-						let provider = context[contextType.__c];
-						cctx = provider ? provider.props.value : contextType.__;
-					}
-
-					const component = {
-						__v: node,
-						props: node.props,
-						context: cctx,
-						// silently drop state updates
-						setState: markAsDirty,
-						forceUpdate: markAsDirty,
-						__d: true,
-						// hooks
-						__h: []
-					};
-					node[COMPONENT] = component;
-
-					let count = 0,
-						rendered;
-					while (component[DIRTY] && count++ < 25) {
-						component[DIRTY] = false;
-
-						if (renderHook) renderHook(node);
-
-						rendered = node.type.call(component, node.props, cctx);
-					}
-					component[DIRTY] = true;
-
-					if (component.getChildContext != null) {
-						context = assign({}, context, component.getChildContext());
-					}
-
-					const isTopLevelFragment =
-						rendered != null &&
-						rendered.type === Fragment &&
-						rendered.key == null;
-
-					const data = [
-						createStackItem(
-							isTopLevelFragment ? rendered.props.children : rendered,
-							context,
-							node,
-							isSvgMode,
-							selectValue
-						)
-					];
-
-					stack.push([data, 0]);
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-
-				// DOM TYPES, these produce output
-				case TEXT_NODE_TYPE: {
-					if (typeof node !== 'function') {
-						output += encodeEntities(node + '');
-					}
-
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-				case DOM_NODE_TYPE: {
-					node[PARENT] = parent;
-					if (beforeDiff) beforeDiff(node);
-
-					const { props, type } = node;
-					let children,
-						html = '',
-						s = '<' + type;
-
-					node[PARENT] = parent;
-
-					for (let name in props) {
-						let v = props[name];
-
-						switch (name) {
-							case 'children':
-								children = v;
-								continue;
-
-							// VDOM-specific props
-							case 'key':
-							case 'ref':
-							case '__self':
-							case '__source':
-								continue;
-
-							// prefer for/class over htmlFor/className
-							case 'htmlFor':
-								if ('for' in props) continue;
-								name = 'for';
-								break;
-							case 'className':
-								if ('class' in props) continue;
-								name = 'class';
-								break;
-
-							// Form element reflected properties
-							case 'defaultChecked':
-								name = 'checked';
-								break;
-							case 'defaultSelected':
-								name = 'selected';
-								break;
-
-							// Special value attribute handling
-							case 'defaultValue':
-							case 'value':
-								name = 'value';
-								switch (type) {
-									// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
-									case 'textarea':
-										children = v;
-										continue;
-
-									// <select value> is serialized as a selected attribute on the matching option child
-									case 'select':
-										selectValue = v;
-										continue;
-
-									// Add a selected attribute to <option> if its value matches the parent <select> value
-									case 'option':
-										if (selectValue == v && !('selected' in props)) {
-											s = s + ' selected';
-										}
-										break;
-								}
-								break;
-
-							case 'dangerouslySetInnerHTML':
-								html = v && v.__html;
-								continue;
-
-							// serialize object styles to a CSS string
-							case 'style':
-								if (typeof v === 'object') {
-									v = styleObjToCss(v);
-								}
-								break;
-
-							default: {
-								if (isSvgMode && XLINK.test(name)) {
-									name = name
-										.toLowerCase()
-										.replace(XLINK_REPLACE_REGEX, 'xlink:');
-								} else if (UNSAFE_NAME.test(name)) {
-									continue;
-								} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
-									// serialize boolean aria-xyz attribute values as strings
-									v += '';
-								}
-							}
-						}
-
-						// write this attribute to the buffer
-						if (v != null && v !== false && typeof v !== 'function') {
-							if (v === true || v === '') {
-								s = s + ' ' + name;
-							} else {
-								s = s + ' ' + name + '="' + encodeEntities(v + '') + '"';
-							}
-						}
-					}
-
-					if (UNSAFE_NAME.test(type)) {
-						throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
-					} else if (html) {
-						// dangerouslySetInnerHTML defined this node's contents
-						output += s + '>' + html + '</' + type + '>';
-					} else if (typeof children === 'string') {
-						output += s + '>' + encodeEntities(children) + '</' + type + '>';
-					} else if (children != null && typeof children !== 'boolean') {
-						output += s + '>';
-
-						const data = [
-							createStackItem(
-								children,
-								context,
-								node,
-								type === 'svg' || (type !== 'foreignObject' && isSvgMode),
-								selectValue
-							)
-						];
-						stack.push([data, 0]);
-					} else if (!SELF_CLOSING.has(type) && children === undefined) {
-						output += s + '></' + type + '>';
-					} else if (SELF_CLOSING.has(type)) {
-						output += s + ' />';
-					}
-
-					current[1]++;
-					current = stack[stack.length - 1];
-					continue;
-				}
-			}
-		}
-
-		return output;
+		return _renderToString(vnode, context, parent);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -403,6 +58,355 @@ export default function renderToString(vnode, ctx) {
 		options[SKIP_EFFECTS] = previousSkipEffects;
 		EMPTY_ARR.length = 0;
 	}
+}
+
+function _renderToString(vnode, ctx, parent) {
+	// the itemized shape allows us to hold a vnode, the context up to that point and
+	// a backref to the parent vnode.
+	// [0] is the array we are currently handling.
+	// [1] is the pointer for the item in the array we are handling.
+	let current = [[createStackItem(vnode, ctx, parent, false, undefined)], 0];
+	// our stack contains the history of what we are handling and have
+	// handled while we do a depth-first traversal of the vnode-tree.
+	const stack = [current];
+	// The stringified output for the depth-first traversal of our vnode-tree
+	let output = '';
+
+	while (stack.length) {
+		// When we see that the length of our children got exceeded
+		// we know that we can go back up a level.
+		// we can use this to close dom-tags
+		if (current[1] >= current[0].length) {
+			const lastItem = current[0][current[1] - 1];
+			const lastVNode = lastItem.node;
+			const nodeType = typeof lastVNode.type;
+
+			if (nodeType === 'function' || nodeType === 'string') {
+				lastVNode[PARENT] = undefined;
+				if (afterDiff) afterDiff(lastVNode);
+				if (ummountHook) ummountHook(lastVNode);
+			}
+
+			if (!isArray(lastVNode) && typeof lastItem.parent.type === 'string') {
+				output += '</' + lastItem.parent.type + '>';
+			}
+
+			stack.pop();
+			current = stack[stack.length - 1];
+			continue;
+		}
+
+		const item = current[0][current[1]];
+		const { node, parent } = item;
+		let { context, selectValue, isSvgMode } = item;
+
+		switch (/**#__NOINLINE__**/ getStep(node)) {
+			// Cases that result in null
+			case NULL_NODE_TYPE: {
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			// We discover a new array, we have to gather all children
+			// in a shape that allows us to handle them within our iteration.
+			// this means that we will convert them to our item shape and
+			// add them to our stack as data-points.
+			case LIST_TYPE: {
+				parent[CHILDREN] = node;
+				const data = [];
+				for (let i = 0; i < node.length; i++) {
+					let child = node[i];
+					const childType = typeof child;
+					if (child == null || childType === 'boolean') continue;
+
+					data.push(
+						createStackItem(child, context, parent, isSvgMode, selectValue)
+					);
+
+					if (
+						childType === 'string' ||
+						childType === 'number' ||
+						childType === 'bigint'
+					) {
+						// @ts-ignore manually constructing a Text vnode
+						node[i] = h(null, null, child);
+					}
+				}
+
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+
+			// FN-types, these produce more children
+			// Similar to a list-type but with extra steps.
+			case FRAGMENT_TYPE: {
+				node[PARENT] = parent;
+				if (beforeDiff) beforeDiff(node);
+
+				let rendered = node.props.children;
+				const isTopLevelFragment =
+					rendered != null &&
+					rendered.type === Fragment &&
+					rendered.key == null;
+				rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+				const data = [
+					createStackItem(rendered, context, node, isSvgMode, selectValue)
+				];
+
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			case CLASS_COMPONENT_TYPE: {
+				node[PARENT] = parent;
+				if (beforeDiff) beforeDiff(node);
+
+				let contextType = node.type.contextType,
+					cctx = context;
+
+				if (contextType != null) {
+					let provider = context[contextType.__c];
+					cctx = provider ? provider.props.value : contextType.__;
+				}
+
+				let rendered = /**#__NOINLINE__**/ renderClassComponent(node, cctx);
+				const component = node[COMPONENT];
+
+				if (component.getChildContext != null) {
+					context = assign({}, context, component.getChildContext());
+				}
+
+				const isTopLevelFragment =
+					rendered != null &&
+					rendered.type === Fragment &&
+					rendered.key == null;
+
+				const data = [
+					createStackItem(
+						isTopLevelFragment ? rendered.props.children : rendered,
+						context,
+						node,
+						isSvgMode,
+						selectValue
+					)
+				];
+
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			case FN_COMPONENT_TYPE: {
+				node[PARENT] = parent;
+				if (beforeDiff) beforeDiff(node);
+
+				let contextType = node.type.contextType,
+					cctx = context;
+				if (contextType != null) {
+					let provider = context[contextType.__c];
+					cctx = provider ? provider.props.value : contextType.__;
+				}
+
+				const component = {
+					__v: node,
+					props: node.props,
+					context: cctx,
+					// silently drop state updates
+					setState: markAsDirty,
+					forceUpdate: markAsDirty,
+					__d: true,
+					// hooks
+					__h: []
+				};
+				node[COMPONENT] = component;
+
+				let count = 0,
+					rendered;
+				while (component[DIRTY] && count++ < 25) {
+					component[DIRTY] = false;
+
+					if (renderHook) renderHook(node);
+
+					rendered = node.type.call(component, node.props, cctx);
+				}
+				component[DIRTY] = true;
+
+				if (component.getChildContext != null) {
+					context = assign({}, context, component.getChildContext());
+				}
+
+				const isTopLevelFragment =
+					rendered != null &&
+					rendered.type === Fragment &&
+					rendered.key == null;
+
+				const data = [
+					createStackItem(
+						isTopLevelFragment ? rendered.props.children : rendered,
+						context,
+						node,
+						isSvgMode,
+						selectValue
+					)
+				];
+
+				stack.push([data, 0]);
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+
+			// DOM TYPES, these produce output
+			case TEXT_NODE_TYPE: {
+				if (typeof node !== 'function') {
+					output += encodeEntities(node + '');
+				}
+
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+			case DOM_NODE_TYPE: {
+				node[PARENT] = parent;
+				if (beforeDiff) beforeDiff(node);
+
+				const { props, type } = node;
+				let children,
+					html = '',
+					s = '<' + type;
+
+				node[PARENT] = parent;
+
+				for (let name in props) {
+					let v = props[name];
+
+					switch (name) {
+						case 'children':
+							children = v;
+							continue;
+
+						// VDOM-specific props
+						case 'key':
+						case 'ref':
+						case '__self':
+						case '__source':
+							continue;
+
+						// prefer for/class over htmlFor/className
+						case 'htmlFor':
+							if ('for' in props) continue;
+							name = 'for';
+							break;
+						case 'className':
+							if ('class' in props) continue;
+							name = 'class';
+							break;
+
+						// Form element reflected properties
+						case 'defaultChecked':
+							name = 'checked';
+							break;
+						case 'defaultSelected':
+							name = 'selected';
+							break;
+
+						// Special value attribute handling
+						case 'defaultValue':
+						case 'value':
+							name = 'value';
+							switch (type) {
+								// <textarea value="a&b"> --> <textarea>a&amp;b</textarea>
+								case 'textarea':
+									children = v;
+									continue;
+
+								// <select value> is serialized as a selected attribute on the matching option child
+								case 'select':
+									selectValue = v;
+									continue;
+
+								// Add a selected attribute to <option> if its value matches the parent <select> value
+								case 'option':
+									if (selectValue == v && !('selected' in props)) {
+										s = s + ' selected';
+									}
+									break;
+							}
+							break;
+
+						case 'dangerouslySetInnerHTML':
+							html = v && v.__html;
+							continue;
+
+						// serialize object styles to a CSS string
+						case 'style':
+							if (typeof v === 'object') {
+								v = styleObjToCss(v);
+							}
+							break;
+
+						default: {
+							if (isSvgMode && XLINK.test(name)) {
+								name = name
+									.toLowerCase()
+									.replace(XLINK_REPLACE_REGEX, 'xlink:');
+							} else if (UNSAFE_NAME.test(name)) {
+								continue;
+							} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
+								// serialize boolean aria-xyz attribute values as strings
+								v += '';
+							}
+						}
+					}
+
+					// write this attribute to the buffer
+					if (v != null && v !== false && typeof v !== 'function') {
+						if (v === true || v === '') {
+							s = s + ' ' + name;
+						} else {
+							s = s + ' ' + name + '="' + encodeEntities(v + '') + '"';
+						}
+					}
+				}
+
+				if (UNSAFE_NAME.test(type)) {
+					throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
+				} else if (html) {
+					// dangerouslySetInnerHTML defined this node's contents
+					output += s + '>' + html + '</' + type + '>';
+				} else if (typeof children === 'string') {
+					output += s + '>' + encodeEntities(children) + '</' + type + '>';
+				} else if (children != null && typeof children !== 'boolean') {
+					output += s + '>';
+
+					const data = [
+						createStackItem(
+							children,
+							context,
+							node,
+							type === 'svg' || (type !== 'foreignObject' && isSvgMode),
+							selectValue
+						)
+					];
+					stack.push([data, 0]);
+				} else if (!SELF_CLOSING.has(type) && children === undefined) {
+					output += s + '></' + type + '>';
+				} else if (SELF_CLOSING.has(type)) {
+					output += s + ' />';
+				}
+
+				current[1]++;
+				current = stack[stack.length - 1];
+				continue;
+			}
+		}
+	}
+
+	return output;
 }
 
 // Installed as setState/forceUpdate for function components
@@ -452,18 +456,18 @@ function renderClassComponent(vnode, context) {
 	return c.render(c.props, c.state, context);
 }
 
-const FRAGMENT_TYPE = 0;
-const LIST_TYPE = 1;
-const CLASS_COMPONENT_TYPE = 2;
-const FN_COMPONENT_TYPE = 3;
-const DOM_NODE_TYPE = 4;
-const TEXT_NODE_TYPE = 5;
-const NULL_NODE_TYPE = 6;
+const FRAGMENT_TYPE = 1 << 0;
+const LIST_TYPE = 1 << 1;
+const CLASS_COMPONENT_TYPE = 1 << 2;
+const FN_COMPONENT_TYPE = 1 << 3;
+const DOM_NODE_TYPE = 1 << 4;
+const TEXT_NODE_TYPE = 1 << 5;
+const NULL_NODE_TYPE = 1 << 6;
 
 function getStep(vnode) {
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return NULL_NODE_TYPE;
-	} else if (typeof vnode != 'object') {
+	} else if (typeof vnode !== 'object') {
 		return TEXT_NODE_TYPE;
 	} else if (isArray(vnode)) {
 		return LIST_TYPE;
@@ -472,12 +476,12 @@ function getStep(vnode) {
 	} else if (vnode.type === Fragment) {
 		return FRAGMENT_TYPE;
 	} else if (
-		typeof vnode.type == 'function' &&
+		typeof vnode.type === 'function' &&
 		vnode.type.prototype &&
 		typeof vnode.type.prototype.render === 'function'
 	) {
 		return CLASS_COMPONENT_TYPE;
-	} else if (typeof vnode.type == 'function') {
+	} else if (typeof vnode.type === 'function') {
 		return FN_COMPONENT_TYPE;
 	}
 
