@@ -82,9 +82,10 @@ function _renderToString(vnode, ctx, parent) {
 			const nodeType = typeof lastVNode.type;
 
 			if (nodeType === 'function' || nodeType === 'string') {
-				lastVNode[PARENT] = undefined;
 				if (afterDiff) afterDiff(lastVNode);
 				if (ummountHook) ummountHook(lastVNode);
+				lastVNode[PARENT] = undefined;
+				lastVNode[CHILDREN] = undefined;
 			}
 
 			if (!isArray(lastVNode) && typeof lastItem.parent.type === 'string') {
@@ -107,37 +108,6 @@ function _renderToString(vnode, ctx, parent) {
 				current = stack[stack.length - 1];
 				continue;
 			}
-			// We discover a new array, we have to gather all children
-			// in a shape that allows us to handle them within our iteration.
-			// this means that we will convert them to our item shape and
-			// add them to our stack as data-points.
-			case LIST_TYPE: {
-				parent[CHILDREN] = node;
-				const data = [];
-				for (let i = 0; i < node.length; i++) {
-					let child = node[i];
-					const childType = typeof child;
-					if (child == null || childType === 'boolean') continue;
-
-					data.push(
-						createStackItem(child, context, parent, isSvgMode, selectValue)
-					);
-
-					if (
-						childType === 'string' ||
-						childType === 'number' ||
-						childType === 'bigint'
-					) {
-						// @ts-ignore manually constructing a Text vnode
-						node[i] = h(null, null, child);
-					}
-				}
-
-				stack.push([data, 0]);
-				current[1]++;
-				current = stack[stack.length - 1];
-				continue;
-			}
 
 			// FN-types, these produce more children
 			// Similar to a list-type but with extra steps.
@@ -152,11 +122,37 @@ function _renderToString(vnode, ctx, parent) {
 					rendered.key == null;
 				rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-				const data = [
-					createStackItem(rendered, context, node, isSvgMode, selectValue)
-				];
+				if (isArray(rendered)) {
+					node[CHILDREN] = rendered;
+					const data = [];
+					for (let i = 0; i < rendered.length; i++) {
+						let child = rendered[i];
+						const childType = typeof child;
+						if (child == null || childType === 'boolean') continue;
 
-				stack.push([data, 0]);
+						data.push(
+							createStackItem(child, context, node, isSvgMode, selectValue)
+						);
+
+						if (
+							childType === 'string' ||
+							childType === 'number' ||
+							childType === 'bigint'
+						) {
+							// @ts-ignore manually constructing a Text vnode
+							rendered[i] = h(null, null, child);
+						}
+					}
+
+					stack.push([data, 0]);
+				} else {
+					const data = [
+						createStackItem(rendered, context, node, isSvgMode, selectValue)
+					];
+
+					stack.push([data, 0]);
+				}
+
 				current[1]++;
 				current = stack[stack.length - 1];
 				continue;
@@ -184,18 +180,40 @@ function _renderToString(vnode, ctx, parent) {
 					rendered != null &&
 					rendered.type === Fragment &&
 					rendered.key == null;
+				const children = isTopLevelFragment
+					? rendered.props.children
+					: rendered;
+				if (isArray(children)) {
+					node[CHILDREN] = children;
+					const data = [];
+					for (let i = 0; i < children.length; i++) {
+						let child = children[i];
+						const childType = typeof child;
+						if (child == null || childType === 'boolean') continue;
 
-				const data = [
-					createStackItem(
-						isTopLevelFragment ? rendered.props.children : rendered,
-						context,
-						node,
-						isSvgMode,
-						selectValue
-					)
-				];
+						data.push(
+							createStackItem(child, context, node, isSvgMode, selectValue)
+						);
 
-				stack.push([data, 0]);
+						if (
+							childType === 'string' ||
+							childType === 'number' ||
+							childType === 'bigint'
+						) {
+							// @ts-ignore manually constructing a Text vnode
+							children[i] = h(null, null, child);
+						}
+					}
+
+					stack.push([data, 0]);
+				} else {
+					const data = [
+						createStackItem(children, context, node, isSvgMode, selectValue)
+					];
+
+					stack.push([data, 0]);
+				}
+
 				current[1]++;
 				current = stack[stack.length - 1];
 				continue;
@@ -244,17 +262,40 @@ function _renderToString(vnode, ctx, parent) {
 					rendered.type === Fragment &&
 					rendered.key == null;
 
-				const data = [
-					createStackItem(
-						isTopLevelFragment ? rendered.props.children : rendered,
-						context,
-						node,
-						isSvgMode,
-						selectValue
-					)
-				];
+				const children = isTopLevelFragment
+					? rendered.props.children
+					: rendered;
+				if (isArray(children)) {
+					node[CHILDREN] = children;
+					const data = [];
+					for (let i = 0; i < children.length; i++) {
+						let child = children[i];
+						const childType = typeof child;
+						if (child == null || childType === 'boolean') continue;
 
-				stack.push([data, 0]);
+						data.push(
+							createStackItem(child, context, node, isSvgMode, selectValue)
+						);
+
+						if (
+							childType === 'string' ||
+							childType === 'number' ||
+							childType === 'bigint'
+						) {
+							// @ts-ignore manually constructing a Text vnode
+							children[i] = h(null, null, child);
+						}
+					}
+
+					stack.push([data, 0]);
+				} else {
+					const data = [
+						createStackItem(children, context, node, isSvgMode, selectValue)
+					];
+
+					stack.push([data, 0]);
+				}
+
 				current[1]++;
 				current = stack[stack.length - 1];
 				continue;
@@ -383,16 +424,47 @@ function _renderToString(vnode, ctx, parent) {
 				} else if (children != null && typeof children !== 'boolean') {
 					output += s + '>';
 
-					const data = [
-						createStackItem(
-							children,
-							context,
-							node,
-							type === 'svg' || (type !== 'foreignObject' && isSvgMode),
-							selectValue
-						)
-					];
-					stack.push([data, 0]);
+					if (isArray(children)) {
+						node[CHILDREN] = children;
+						const data = [];
+						for (let i = 0; i < children.length; i++) {
+							let child = children[i];
+							const childType = typeof child;
+							if (child == null || childType === 'boolean') continue;
+
+							data.push(
+								createStackItem(
+									child,
+									context,
+									node,
+									type === 'svg' || (type !== 'foreignObject' && isSvgMode),
+									selectValue
+								)
+							);
+
+							if (
+								childType === 'string' ||
+								childType === 'number' ||
+								childType === 'bigint'
+							) {
+								// @ts-ignore manually constructing a Text vnode
+								children[i] = h(null, null, child);
+							}
+						}
+
+						stack.push([data, 0]);
+					} else {
+						const data = [
+							createStackItem(
+								children,
+								context,
+								node,
+								type === 'svg' || (type !== 'foreignObject' && isSvgMode),
+								selectValue
+							)
+						];
+						stack.push([data, 0]);
+					}
 				} else if (!SELF_CLOSING.has(type) && children === undefined) {
 					output += s + '></' + type + '>';
 				} else if (SELF_CLOSING.has(type)) {
@@ -457,7 +529,6 @@ function renderClassComponent(vnode, context) {
 }
 
 const FRAGMENT_TYPE = 1 << 0;
-const LIST_TYPE = 1 << 1;
 const CLASS_COMPONENT_TYPE = 1 << 2;
 const FN_COMPONENT_TYPE = 1 << 3;
 const DOM_NODE_TYPE = 1 << 4;
@@ -469,8 +540,6 @@ function getStep(vnode) {
 		return NULL_NODE_TYPE;
 	} else if (typeof vnode !== 'object') {
 		return TEXT_NODE_TYPE;
-	} else if (isArray(vnode)) {
-		return LIST_TYPE;
 	} else if (vnode.constructor !== undefined) {
 		return NULL_NODE_TYPE;
 	} else if (vnode.type === Fragment) {
