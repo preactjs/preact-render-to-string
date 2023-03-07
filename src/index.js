@@ -73,13 +73,11 @@ function _renderToString(vnode, ctx, parent) {
 	let output = '';
 
 	while (stack.length) {
-		const index = current[1];
-		const stackPosition = current[0];
 		// When we see that the length of our children got exceeded
 		// we know that we can go back up a level.
 		// we can use this to close dom-tags
-		if (index >= stackPosition.length) {
-			const lastItem = stackPosition[index - 1];
+		if (current[1] >= current[0].length) {
+			const lastItem = current[0][current[1] - 1];
 			const lastVNode = lastItem.node;
 			const nodeType = typeof lastVNode.type;
 
@@ -98,7 +96,7 @@ function _renderToString(vnode, ctx, parent) {
 			continue;
 		}
 
-		const item = stackPosition[index];
+		const item = current[0][current[1]];
 		const { node, parent } = item;
 		let { context, selectValue, isSvgMode } = item;
 
@@ -115,10 +113,8 @@ function _renderToString(vnode, ctx, parent) {
 			// add them to our stack as data-points.
 			case LIST_TYPE: {
 				parent[CHILDREN] = node;
-				const data = [],
-					nodeLength = node.length;
-
-				for (let i = 0; i < nodeLength; i++) {
+				const data = [];
+				for (let i = 0; i < node.length; i++) {
 					let child = node[i];
 					const childType = typeof child;
 					if (child == null || childType === 'boolean') continue;
@@ -278,11 +274,10 @@ function _renderToString(vnode, ctx, parent) {
 				node[PARENT] = parent;
 				if (beforeDiff) beforeDiff(node);
 
+				const { props, type } = node;
 				let children,
 					html = '',
-					s = '<' + type,
-					props = node.props,
-					type = node.type;
+					s = '<' + type;
 
 				node[PARENT] = parent;
 
