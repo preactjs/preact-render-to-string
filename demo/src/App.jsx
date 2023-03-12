@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { Suspense, lazy } from 'preact/compat';
+import { lazy, Router, Route, ErrorBoundary } from 'preact-iso';
 
 export function App({ head }) {
 	const Counter = lazy(
@@ -16,9 +16,11 @@ export function App({ head }) {
 			<body>
 				<main>
 					<h1>Our Counter application</h1>
-					<Suspense fallback={<p>Loading...</p>}>
-						<Counter />
-					</Suspense>
+					<ErrorBoundary>
+						<Router fallback={<p>Loading...</p>}>
+							<Route component={Counter} path="/" />
+						</Router>
+					</ErrorBoundary>
 				</main>
 				{import.meta.env.DEV && (
 					<script type="module" src="/src/entry-client.jsx" />
