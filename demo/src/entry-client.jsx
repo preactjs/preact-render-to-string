@@ -1,5 +1,4 @@
 import { hydrate } from 'preact';
-import { LocationProvider } from 'preact-iso';
 import { App } from './App';
 
 const config = { attributes: true, childList: true, subtree: true };
@@ -17,9 +16,4 @@ const mut = new MutationObserver((mutationList, observer) => {
 });
 mut.observe(document, config);
 
-hydrate(
-	<LocationProvider>
-		<App />
-	</LocationProvider>,
-	document
-);
+hydrate(<App />, document);
