@@ -3,7 +3,7 @@ import { useState } from 'preact/compat';
 
 const Counter = () => {
 	const [count, setCount] = useState(0);
-
+	console.log('counter');
 	return (
 		<div style={{ display: 'flex' }}>
 			<button onClick={() => setCount(count - 1)}>-</button>

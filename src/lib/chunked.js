@@ -26,6 +26,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	onWrite(shell);
 	// Wait for any suspended sub-trees if there are any
 	const len = renderer.suspended.length;
+	console.log(renderer.suspended);
 	if (len > 0) {
 		onWrite('<div hidden>');
 		onWrite(createInitScript(len));

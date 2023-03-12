@@ -5,9 +5,12 @@ export function App({ head }) {
 	const Counter = lazy(
 		() =>
 			new Promise((res) => {
-				setTimeout(() => {
-					res(import('./Counter.jsx'));
-				}, 3000);
+				setTimeout(
+					() => {
+						res(import('./Counter.jsx'));
+					},
+					typeof document === 'undefined' ? 500 : 3000
+				);
 			})
 	);
 	return (
