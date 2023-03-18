@@ -3,7 +3,6 @@ export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
 // DOM properties that should NOT have "px" added when numeric
-const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/;
 const ENCODED_ENTITIES = /["&<]/;
 
 /** @param {string} str */
@@ -50,9 +49,45 @@ export let isLargeString = (s, length, ignoreLines) =>
 	String(s).indexOf('<') !== -1;
 
 const JS_TO_CSS = {};
-const SUFFIX_CACHE = {};
 
-const CSS_REGEX = /([A-Z])/g;
+const IS_NON_DIMENSIONAL = new Set([
+	'animation-iteration-count',
+	'border-image-outset',
+	'border-image-slice',
+	'border-image-width',
+	'box-flex',
+	'box-flex-group',
+	'box-ordinal-group',
+	'column-count',
+	'fill-opacity',
+	'flex',
+	'flex-grow',
+	'flex-negative',
+	'flex-order',
+	'flex-positive',
+	'flex-shrink',
+	'flood-opacity',
+	'font-weight',
+	'grid-column',
+	'grid-row',
+	'line-clamp',
+	'line-height',
+	'opacity',
+	'order',
+	'orphans',
+	'stop-opacity',
+	'stroke-dasharray',
+	'stroke-dashoffset',
+	'stroke-miterlimit',
+	'stroke-opacity',
+	'stroke-width',
+	'tab-size',
+	'widows',
+	'z-index',
+	'zoom'
+]);
+
+const CSS_REGEX = /[A-Z]/g;
 // Convert an Object style to a CSSText string
 export function styleObjToCss(s) {
 	let str = '';
@@ -63,17 +98,15 @@ export function styleObjToCss(s) {
 				prop[0] == '-'
 					? prop
 					: JS_TO_CSS[prop] ||
-					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
+					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$&').toLowerCase());
 
 			let suffix = ';';
-			let isNumber = typeof val === 'number';
-			if (isNumber && SUFFIX_CACHE[name]) {
-				suffix = 'px;';
-			} else if (
-				isNumber &&
-				IS_NON_DIMENSIONAL.test(prop.toLowerCase()) === false
+			if (
+				typeof val === 'number' &&
+				// Exclude custom-attributes
+				!name.startsWith('--') &&
+				!IS_NON_DIMENSIONAL.has(name)
 			) {
-				SUFFIX_CACHE[name] = true;
 				suffix = 'px;';
 			}
 			str = str + name + ':' + val + suffix;
