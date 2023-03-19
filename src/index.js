@@ -337,7 +337,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		}
 	}
 
-	if (UNSAFE_NAME.test(type)) {
+	if (type.match(UNSAFE_NAME)) {
 		throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
 	}
 
