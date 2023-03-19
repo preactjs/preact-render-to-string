@@ -22,6 +22,7 @@ const assign = Object.assign;
 
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
+const parent = h(Fragment, null);
 
 /**
  * Render Preact JSX + Components to an HTML string.
@@ -44,7 +45,6 @@ export default function renderToString(vnode, context) {
 	renderHook = options[RENDER];
 	ummountHook = options.unmount;
 
-	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
 
 	try {
@@ -145,15 +145,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered =
 				rendered +
 				_renderToString(child, context, isSvgMode, selectValue, parent);
-
-			if (
-				typeof child === 'string' ||
-				typeof child === 'number' ||
-				typeof child === 'bigint'
-			) {
-				// @ts-ignore manually constructing a Text vnode
-				vnode[i] = h(null, null, child);
-			}
 		}
 		return rendered;
 	}
