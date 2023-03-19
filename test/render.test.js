@@ -1313,7 +1313,7 @@ describe('render', () => {
 				);
 			}
 
-			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
+			expect(render(<App />)).to.equal('<div><p>P0-0</p><p>P0-1</p></div>');
 		});
 	});
 });
