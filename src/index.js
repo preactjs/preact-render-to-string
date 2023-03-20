@@ -22,7 +22,6 @@ const assign = Object.assign;
 
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
-const parent = h(Fragment, null);
 
 /**
  * Render Preact JSX + Components to an HTML string.
@@ -45,6 +44,7 @@ export default function renderToString(vnode, context) {
 	renderHook = options[RENDER];
 	ummountHook = options.unmount;
 
+	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
 
 	try {
