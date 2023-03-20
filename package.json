@@ -121,6 +121,7 @@
 		"lint-staged": "^10.5.3",
 		"microbundle": "^0.15.1",
 		"mocha": "^8.2.1",
+		"baseline-rts": "npm:preact-render-to-string@latest",
 		"preact": "^10.11.1",
 		"prettier": "^2.2.1",
 		"sinon": "^9.2.2",

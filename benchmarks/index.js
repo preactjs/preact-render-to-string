@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import Suite from 'benchmarkjs-pretty';
-import renderToStringBaseline from './lib/render-to-string';
+import renderToStringBaseline from 'baseline-rts';
 // import renderToString from '../src/index';
 import renderToString from '../dist/index.module.js';
 import TextApp from './text';
