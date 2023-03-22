@@ -145,15 +145,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered =
 				rendered +
 				_renderToString(child, context, isSvgMode, selectValue, parent);
-
-			if (
-				typeof child === 'string' ||
-				typeof child === 'number' ||
-				typeof child === 'bigint'
-			) {
-				// @ts-ignore manually constructing a Text vnode
-				vnode[i] = h(null, null, child);
-			}
 		}
 		return rendered;
 	}
@@ -338,6 +329,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	}
 
 	if (UNSAFE_NAME.test(type)) {
+		// this seems to performs a lot better than throwing
+		// return '<!-- -->';
 		throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
 	}
 
