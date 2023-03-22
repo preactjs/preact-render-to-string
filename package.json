@@ -4,21 +4,23 @@
 	"version": "5.2.6",
 	"description": "Render JSX to an HTML string, with support for Preact components.",
 	"main": "dist/index.js",
-	"umd:main": "dist/index.js",
+	"umd:main": "dist/index.umd.js",
 	"module": "dist/index.module.js",
 	"jsnext:main": "dist/index.module.js",
 	"types": "src/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./src/index.d.ts",
-			"import": "./dist/index.mjs",
 			"browser": "./dist/index.module.js",
+			"umd": "./dist/index.umd.js",
+			"import": "./dist/index.mjs",
 			"require": "./dist/index.js"
 		},
 		"./jsx": {
 			"types": "./jsx.d.ts",
-			"import": "./dist/jsx.mjs",
 			"browser": "./dist/jsx.module.js",
+			"umd": "./dist/jsx.umd.js",
+			"import": "./dist/jsx.mjs",
 			"require": "./dist/jsx.js"
 		},
 		"./package.json": "./package.json"
@@ -28,7 +30,7 @@
 		"bench:v8": "BABEL_ENV=test microbundle benchmarks/index.js -f modern --alias benchmarkjs-pretty=benchmarks/lib/benchmark-lite.js --external none --target node --no-compress --no-sourcemap --raw -o benchmarks/.v8.mjs && v8 --module benchmarks/.v8.mjs",
 		"build": "npm run -s transpile && npm run -s transpile:jsx && npm run -s copy-typescript-definition",
 		"postbuild": "node ./config/node-13-exports.js && node ./config/node-commonjs.js",
-		"transpile": "microbundle src/index.js -f es,umd --target web --external preact",
+		"transpile": "microbundle src/index.js -f es,cjs,umd --target web --external preact",
 		"transpile:jsx": "microbundle src/jsx.js -o dist/jsx.js --target web --external preact && microbundle dist/jsx.js -o dist/jsx.js -f cjs --external preact",
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
 		"test": "eslint src test && tsc && npm run test:mocha && npm run test:mocha:compat && npm run test:mocha:debug && npm run bench",
