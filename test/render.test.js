@@ -135,6 +135,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should include boolean draggable attribute', () => {
+			let rendered = render(<div draggable />),
+				expected = `<div draggable="true"></div>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		describe('attribute name sanitization', () => {
 			it('should omit attributes with invalid names', () => {
 				let rendered = render(
