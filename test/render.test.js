@@ -116,7 +116,7 @@ describe('render', () => {
 
 		it('should serialize defaultChecked prop to the checked attribute', () => {
 			let rendered = render(<input type="checkbox" defaultChecked />),
-				expected = `<input type="checkbox" checked />`;
+				expected = `<input type="checkbox" checked/>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -247,7 +247,7 @@ describe('render', () => {
 						<wbr />
 					</div>
 				),
-				expected = `<div><input type="text" /><wbr /></div>`;
+				expected = `<div><input type="text"/><wbr/></div>`;
 
 			expect(rendered).to.equal(expected);
 		});

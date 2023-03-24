@@ -357,7 +357,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	// Emit self-closing tag for empty void elements:
 	if (!html && SELF_CLOSING.has(type)) {
-		return s + ' />';
+		return s + '/>';
 	}
 
 	return s + '>' + html + '</' + type + '>';
