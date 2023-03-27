@@ -142,6 +142,16 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should support false aria-* attributes', () => {
+			let rendered = render(<div aria-checked={false} />);
+			expect(rendered).to.equal(`<div aria-checked="false"></div>`);
+		});
+
+		it('should support false data-* attributes', () => {
+			let rendered = render(<div data-checked={false} />);
+			expect(rendered).to.equal(`<div data-checked="false"></div>`);
+		});
+
 		describe('attribute name sanitization', () => {
 			it('should omit attributes with invalid names', () => {
 				let rendered = render(
