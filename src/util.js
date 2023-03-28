@@ -1,17 +1,14 @@
-// DOM properties that should NOT have "px" added when numeric
-export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
-export const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
+// DOM properties that should NOT have "px" added when numeric
 const ENCODED_ENTITIES = /["&<]/;
 
+/** @param {string} str */
 export function encodeEntities(str) {
-	// Ensure we're always parsing and returning a string:
-	str += '';
-
 	// Skip all work for strings with no entities needing encoding:
-	if (ENCODED_ENTITIES.test(str) === false) return str;
+	if (str.length === 0 || ENCODED_ENTITIES.test(str) === false) return str;
 
 	let last = 0,
 		i = 0,
@@ -53,26 +50,66 @@ export let isLargeString = (s, length, ignoreLines) =>
 
 const JS_TO_CSS = {};
 
-const CSS_REGEX = /([A-Z])/g;
+const IS_NON_DIMENSIONAL = new Set([
+	'animation-iteration-count',
+	'border-image-outset',
+	'border-image-slice',
+	'border-image-width',
+	'box-flex',
+	'box-flex-group',
+	'box-ordinal-group',
+	'column-count',
+	'fill-opacity',
+	'flex',
+	'flex-grow',
+	'flex-negative',
+	'flex-order',
+	'flex-positive',
+	'flex-shrink',
+	'flood-opacity',
+	'font-weight',
+	'grid-column',
+	'grid-row',
+	'line-clamp',
+	'line-height',
+	'opacity',
+	'order',
+	'orphans',
+	'stop-opacity',
+	'stroke-dasharray',
+	'stroke-dashoffset',
+	'stroke-miterlimit',
+	'stroke-opacity',
+	'stroke-width',
+	'tab-size',
+	'widows',
+	'z-index',
+	'zoom'
+]);
+
+const CSS_REGEX = /[A-Z]/g;
 // Convert an Object style to a CSSText string
 export function styleObjToCss(s) {
 	let str = '';
 	for (let prop in s) {
 		let val = s[prop];
 		if (val != null && val !== '') {
-			if (str) str += ' ';
-			// str += jsToCss(prop);
-			str +=
+			const name =
 				prop[0] == '-'
 					? prop
 					: JS_TO_CSS[prop] ||
-					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
+					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$&').toLowerCase());
 
-			if (typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false) {
-				str = str + ': ' + val + 'px;';
-			} else {
-				str = str + ': ' + val + ';';
+			let suffix = ';';
+			if (
+				typeof val === 'number' &&
+				// Exclude custom-attributes
+				!name.startsWith('--') &&
+				!IS_NON_DIMENSIONAL.has(name)
+			) {
+				suffix = 'px;';
 			}
+			str = str + name + ':' + val + suffix;
 		}
 	}
 	return str || undefined;
@@ -110,18 +147,6 @@ export function createComponent(vnode, context) {
 		// hooks
 		__h: []
 	};
-}
-
-// Necessary for createContext api. Setting this property will pass
-// the context value as `this.context` just for this component.
-export function getContext(nodeName, context) {
-	let cxType = nodeName.contextType;
-	let provider = cxType && context[cxType.__c];
-	return cxType != null
-		? provider
-			? provider.props.value
-			: cxType.__
-		: context;
 }
 
 const DASHED_ATTRS = /^(acceptC|httpE|(clip|color|fill|font|glyph|marker|stop|stroke|text|vert)[A-Z])/;

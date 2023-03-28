@@ -1,5 +1,14 @@
-import { render, shallowRender } from '../src';
-import { h, Component, createContext, Fragment, options } from 'preact';
+import render from '../src';
+import renderToStringPretty from '../src/pretty';
+import renderToStringJSX from '../src/jsx';
+import {
+	h,
+	Component,
+	createContext,
+	Fragment,
+	options,
+	createRef
+} from 'preact';
 import {
 	useState,
 	useContext,
@@ -10,6 +19,15 @@ import {
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
+
+function shallowRender(vnode) {
+	return renderToStringJSX(vnode, context, {
+		jsx: false,
+		xml: false,
+		pretty: '  ',
+		shallow: true
+	});
+}
 
 describe('render', () => {
 	describe('Basic JSX', () => {
@@ -69,7 +87,7 @@ describe('render', () => {
 		});
 
 		it('should omit ref attribute', () => {
-			let rendered = render(<div ref="test" />),
+			let rendered = render(<div ref={createRef()} />),
 				expected = `<div></div>`;
 
 			expect(rendered).to.equal(expected);
@@ -98,7 +116,7 @@ describe('render', () => {
 
 		it('should serialize defaultChecked prop to the checked attribute', () => {
 			let rendered = render(<input type="checkbox" defaultChecked />),
-				expected = `<input type="checkbox" checked />`;
+				expected = `<input type="checkbox" checked/>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -112,7 +130,7 @@ describe('render', () => {
 
 		it('should decamelize attributes', () => {
 			let rendered = render(<img srcSet="foo.png, foo2.png 2x" />),
-				expected = `<img srcset="foo.png, foo2.png 2x" />`;
+				expected = `<img srcset="foo.png, foo2.png 2x"/>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -121,14 +139,14 @@ describe('render', () => {
 			let rendered = render(
 					<link rel="preconnect" href="https://foo.com" crossOrigin />
 				),
-				expected = `<link rel="preconnect" href="https://foo.com" crossorigin />`;
+				expected = `<link rel="preconnect" href="https://foo.com" crossorigin/>`;
 
 			expect(rendered).to.equal(expected);
 		});
 
 		it('should dasherize certain attributes', () => {
 			let rendered = render(<meta httpEquiv="refresh" />),
-				expected = `<meta http-equiv="refresh" />`;
+				expected = `<meta http-equiv="refresh"/>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -147,6 +165,23 @@ describe('render', () => {
 				expected = `<div aria-hidden="true" aria-whatever="false"></div>`;
 
 			expect(rendered).to.equal(expected);
+		});
+
+		it('should include boolean draggable attribute', () => {
+			let rendered = render(<div draggable />),
+				expected = `<div draggable="true"></div>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
+		it('should support false aria-* attributes', () => {
+			let rendered = render(<div aria-checked={false} />);
+			expect(rendered).to.equal(`<div aria-checked="false"></div>`);
+		});
+
+		it('should support false data-* attributes', () => {
+			let rendered = render(<div data-checked={false} />);
+			expect(rendered).to.equal(`<div data-checked="false"></div>`);
 		});
 
 		describe('attribute name sanitization', () => {
@@ -254,13 +289,13 @@ describe('render', () => {
 						<wbr />
 					</div>
 				),
-				expected = `<div><input type="text" /><wbr /></div>`;
+				expected = `<div><input type="text"/><wbr/></div>`;
 
 			expect(rendered).to.equal(expected);
 		});
 
 		it('should self-close custom void elements', () => {
-			let rendered = render(
+			let rendered = renderToStringPretty(
 					<div>
 						<hello-world />
 					</div>,
@@ -290,14 +325,14 @@ describe('render', () => {
 
 		it('should serialize object styles', () => {
 			let rendered = render(<div style={{ color: 'red', border: 'none' }} />),
-				expected = `<div style="color: red; border: none;"></div>`;
+				expected = `<div style="color:red;border:none;"></div>`;
 
 			expect(rendered).to.equal(expected);
 		});
 
 		it('should preserve CSS Custom Properties', () => {
 			let rendered = render(<div style={{ '--foo': 1, '--foo-bar': '2' }} />),
-				expected = `<div style="--foo: 1; --foo-bar: 2;"></div>`;
+				expected = `<div style="--foo:1;--foo-bar:2;"></div>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -767,7 +802,7 @@ describe('render', () => {
 				</Outer>
 			);
 			expect(rendered).to.equal(
-				'<Inner a="b" b="b" p="1">child <span>foo</span></Inner>'
+				`<Inner a="b" b="b" p="1">\n  child \n  <span>foo</span>\n</Inner>`
 			);
 		});
 
@@ -790,10 +825,10 @@ describe('render', () => {
 			let rendered = render(<Outer />);
 			expect(rendered).to.equal('<div>hi</div>');
 
-			rendered = render(<Outer />, null, { shallow: true });
+			rendered = renderToStringPretty(<Outer />, null, { shallow: true });
 			expect(rendered, '{shallow:true}').to.equal('<Middle></Middle>');
 
-			rendered = render(<Outer />, null, {
+			rendered = renderToStringPretty(<Outer />, null, {
 				shallow: true,
 				shallowHighOrder: false
 			});
@@ -865,15 +900,19 @@ describe('render', () => {
 		});
 
 		it('should sort attributes lexicographically if enabled', () => {
-			let rendered = render(<div b1="b1" c="c" a="a" b="b" />, null, {
-				sortAttributes: true
-			});
+			let rendered = renderToStringPretty(
+				<div b1="b1" c="c" a="a" b="b" />,
+				null,
+				{
+					sortAttributes: true
+				}
+			);
 			expect(rendered).to.equal('<div a="a" b="b" b1="b1" c="c"></div>');
 		});
 	});
 
 	describe('xml:true', () => {
-		let renderXml = (jsx) => render(jsx, null, { xml: true });
+		let renderXml = (jsx) => renderToStringPretty(jsx, null, { xml: true });
 
 		it('should render end-tags', () => {
 			expect(renderXml(<div />)).to.equal(`<div />`);
@@ -977,7 +1016,7 @@ describe('render', () => {
 		});
 
 		it('should indent Fragment children when pretty printing', () => {
-			let html = render(
+			let html = renderToStringPretty(
 				<div>
 					<Fragment>
 						<div>foo</div>
@@ -1323,7 +1362,7 @@ describe('render', () => {
 				);
 			}
 
-			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
+			expect(render(<App />)).to.equal('<div><p>P0-0</p><p>P0-1</p></div>');
 		});
 	});
 });

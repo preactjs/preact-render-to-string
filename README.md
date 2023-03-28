@@ -3,20 +3,18 @@
 [![NPM](http://img.shields.io/npm/v/preact-render-to-string.svg)](https://www.npmjs.com/package/preact-render-to-string)
 [![Build status](https://github.com/preactjs/preact-render-to-string/actions/workflows/ci.yml/badge.svg)](https://github.com/preactjs/preact-render-to-string/actions/workflows/ci.yml)
 
-Render JSX and [Preact] components to an HTML string.
+Render JSX and [Preact](https://github.com/preactjs/preact) components to an HTML string.
 
 Works in Node & the browser, making it useful for universal/isomorphic rendering.
 
 \>\> **[Cute Fox-Related Demo](http://codepen.io/developit/pen/dYZqjE?editors=001)** _(@ CodePen)_ <<
 
-
 ---
-
 
 ### Render JSX/VDOM to HTML
 
 ```js
-import render from 'preact-render-to-string';
+import { render } from 'preact-render-to-string';
 import { h } from 'preact';
 /** @jsx h */
 
@@ -27,24 +25,23 @@ console.log(html);
 // <div class="foo">content</div>
 ```
 
-
 ### Render Preact Components to HTML
 
 ```js
-import render from 'preact-render-to-string';
+import { render } from 'preact-render-to-string';
 import { h, Component } from 'preact';
 /** @jsx h */
 
 // Classical components work
 class Fox extends Component {
 	render({ name }) {
-		return <span class="fox">{ name }</span>;
+		return <span class="fox">{name}</span>;
 	}
 }
 
 // ... and so do pure functional components:
 const Box = ({ type, children }) => (
-	<div class={`box box-${type}`}>{ children }</div>
+	<div class={`box box-${type}`}>{children}</div>
 );
 
 let html = render(
@@ -57,22 +54,20 @@ console.log(html);
 // <div class="box box-open"><span class="fox">Finn</span></div>
 ```
 
-
 ---
-
 
 ### Render JSX / Preact / Whatever via Express!
 
 ```js
 import express from 'express';
 import { h } from 'preact';
-import render from 'preact-render-to-string';
+import { render } from 'preact-render-to-string';
 /** @jsx h */
 
 // silly example component:
 const Fox = ({ name }) => (
 	<div class="fox">
-		<h5>{ name }</h5>
+		<h5>{name}</h5>
 		<p>This page is all about {name}.</p>
 	</div>
 );
@@ -89,14 +84,64 @@ app.get('/:fox', (req, res) => {
 });
 ```
 
+---
+
+### `Suspense` & `lazy` components with [`preact/compat`](https://www.npmjs.com/package/preact) & [`preact-ssr-prepass`](https://www.npmjs.com/package/preact-ssr-prepass)
+
+```bash
+npm install preact preact-render-to-string preact-ssr-prepass
+```
+
+```jsx
+export default () => {
+  return (
+    <h1>Home page</h1>
+  )
+}
+```
+
+```jsx
+import { Suspense, lazy } from "preact/compat"
+
+// Creation of the lazy component
+const HomePage = lazy(() => import("./pages/home"))
+
+const Main = () => {
+  return (
+    <Suspense fallback={<p>Loading</p>}>
+      <HomePage />
+    </Suspense>
+  )
+}
+```
+
+```jsx
+import { render } from "preact-render-to-string"
+import prepass from "preact-ssr-prepass"
+import { Main } from "./main"
+
+const main = async () => {
+  // Creation of the virtual DOM
+  const vdom = <Main />
+  
+  // Pre-rendering of lazy components
+  await prepass(vdom)
+  
+  // Rendering of components 
+  const html = render(vdom)
+  
+  console.log(html)
+  // <h1>Home page</h1>
+}
+
+// Execution & error handling
+main().catch(error => {
+  console.error(error)
+})
+```
 
 ---
 
-
 ### License
 
-[MIT]
-
-
-[Preact]: https://github.com/developit/preact
-[MIT]: http://choosealicense.com/licenses/mit/
+[MIT](http://choosealicense.com/licenses/mit/)
