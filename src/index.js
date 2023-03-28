@@ -29,7 +29,7 @@ let beforeDiff, afterDiff, renderHook, ummountHook;
  * @param {Object} [context={}] Initial root context object
  * @returns {string} serialized HTML
  */
-export default function renderToString(vnode, context) {
+export function renderToString(vnode, context) {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -379,3 +379,7 @@ const SELF_CLOSING = new Set([
 	'track',
 	'wbr'
 ]);
+
+export default renderToString;
+export const render = renderToString;
+export const renderToStaticMarkup = renderToString;
