@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.0.1
+
+### Patch Changes
+
+- [#292](https://github.com/preactjs/preact-render-to-string/pull/292) [`8f4692c`](https://github.com/preactjs/preact-render-to-string/commit/8f4692c49277591819acb74808a0e28f7cb30c2f) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix error in commonjs entry point
+
 ## 6.0.0
 
 ### Major Changes
