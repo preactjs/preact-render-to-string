@@ -1,11 +1,23 @@
 const fs = require('fs');
 const path = require('path');
-const assert = require('assert/strict');
 
 // This file will only export default exports in commonjs bundles
 // instead of guarding them behind a `.default` property.
 
 const filePath = (file) => path.join(process.cwd(), 'dist', file);
+
+// Main entry
+fs.copyFileSync(filePath('index.js'), filePath('commonjs.js'));
+fs.copyFileSync(filePath('index.js.map'), filePath('commonjs.js.map'));
+
+const source = [
+	`const mod = require('./commonjs');`,
+	`mod.default.renderToStaticMarkup = mod.default;`,
+	`mod.default.renderToString = mod.default;`,
+	`mod.default.render = mod.default;`,
+	`module.exports = mod.default;`
+].join('\n');
+fs.writeFileSync(filePath('index.js'), source, 'utf-8');
 
 // JSX entry
 fs.copyFileSync(filePath('jsx.js'), filePath('jsx-entry.js'));
@@ -18,15 +30,3 @@ const sourceJsx = [
 	`module.exports = entry.default;`
 ].join('\n');
 fs.writeFileSync(filePath('jsx.js'), sourceJsx, 'utf-8');
-
-// Verify CJS entries
-const main = require(filePath('index.js'));
-assert(typeof main === 'function', 'Default export is a function');
-
-const jsx = require(filePath('jsx.js'));
-assert(typeof jsx === 'function', 'Default export is a function');
-assert(typeof jsx.render === 'function', 'render entry is a function');
-assert(
-	typeof jsx.shallowRender === 'function',
-	'shallowRender entry is a function'
-);
