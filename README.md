@@ -86,6 +86,62 @@ app.get('/:fox', (req, res) => {
 
 ---
 
+### `Suspense` & `lazy` components with [`preact/compat`](https://www.npmjs.com/package/preact) & [`preact-ssr-prepass`](https://www.npmjs.com/package/preact-ssr-prepass)
+
+```bash
+npm install preact preact-render-to-string preact-ssr-prepass
+```
+
+```jsx
+export default () => {
+  return (
+    <h1>Home page</h1>
+  )
+}
+```
+
+```jsx
+import { Suspense, lazy } from "preact/compat"
+
+// Creation of the lazy component
+const HomePage = lazy(() => import("./pages/home"))
+
+const Main = () => {
+  return (
+    <Suspense fallback={<p>Loading</p>}>
+      <HomePage />
+    </Suspense>
+  )
+}
+```
+
+```jsx
+import { render } from "preact-render-to-string"
+import prepass from "preact-ssr-prepass"
+import { Main } from "./main"
+
+const main = async () => {
+  // Creation of the virtual DOM
+  const vdom = <Main />
+  
+  // Pre-rendering of lazy components
+  await prepass(vdom)
+  
+  // Rendering of components 
+  const html = render(vdom)
+  
+  console.log(html)
+  // <h1>Home page</h1>
+}
+
+// Execution & error handling
+main().catch(error => {
+  console.error(error)
+})
+```
+
+---
+
 ### License
 
 [MIT](http://choosealicense.com/licenses/mit/)

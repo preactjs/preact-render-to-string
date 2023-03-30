@@ -117,7 +117,7 @@ describe('render', () => {
 
 		it('should serialize defaultChecked prop to the checked attribute', () => {
 			let rendered = render(<input type="checkbox" defaultChecked />),
-				expected = `<input type="checkbox" checked />`;
+				expected = `<input type="checkbox" checked/>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -134,6 +134,23 @@ describe('render', () => {
 				expected = `<div aria-hidden="true" aria-whatever="false"></div>`;
 
 			expect(rendered).to.equal(expected);
+		});
+
+		it('should include boolean draggable attribute', () => {
+			let rendered = render(<div draggable />),
+				expected = `<div draggable="true"></div>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
+		it('should support false aria-* attributes', () => {
+			let rendered = render(<div aria-checked={false} />);
+			expect(rendered).to.equal(`<div aria-checked="false"></div>`);
+		});
+
+		it('should support false data-* attributes', () => {
+			let rendered = render(<div data-checked={false} />);
+			expect(rendered).to.equal(`<div data-checked="false"></div>`);
 		});
 
 		describe('attribute name sanitization', () => {
@@ -241,7 +258,7 @@ describe('render', () => {
 						<wbr />
 					</div>
 				),
-				expected = `<div><input type="text" /><wbr /></div>`;
+				expected = `<div><input type="text"/><wbr/></div>`;
 
 			expect(rendered).to.equal(expected);
 		});
@@ -1314,7 +1331,7 @@ describe('render', () => {
 				);
 			}
 
-			expect(render(<App />)).to.equal('<div><p>P481</p><p>P476951</p></div>');
+			expect(render(<App />)).to.equal('<div><p>P0-0</p><p>P0-1</p></div>');
 		});
 	});
 });

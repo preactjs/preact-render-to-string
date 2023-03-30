@@ -20,7 +20,7 @@ const isArray = Array.isArray;
 const assign = Object.assign;
 
 // Global state for the current render pass
-let beforeDiff, afterDiff, renderHook;
+let beforeDiff, afterDiff, renderHook, ummountHook;
 
 /**
  * Render Preact JSX + Components to an HTML string.
@@ -42,6 +42,7 @@ export default function renderToString(vnode, context, _rendererState) {
 	beforeDiff = options[DIFF];
 	afterDiff = options[DIFFED];
 	renderHook = options[RENDER];
+	ummountHook = options.unmount;
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
@@ -49,7 +50,7 @@ export default function renderToString(vnode, context, _rendererState) {
 	try {
 		return _renderToString(
 			vnode,
-			context || {},
+			context || EMPTY_OBJ,
 			false,
 			undefined,
 			parent,
@@ -69,6 +70,8 @@ function markAsDirty() {
 	this.__d = true;
 }
 
+const EMPTY_OBJ = {};
+
 /**
  * @param {VNode} vnode
  * @param {Record<string, unknown>} context
@@ -86,7 +89,7 @@ function renderClassComponent(vnode, context) {
 	// turn off stateful re-rendering:
 	c[DIRTY] = true;
 
-	if (c.state == null) c.state = {};
+	if (c.state == null) c.state = EMPTY_OBJ;
 
 	if (c[NEXT_STATE] == null) {
 		c[NEXT_STATE] = c.state;
@@ -158,15 +161,6 @@ function _renderToString(
 					parent,
 					renderer
 				);
-
-			if (
-				typeof child === 'string' ||
-				typeof child === 'number' ||
-				typeof child === 'bigint'
-			) {
-				// @ts-ignore manually constructing a Text vnode
-				vnode[i] = h(null, null, child);
-			}
 		}
 		return rendered;
 	}
@@ -185,8 +179,7 @@ function _renderToString(
 		component;
 
 	// Invoke rendering on Components
-	let isComponent = typeof type === 'function';
-	if (isComponent) {
+	if (typeof type === 'function') {
 		if (type === Fragment) {
 			rendered = props.children;
 		} else {
@@ -351,15 +344,18 @@ function _renderToString(
 				}
 				break;
 
-			default:
+			default: {
 				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
-				} else if (name[0] === 'a' && name[1] === 'r' && v != null) {
-					// serialize boolean aria-xyz attribute values as strings
+				} else if ((name[4] === '-' || name === 'draggable') && v != null) {
+					// serialize boolean aria-xyz or draggable attribute values as strings
+					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
+					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
 					v += '';
 				}
+			}
 		}
 
 		// write this attribute to the buffer
@@ -373,6 +369,8 @@ function _renderToString(
 	}
 
 	if (UNSAFE_NAME.test(type)) {
+		// this seems to performs a lot better than throwing
+		// return '<!-- -->';
 		throw new Error(`${type} is not a valid HTML tag name in ${s}>`);
 	}
 
@@ -397,28 +395,32 @@ function _renderToString(
 
 	if (afterDiff) afterDiff(vnode);
 	vnode[PARENT] = undefined;
-	if (options.unmount) options.unmount(vnode);
+	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
-	if (!html) {
-		switch (type) {
-			case 'area':
-			case 'base':
-			case 'br':
-			case 'col':
-			case 'embed':
-			case 'hr':
-			case 'img':
-			case 'input':
-			case 'link':
-			case 'meta':
-			case 'param':
-			case 'source':
-			case 'track':
-			case 'wbr':
-				return s + ' />';
-		}
+	if (!html && SELF_CLOSING.has(type)) {
+		return s + '/>';
 	}
 
 	return s + '>' + html + '</' + type + '>';
 }
+
+const XLINK_REPLACE_REGEX = /^xlink:?/;
+const SELF_CLOSING = new Set([
+	'area',
+	'base',
+	'br',
+	'col',
+	'command',
+	'embed',
+	'hr',
+	'img',
+	'input',
+	'keygen',
+	'link',
+	'meta',
+	'param',
+	'source',
+	'track',
+	'wbr'
+]);

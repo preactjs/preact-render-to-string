@@ -1,9 +1,8 @@
-// DOM properties that should NOT have "px" added when numeric
-export const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|^--/i;
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const XLINK = /^xlink:?./;
 
+// DOM properties that should NOT have "px" added when numeric
 const ENCODED_ENTITIES = /["&<]/;
 
 /** @param {string} str */
@@ -51,7 +50,44 @@ export let isLargeString = (s, length, ignoreLines) =>
 
 const JS_TO_CSS = {};
 
-const CSS_REGEX = /([A-Z])/g;
+const IS_NON_DIMENSIONAL = new Set([
+	'animation-iteration-count',
+	'border-image-outset',
+	'border-image-slice',
+	'border-image-width',
+	'box-flex',
+	'box-flex-group',
+	'box-ordinal-group',
+	'column-count',
+	'fill-opacity',
+	'flex',
+	'flex-grow',
+	'flex-negative',
+	'flex-order',
+	'flex-positive',
+	'flex-shrink',
+	'flood-opacity',
+	'font-weight',
+	'grid-column',
+	'grid-row',
+	'line-clamp',
+	'line-height',
+	'opacity',
+	'order',
+	'orphans',
+	'stop-opacity',
+	'stroke-dasharray',
+	'stroke-dashoffset',
+	'stroke-miterlimit',
+	'stroke-opacity',
+	'stroke-width',
+	'tab-size',
+	'widows',
+	'z-index',
+	'zoom'
+]);
+
+const CSS_REGEX = /[A-Z]/g;
 // Convert an Object style to a CSSText string
 export function styleObjToCss(s) {
 	let str = '';
@@ -62,16 +98,18 @@ export function styleObjToCss(s) {
 				prop[0] == '-'
 					? prop
 					: JS_TO_CSS[prop] ||
-					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$1').toLowerCase());
+					  (JS_TO_CSS[prop] = prop.replace(CSS_REGEX, '-$&').toLowerCase());
 
-			str =
-				str +
-				name +
-				':' +
-				val +
-				(typeof val === 'number' && IS_NON_DIMENSIONAL.test(prop) === false
-					? 'px;'
-					: ';');
+			let suffix = ';';
+			if (
+				typeof val === 'number' &&
+				// Exclude custom-attributes
+				!name.startsWith('--') &&
+				!IS_NON_DIMENSIONAL.has(name)
+			) {
+				suffix = 'px;';
+			}
+			str = str + name + ':' + val + suffix;
 		}
 	}
 	return str || undefined;
