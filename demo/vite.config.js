@@ -13,9 +13,11 @@ function ssrPlugin() {
 					return next();
 				}
 
-				const { render } = await server.ssrLoadModule(
+				const { render, abort } = await server.ssrLoadModule(
 					path.resolve(__dirname, './src/entry-server')
 				);
+
+				setTimeout(abort, 10000);
 
 				const indexHtml = await fs.readFile(
 					path.resolve(__dirname, './index.html'),

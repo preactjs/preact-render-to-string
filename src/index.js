@@ -245,7 +245,8 @@ function _renderToString(
 			);
 
 			if (afterDiff) afterDiff(vnode);
-			vnode[PARENT] = undefined;
+			// when we are dealing with suspense we can't do this...
+			// vnode[PARENT] = undefined;
 
 			if (options.unmount) options.unmount(vnode);
 
@@ -394,7 +395,7 @@ function _renderToString(
 	}
 
 	if (afterDiff) afterDiff(vnode);
-	vnode[PARENT] = undefined;
+	//vnode[PARENT] = undefined;
 	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:

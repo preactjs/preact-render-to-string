@@ -5,7 +5,7 @@
     "main": "server.js",
     "type": "module",
     "scripts": {
-        "dev": "vite",
+        "dev": "vite --force",
         "build": "npm run build:client && npm run build:server",
         "build:client": "vite build --outDir dist/client",
         "build:server": "vite build --ssr src/entry-server.jsx --outDir dist/server"

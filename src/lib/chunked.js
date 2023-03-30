@@ -39,6 +39,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 function handleError(error, vnode, renderChild) {
 	if (!error || !error.then) return;
 
+	console.log('--- IN HANDLER ---');
 	// walk up to the Suspense boundary
 	while ((vnode = vnode[PARENT])) {
 		let component = vnode[COMPONENT];
@@ -50,6 +51,7 @@ function handleError(error, vnode, renderChild) {
 	if (!vnode) return;
 
 	let root = vnode;
+	// TODO: we can't unset parent because of this traversal to Suspense
 	while (root !== null && !root.mask && root[PARENT] !== null) {
 		root = root[PARENT];
 	}
@@ -68,6 +70,7 @@ function handleError(error, vnode, renderChild) {
 
 	const promise = error.then(
 		() => {
+			console.log('resolved');
 			if (abortSignal && abortSignal.aborted) return;
 			this.onWrite(createSubtree(id, renderChild(vnode.props.children)));
 		},
