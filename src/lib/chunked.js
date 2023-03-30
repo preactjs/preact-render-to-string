@@ -1,5 +1,5 @@
 import renderToString from '../index';
-import { CHILD_DID_SUSPEND, COMPONENT, MASK, PARENT } from './constants';
+import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants';
 import { Deferred } from './util';
 import { createInitScript, createSubtree } from './client';
 
@@ -50,12 +50,12 @@ function handleError(error, vnode, renderChild) {
 	if (!vnode) return;
 
 	let root = vnode;
-	while (root !== null && !root[MASK] && root[PARENT] !== null) {
+	while (root !== null && !root.mask && root[PARENT] !== null) {
 		root = root[PARENT];
 	}
 
-	const mask = root[MASK] || (root[MASK] = [0, 0]);
-	const id = 'P' + mask[0] + '-' + mask[1]++ + this.suspended.length;
+	const mask = root.mask || (root.mask = [0, 0]);
+	const id = 'S' + mask[0] + '-' + mask[1]++ + this.suspended.length;
 
 	const race = new Deferred();
 
