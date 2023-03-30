@@ -49,7 +49,13 @@ function handleError(error, vnode, renderChild) {
 
 	if (!vnode) return;
 
-	const id = vnode[MASK] + this.suspended.length;
+	let root = vnode;
+	while (root !== null && !root[MASK] && root[PARENT] !== null) {
+		root = root[PARENT];
+	}
+
+	const mask = root[MASK] || (root[MASK] = [0, 0]);
+	const id = 'P' + mask[0] + '-' + mask[1]++ + this.suspended.length;
 
 	const race = new Deferred();
 
