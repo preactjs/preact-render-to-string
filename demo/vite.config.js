@@ -13,11 +13,11 @@ function ssrPlugin() {
 					return next();
 				}
 
-				const { render, abort } = await server.ssrLoadModule(
+				const { render } = await server.ssrLoadModule(
 					path.resolve(__dirname, './src/entry-server')
 				);
 
-				setTimeout(abort, 10000);
+				// setTimeout(abort, 10000);
 
 				const indexHtml = await fs.readFile(
 					path.resolve(__dirname, './index.html'),
@@ -44,7 +44,10 @@ export default defineConfig({
 		noExternal: /./
 	},
 	build: {
-		ssrManifest: true
+		ssrManifest: true,
+		commonjsOptions: {
+			transformMixedEsModules: true
+		}
 	},
 	resolve: {
 		alias: {

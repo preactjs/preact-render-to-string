@@ -30,8 +30,20 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	if (len > 0) {
 		onWrite('<div hidden>');
 		onWrite(createInitScript(len));
-		await Promise.all(renderer.suspended.map((s) => s.promise));
+		// We should keep checking all promises
+		await forkPromises(renderer);
 		onWrite('</div>');
+	}
+}
+
+async function forkPromises(renderer) {
+	if (renderer.suspended.length > 0) {
+		const suspensions = [...renderer.suspended];
+		await Promise.all(renderer.suspended.map((s) => s.promise));
+		renderer.suspended = renderer.suspended.filter(
+			(s) => !suspensions.includes(s)
+		);
+		await forkPromises(renderer);
 	}
 }
 
@@ -39,7 +51,6 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 function handleError(error, vnode, renderChild) {
 	if (!error || !error.then) return;
 
-	console.log('--- IN HANDLER ---');
 	// walk up to the Suspense boundary
 	while ((vnode = vnode[PARENT])) {
 		let component = vnode[COMPONENT];
@@ -50,15 +61,8 @@ function handleError(error, vnode, renderChild) {
 
 	if (!vnode) return;
 
-	let root = vnode;
-	// TODO: we can't unset parent because of this traversal to Suspense
-	while (root !== null && !root.mask && root[PARENT] !== null) {
-		root = root[PARENT];
-	}
-
-	const mask = root.mask || (root.mask = [0, 0]);
-	const id = 'S' + mask[0] + '-' + mask[1]++ + this.suspended.length;
-
+	const id = vnode.__v;
+	const found = this.suspended.find((x) => x.id === id);
 	const race = new Deferred();
 
 	const abortSignal = this.abortSignal;
@@ -70,9 +74,9 @@ function handleError(error, vnode, renderChild) {
 
 	const promise = error.then(
 		() => {
-			console.log('resolved');
 			if (abortSignal && abortSignal.aborted) return;
-			this.onWrite(createSubtree(id, renderChild(vnode.props.children)));
+			const child = renderChild(vnode.props.children);
+			if (child) this.onWrite(createSubtree(id, child));
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration
@@ -87,5 +91,7 @@ function handleError(error, vnode, renderChild) {
 
 	const fallback = renderChild(vnode.props.fallback);
 
-	return `<!--preact-island:${id}-->${fallback}<!--/preact-island:${id}-->`;
+	return found
+		? ''
+		: `<!--preact-island:${id}-->${fallback}<!--/preact-island:${id}-->`;
 }

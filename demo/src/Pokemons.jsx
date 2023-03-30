@@ -1,4 +1,4 @@
-import { gql, useQuery } from '@urql/preact';
+import { gql, useQuery } from 'urql';
 import { h } from 'preact';
 
 const POKEMONS_QUERY = gql`
@@ -17,7 +17,7 @@ const Counter = () => {
 	});
 
 	const { data, fetching, error } = result;
-
+	console.log('hydrated!');
 	return (
 		<div>
 			{fetching && <p>Loading...</p>}

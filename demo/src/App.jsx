@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { Suspense, lazy } from 'preact/compat';
-import { Client, Provider, cacheExchange, fetchExchange } from '@urql/preact';
+import { Client, Provider, cacheExchange, fetchExchange } from 'urql';
 
 const client = new Client({
 	url: 'https://trygql.formidable.dev/graphql/basic-pokedex',
