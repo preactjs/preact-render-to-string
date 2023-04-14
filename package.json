@@ -51,6 +51,7 @@
 		"src",
 		"dist",
 		"jsx.js",
+		"jsx.d.ts",
 		"typings.json"
 	],
 	"eslintConfig": {
