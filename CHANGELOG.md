@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.0.3
+
+### Patch Changes
+
+- [#298](https://github.com/preactjs/preact-render-to-string/pull/298) [`6a4b8ed`](https://github.com/preactjs/preact-render-to-string/commit/6a4b8edc3b60038d2dc539a9652db806c5c24616) Thanks [@shinyama-k](https://github.com/shinyama-k)! - Fix to add type file for jsx.js
+
 ## 6.0.2
 
 ### Patch Changes
