@@ -8,8 +8,8 @@ import {
 	UNSAFE_NAME,
 	XLINK,
 	VOID_ELEMENTS
-} from './util';
-import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './constants';
+} from './util.js';
+import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './constants.js';
 import { options, Fragment } from 'preact';
 
 /** @typedef {import('preact').VNode} VNode */
@@ -133,7 +133,6 @@ function _renderToStringPretty(
 				!nodeName.prototype ||
 				typeof nodeName.prototype.render !== 'function'
 			) {
-
 				// If a hook invokes setState() to invalidate the component during rendering,
 				// re-render it up to 25 times to allow "settling" of memoized states.
 				// Note:
@@ -149,7 +148,6 @@ function _renderToStringPretty(
 					rendered = nodeName.call(vnode.__c, props, cctx);
 				}
 			} else {
-
 				// c = new nodeName(props, context);
 				c = vnode.__c = new nodeName(props, cctx);
 				c.__v = vnode;

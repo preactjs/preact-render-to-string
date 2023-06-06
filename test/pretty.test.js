@@ -1,8 +1,8 @@
-import basicRender from '../src';
-import { render } from '../src/jsx';
+import basicRender from '../src/index.js';
+import { render } from '../src/jsx.js';
 import { h, Fragment } from 'preact';
 import { expect } from 'chai';
-import { dedent } from './utils';
+import { dedent } from './utils.js';
 
 describe('pretty', () => {
 	let prettyRender = (jsx) => render(jsx, {}, { pretty: true });
