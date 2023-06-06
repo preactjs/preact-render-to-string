@@ -1,6 +1,6 @@
-import render from '../src';
-import renderToStringPretty from '../src/pretty';
-import renderToStringJSX from '../src/jsx';
+import render from '../src/index.js';
+import renderToStringPretty from '../src/pretty.js';
+import renderToStringJSX from '../src/jsx.js';
 import {
 	h,
 	Component,

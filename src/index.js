@@ -1,4 +1,4 @@
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util';
+import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util.js';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -12,7 +12,7 @@ import {
 	RENDER,
 	SKIP_EFFECTS,
 	VNODE
-} from './constants';
+} from './constants.js';
 
 /** @typedef {import('preact').VNode} VNode */
 

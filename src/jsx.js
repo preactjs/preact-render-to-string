@@ -1,6 +1,6 @@
-import './polyfills';
-import renderToString from './pretty';
-import { indent, encodeEntities } from './util';
+import './polyfills.js';
+import renderToString from './pretty.js';
+import { indent, encodeEntities } from './util.js';
 import prettyFormat from 'pretty-format';
 
 /** @typedef {import('preact').VNode} VNode */
