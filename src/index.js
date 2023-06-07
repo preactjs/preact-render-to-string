@@ -165,6 +165,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Invoke rendering on Components
 	if (typeof type === 'function') {
 		if (type === Fragment) {
+			// Fragments are the least use components of core that's why
+			// branching here for comments has the least effect on perf.
+			if (props.comment) {
+				return '<!--' + encodeEntities(props.comment || '') + '-->';
+			}
+
 			rendered = props.children;
 		} else {
 			contextType = type.contextType;

@@ -1309,6 +1309,22 @@ describe('render', () => {
 		expect(render(<div>{() => {}}</div>)).to.equal('<div></div>');
 	});
 
+	describe('HTML Comments', () => {
+		it('should render HTML comments via Fragments', () => {
+			expect(render(<Fragment comment="foo" />)).to.equal('<!--foo-->');
+		});
+
+		it('should ignore children with comment prop', () => {
+			expect(
+				render(
+					<Fragment comment="foo">
+						<p>foo</p>
+					</Fragment>
+				)
+			).to.equal('<!--foo-->');
+		});
+	});
+
 	describe('vnode masks (useId)', () => {
 		it('should skip component top level Fragment child', () => {
 			const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
