@@ -48,13 +48,19 @@ export function renderToString(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		return _renderToString(
+		const rendered = _renderToString(
 			vnode,
 			context || EMPTY_OBJ,
 			false,
 			undefined,
 			parent
 		);
+
+		if (Array.isArray(rendered)) {
+			return Promise.all(rendered).then((rendered) => rendered.join(''));
+		}
+
+		return rendered;
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -120,7 +126,7 @@ function renderClassComponent(vnode, context) {
  * @param {boolean} isSvgMode
  * @param {any} selectValue
  * @param {VNode} parent
- * @returns {string}
+ * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
 function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Ignore non-rendered VNodes/values
@@ -136,16 +142,43 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
-		let rendered = '';
+		let rendered = '',
+			renderArray;
 		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			let child = vnode[i];
 			if (child == null || typeof child === 'boolean') continue;
 
-			rendered =
-				rendered +
-				_renderToString(child, context, isSvgMode, selectValue, parent);
+			const childRender = _renderToString(
+				child,
+				context,
+				isSvgMode,
+				selectValue,
+				parent
+			);
+
+			if (typeof childRender === 'string') {
+				rendered += childRender;
+			} else {
+				renderArray = renderArray || [];
+
+				if (rendered) renderArray.push(rendered);
+
+				rendered = '';
+
+				if (Array.isArray(childRender)) {
+					renderArray.push(...childRender);
+				} else {
+					renderArray.push(childRender);
+				}
+			}
 		}
+
+		if (renderArray) {
+			if (rendered) renderArray.push(rendered);
+			return renderArray;
+		}
+
 		return rendered;
 	}
 
@@ -217,20 +250,28 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered != null && rendered.type === Fragment && rendered.key == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
-		if (afterDiff) afterDiff(vnode);
-		vnode[PARENT] = undefined;
+		try {
+			// Recurse into children before invoking the after-diff hook
+			const str = _renderToString(
+				rendered,
+				context,
+				isSvgMode,
+				selectValue,
+				vnode
+			);
+			if (afterDiff) afterDiff(vnode);
+			vnode[PARENT] = undefined;
 
-		if (ummountHook) ummountHook(vnode);
+			if (ummountHook) ummountHook(vnode);
 
-		return str;
+			return str;
+		} catch (error) {
+			if (!error || typeof error.then !== 'function') throw error;
+
+			return error.then(() =>
+				_renderToString(rendered, context, isSvgMode, selectValue, vnode)
+			);
+		}
 	}
 
 	// Serialize Element VNodes to HTML
@@ -357,7 +398,13 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		return s + '/>';
 	}
 
-	return s + '>' + html + '</' + type + '>';
+	const endTag = '</' + type + '>';
+	const startTag = s + '>';
+
+	if (Array.isArray(html)) return [startTag, ...html, endTag];
+	else if (typeof html !== 'string') return [startTag, html, endTag];
+
+	return startTag + html + endTag;
 }
 
 const XLINK_REPLACE_REGEX = /^xlink:?/;
