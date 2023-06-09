@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.1.0
+
+### Minor Changes
+
+- [#301](https://github.com/preactjs/preact-render-to-string/pull/301) [`659b456`](https://github.com/preactjs/preact-render-to-string/commit/659b45623093ae0a93cb29354b069a25cf6351b5) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add experimental ability to render HTML comments via `<Fragment UNSTABLE_comment="my-comment" />`. When the `UNSTABLE_comment` prop is present all children of that `Fragment` will be ignored and a HTML comment will be rendered instead. This feature is added to allow framework authors to experiment with marking DOM for hydration in the client. Note that it's marked as unstable and might change in the future.
+
 ## 6.0.3
 
 ### Patch Changes
