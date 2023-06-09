@@ -1311,13 +1311,15 @@ describe('render', () => {
 
 	describe('HTML Comments', () => {
 		it('should render HTML comments via Fragments', () => {
-			expect(render(<Fragment comment="foo" />)).to.equal('<!--foo-->');
+			expect(render(<Fragment UNSTABLE_comment="foo" />)).to.equal(
+				'<!--foo-->'
+			);
 		});
 
 		it('should ignore children with comment prop', () => {
 			expect(
 				render(
-					<Fragment comment="foo">
+					<Fragment UNSTABLE_comment="foo">
 						<p>foo</p>
 					</Fragment>
 				)
