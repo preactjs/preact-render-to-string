@@ -84,6 +84,17 @@ app.get('/:fox', (req, res) => {
 });
 ```
 
+### Error Boundaries
+
+Rendering errors can be caught by Preact via `getDerivedStateFromErrors` or `componentDidCatch`. To enable that feature in `preact-render-to-string` set `errorBoundaries = true`
+
+```js
+import { options } from 'preact';
+
+// Enable error boundaries in `preact-render-to-string`
+options.errorBoundaries = true;
+```
+
 ---
 
 ### `Suspense` & `lazy` components with [`preact/compat`](https://www.npmjs.com/package/preact) & [`preact-ssr-prepass`](https://www.npmjs.com/package/preact-ssr-prepass)
@@ -94,50 +105,48 @@ npm install preact preact-render-to-string preact-ssr-prepass
 
 ```jsx
 export default () => {
-  return (
-    <h1>Home page</h1>
-  )
-}
+	return <h1>Home page</h1>;
+};
 ```
 
 ```jsx
-import { Suspense, lazy } from "preact/compat"
+import { Suspense, lazy } from 'preact/compat';
 
 // Creation of the lazy component
-const HomePage = lazy(() => import("./pages/home"))
+const HomePage = lazy(() => import('./pages/home'));
 
 const Main = () => {
-  return (
-    <Suspense fallback={<p>Loading</p>}>
-      <HomePage />
-    </Suspense>
-  )
-}
+	return (
+		<Suspense fallback={<p>Loading</p>}>
+			<HomePage />
+		</Suspense>
+	);
+};
 ```
 
 ```jsx
-import { render } from "preact-render-to-string"
-import prepass from "preact-ssr-prepass"
-import { Main } from "./main"
+import { render } from 'preact-render-to-string';
+import prepass from 'preact-ssr-prepass';
+import { Main } from './main';
 
 const main = async () => {
-  // Creation of the virtual DOM
-  const vdom = <Main />
-  
-  // Pre-rendering of lazy components
-  await prepass(vdom)
-  
-  // Rendering of components 
-  const html = render(vdom)
-  
-  console.log(html)
-  // <h1>Home page</h1>
-}
+	// Creation of the virtual DOM
+	const vdom = <Main />;
+
+	// Pre-rendering of lazy components
+	await prepass(vdom);
+
+	// Rendering of components
+	const html = render(vdom);
+
+	console.log(html);
+	// <h1>Home page</h1>
+};
 
 // Execution & error handling
-main().catch(error => {
-  console.error(error)
-})
+main().catch((error) => {
+	console.error(error);
+});
 ```
 
 ---
