@@ -32,6 +32,7 @@ const noop = () => {};
  *	@param {Boolean} [options.xml=false]		If `true`, uses self-closing tags for elements without children.
  *	@param {Boolean} [options.pretty=false]		If `true`, adds whitespace for readability
  *	@param {RegExp|undefined} [options.voidElements]       RegeEx that matches elements that are considered void (self-closing)
+ *	@param {boolean|undefined} [options.errorBoundaries=false]       Enables support for error boundaries
  */
 renderToString.render = renderToString;
 
@@ -205,6 +206,43 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 			}
 
 			if (options.diffed) options.diffed(vnode);
+
+			if (opts.errorBoundaries && c.componentDidCatch) {
+				try {
+					return _renderToString(
+						rendered,
+						context,
+						opts,
+						opts.shallowHighOrder !== false,
+						isSvgMode,
+						selectValue
+					);
+				} catch (err) {
+					c.componentDidCatch(err, {});
+
+					let nextState =
+						c._nextState !== c.state
+							? c._nextState
+							: c.__s !== c.state
+							? c.__s
+							: c.state;
+
+					// Check if there is a potential state update. Note that
+					// we'll ignore any state updates inside cWU for now
+					// because that's an infinite loop anyway in the browser
+					if (c.state !== nextState && c.componentWillUpdate) {
+						c.componentWillUpdate();
+					}
+
+					// Flush potential state updates
+					c.state = nextState;
+
+					rendered = c.render(c.props, c.state, c.context);
+
+					// console.log('FAILING', c);
+				}
+			}
+
 			return _renderToString(
 				rendered,
 				context,
