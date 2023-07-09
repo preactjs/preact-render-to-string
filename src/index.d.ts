@@ -4,6 +4,8 @@ interface Options {
 	shallow?: boolean;
 	xml?: boolean;
 	pretty?: boolean | string;
+	/** Enable or disable error boundaries (default: false) */
+	errorBoundaries?: boolean;
 }
 
 export function render(vnode: VNode, context?: any, options?: Options): string;
