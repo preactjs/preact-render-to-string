@@ -207,7 +207,10 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 
 			if (options.diffed) options.diffed(vnode);
 
-			if (opts.errorBoundaries && c.componentDidCatch) {
+			if (
+				opts.errorBoundaries &&
+				(c.componentDidCatch || nodeName.getDerivedStateFromError)
+			) {
 				try {
 					return _renderToString(
 						rendered,
@@ -218,7 +221,16 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 						selectValue
 					);
 				} catch (err) {
-					c.componentDidCatch(err, {});
+					if (nodeName.getDerivedStateFromError) {
+						let nextState = nodeName.getDerivedStateFromError(err);
+						c.state = c._nextState = c.__s = Object.assign(
+							{},
+							c.state,
+							nextState
+						);
+					}
+
+					if (c.componentDidCatch) c.componentDidCatch(err, {});
 
 					let nextState =
 						c._nextState !== c.state
@@ -238,8 +250,6 @@ function _renderToString(vnode, context, opts, inner, isSvgMode, selectValue) {
 					c.state = nextState;
 
 					rendered = c.render(c.props, c.state, c.context);
-
-					// console.log('FAILING', c);
 				}
 			}
 
