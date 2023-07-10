@@ -1351,4 +1351,251 @@ describe('render', () => {
 			expect(render(<App />)).to.equal('<div><p>P0-0</p><p>P0-1</p></div>');
 		});
 	});
+
+	describe('Error Handling', () => {
+		function Thrower() {
+			throw new Error('fail');
+		}
+
+		function renderWithError(vnode) {
+			options.errorBoundaries = true;
+			try {
+				return render(vnode);
+			} finally {
+				options.errorBoundaries = false;
+			}
+		}
+
+		describe('componentDidCatch', () => {
+			it('should disable componentDidCatch by default', () => {
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error) {
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				expect(() => render(<ErrorBoundary />)).to.throw('fail');
+			});
+
+			it('should invoke componentDidCatch', () => {
+				let args = null;
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error, info) {
+						args = { error: error.message, info };
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+				expect(args).to.deep.equal({ error: 'fail', info: {} });
+			});
+
+			it("should not invoke parent's componentDidCatch", () => {
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error) {
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let called = false;
+				class App extends Component {
+					componentDidCatch() {
+						called = true;
+					}
+					render() {
+						return <ErrorBoundary />;
+					}
+				}
+
+				renderWithError(<App />);
+				expect(called).to.equal(false, "Parent's componentDidCatch was called");
+			});
+
+			it('should invoke componentDidCatch if child throws in gDSFP', () => {
+				let throwerCatchCalled = false;
+
+				class Thrower extends Component {
+					static getDerivedStateFromProps(props) {
+						throw new Error('fail');
+					}
+
+					componentDidCatch() {
+						throwerCatchCalled = true;
+					}
+
+					render() {
+						return <p>it doesn't work</p>;
+					}
+				}
+
+				let args = null;
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error, info) {
+						args = { error: error.message, info };
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+				expect(args).to.deep.equal({ error: 'fail', info: {} });
+
+				expect(throwerCatchCalled).to.equal(
+					false,
+					"Thrower's componentDidCatch should not be called"
+				);
+			});
+
+			it('should invoke componentWillUpdate on state render', () => {
+				let calledWillUpdate = false;
+
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentWillUpdate() {
+						calledWillUpdate = true;
+					}
+					componentDidCatch(error, info) {
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+				expect(calledWillUpdate).to.equal(
+					true,
+					'Did not call componentWillUpdate'
+				);
+			});
+		});
+
+		describe('getDerivedStateFromError', () => {
+			it('should disable gDSFE by default', () => {
+				class ErrorBoundary extends Component {
+					static getDerivedStateFromError(error) {
+						return { error };
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				expect(() => render(<ErrorBoundary />)).to.throw('fail');
+			});
+
+			it('should be invoked', () => {
+				let calls = [];
+				let cDCState = null;
+				let renderState = null;
+				class ErrorBoundary extends Component {
+					static getDerivedStateFromError(error) {
+						calls.push(['gDSFE', error.message]);
+						return { foo: 1 };
+					}
+
+					componentDidCatch(error, info) {
+						calls.push(['cDC', error.message]);
+						cDCState = this.state;
+						this.setState({ bar: 2 });
+					}
+
+					render() {
+						renderState = this.state;
+						return this.state.foo ? <p>it works</p> : <Thrower />;
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>it works</p>');
+				expect(calls).to.deep.equal([
+					['gDSFE', 'fail'],
+					['cDC', 'fail']
+				]);
+				expect(cDCState).to.deep.equal({});
+				expect(renderState).to.deep.equal({
+					foo: 1,
+					bar: 2
+				});
+			});
+
+			it('should work without componentDidCatch', () => {
+				class ErrorBoundary extends Component {
+					static getDerivedStateFromError(error) {
+						return { error: error.message };
+					}
+
+					render() {
+						return this.state.error ? <p>{this.state.error}</p> : <Thrower />;
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+			});
+		});
+	});
 });

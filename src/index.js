@@ -78,7 +78,15 @@ const EMPTY_OBJ = {};
 function renderClassComponent(vnode, context) {
 	let type = /** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
 
-	let c = new type(vnode.props, context);
+	let isMounting = true;
+	let c;
+	if (vnode[COMPONENT]) {
+		isMounting = false;
+		c = vnode[COMPONENT];
+		c.state = c[NEXT_STATE];
+	} else {
+		c = new type(vnode.props, context);
+	}
 
 	vnode[COMPONENT] = c;
 	c[VNODE] = vnode;
@@ -100,12 +108,14 @@ function renderClassComponent(vnode, context) {
 			c.state,
 			type.getDerivedStateFromProps(c.props, c.state)
 		);
-	} else if (c.componentWillMount) {
+	} else if (isMounting && c.componentWillMount) {
 		c.componentWillMount();
 
 		// If the user called setState in cWM we need to flush pending,
 		// state updates. This is the same behaviour in React.
 		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
+	} else if (!isMounting && c.componentWillUpdate) {
+		c.componentWillUpdate();
 	}
 
 	if (renderHook) renderHook(vnode);
@@ -214,6 +224,69 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 			if (component.getChildContext != null) {
 				context = assign({}, context, component.getChildContext());
+			}
+
+			if (
+				(type.getDerivedStateFromError || component.componentDidCatch) &&
+				options.errorBoundaries
+			) {
+				let str = '';
+				// When a component returns a Fragment node we flatten it in core, so we
+				// need to mirror that logic here too
+				let isTopLevelFragment =
+					rendered != null &&
+					rendered.type === Fragment &&
+					rendered.key == null;
+				rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+				try {
+					str = _renderToString(
+						rendered,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode
+					);
+					return str;
+				} catch (err) {
+					if (type.getDerivedStateFromError) {
+						component[NEXT_STATE] = type.getDerivedStateFromError(err);
+					}
+
+					if (component.componentDidCatch) {
+						component.componentDidCatch(err, {});
+					}
+
+					if (component[DIRTY]) {
+						rendered = renderClassComponent(vnode, context);
+						component = vnode[COMPONENT];
+
+						if (component.getChildContext != null) {
+							context = assign({}, context, component.getChildContext());
+						}
+
+						let isTopLevelFragment =
+							rendered != null &&
+							rendered.type === Fragment &&
+							rendered.key == null;
+						rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+						str = _renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode
+						);
+					}
+
+					return str;
+				} finally {
+					if (afterDiff) afterDiff(vnode);
+					vnode[PARENT] = undefined;
+
+					if (ummountHook) ummountHook(vnode);
+				}
 			}
 		}
 
