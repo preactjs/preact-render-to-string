@@ -1,5 +1,20 @@
 # preact-render-to-string
 
+## 6.2.0
+
+### Minor Changes
+
+- [#305](https://github.com/preactjs/preact-render-to-string/pull/305) [`568f139`](https://github.com/preactjs/preact-render-to-string/commit/568f139a6c7916e0b6eebb7c51f1abf035850b7c) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add support for error boundaries via `componentDidCatch` and `getDerivedStateFromError`
+
+  This feature is disabled by default and can be enabled by toggling the `errorBoundaries` option:
+
+  ```js
+  import { options } from 'preact';
+
+  // Enable error boundaries
+  options.errorBoundaries = true;
+  ```
+
 ## 6.1.0
 
 ### Minor Changes
