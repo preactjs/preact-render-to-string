@@ -1,7 +1,7 @@
-import renderToString from '../index';
-import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants';
-import { Deferred } from './util';
-import { createInitScript, createSubtree } from './client';
+import { renderToString } from '../index.js';
+import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
+import { Deferred } from './util.js';
+import { createInitScript, createSubtree } from './client.js';
 
 /**
  * @param {VNode} vnode

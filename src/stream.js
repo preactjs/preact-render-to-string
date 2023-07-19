@@ -1,5 +1,5 @@
-import { Deferred } from './lib/util';
-import { renderToChunks } from './lib/chunked';
+import { Deferred } from './lib/util.js';
+import { renderToChunks } from './lib/chunked.js';
 
 /** @typedef {ReadableStream<Uint8Array> & { allReady: Promise<void>}} RenderStream */
 

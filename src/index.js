@@ -1,5 +1,5 @@
 import { options, h, Fragment } from 'preact';
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './lib/util';
+import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './lib/util.js';
 import {
 	CHILDREN,
 	COMMIT,
@@ -13,7 +13,7 @@ import {
 	SKIP_EFFECTS,
 	VNODE,
 	CATCH_ERROR
-} from './lib/constants';
+} from './lib/constants.js';
 
 const EMPTY_ARR = [];
 const isArray = Array.isArray;
