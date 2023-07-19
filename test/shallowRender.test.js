@@ -1,4 +1,4 @@
-import { shallowRender } from '../src/jsx';
+import { shallowRender } from '../src/jsx.js';
 import { h, Fragment } from 'preact';
 import { expect } from 'chai';
 import { spy } from 'sinon';

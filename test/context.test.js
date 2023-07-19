@@ -1,7 +1,7 @@
-import render from '../src/jsx';
+import render from '../src/jsx.js';
 import { h, createContext, Component } from 'preact';
 import { expect } from 'chai';
-import { dedent } from './utils';
+import { dedent } from './utils.js';
 
 describe('context', () => {
 	let renderJsx = (jsx, opts) => render(jsx, null, opts).replace(/ {2}/g, '\t');

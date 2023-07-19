@@ -1,6 +1,6 @@
-import './lib/polyfills';
-import renderToString from './pretty';
-import { indent, encodeEntities } from './lib/util';
+import './lib/polyfills.js';
+import renderToString from './pretty.js';
+import { indent, encodeEntities } from './lib/util.js';
 import prettyFormat from 'pretty-format';
 
 // we have to patch in Array support, Possible issue in npm.im/pretty-format

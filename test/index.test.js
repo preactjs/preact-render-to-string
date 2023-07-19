@@ -1,5 +1,5 @@
-import renderToString from '../src';
-import { default as renderToStringPretty, shallowRender } from '../src/jsx';
+import renderToString from '../src/index.js';
+import { default as renderToStringPretty, shallowRender } from '../src/jsx.js';
 import { expect } from 'chai';
 
 describe('render-to-string', () => {

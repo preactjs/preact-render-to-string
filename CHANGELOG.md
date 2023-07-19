@@ -1,5 +1,44 @@
 # preact-render-to-string
 
+## 6.2.0
+
+### Minor Changes
+
+- [#305](https://github.com/preactjs/preact-render-to-string/pull/305) [`568f139`](https://github.com/preactjs/preact-render-to-string/commit/568f139a6c7916e0b6eebb7c51f1abf035850b7c) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add support for error boundaries via `componentDidCatch` and `getDerivedStateFromError`
+
+  This feature is disabled by default and can be enabled by toggling the `errorBoundaries` option:
+
+  ```js
+  import { options } from 'preact';
+
+  // Enable error boundaries
+  options.errorBoundaries = true;
+  ```
+
+## 6.1.0
+
+### Minor Changes
+
+- [#301](https://github.com/preactjs/preact-render-to-string/pull/301) [`659b456`](https://github.com/preactjs/preact-render-to-string/commit/659b45623093ae0a93cb29354b069a25cf6351b5) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add experimental ability to render HTML comments via `<Fragment UNSTABLE_comment="my-comment" />`. When the `UNSTABLE_comment` prop is present all children of that `Fragment` will be ignored and a HTML comment will be rendered instead. This feature is added to allow framework authors to experiment with marking DOM for hydration in the client. Note that it's marked as unstable and might change in the future.
+
+## 6.0.3
+
+### Patch Changes
+
+- [#298](https://github.com/preactjs/preact-render-to-string/pull/298) [`6a4b8ed`](https://github.com/preactjs/preact-render-to-string/commit/6a4b8edc3b60038d2dc539a9652db806c5c24616) Thanks [@shinyama-k](https://github.com/shinyama-k)! - Fix to add type file for jsx.js
+
+## 6.0.2
+
+### Patch Changes
+
+- [#294](https://github.com/preactjs/preact-render-to-string/pull/294) [`637b302`](https://github.com/preactjs/preact-render-to-string/commit/637b3021ff05a0729a1a7c0eb965ce3fc3556af6) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Bring back exports from 5.x to make migration easier
+
+## 6.0.1
+
+### Patch Changes
+
+- [#292](https://github.com/preactjs/preact-render-to-string/pull/292) [`8f4692c`](https://github.com/preactjs/preact-render-to-string/commit/8f4692c49277591819acb74808a0e28f7cb30c2f) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix error in commonjs entry point
+
 ## 6.0.0
 
 ### Major Changes

@@ -29,7 +29,7 @@ let beforeDiff, afterDiff, renderHook, ummountHook;
  * @param {RendererState} [_rendererState] for internal use
  * @returns {string} serialized HTML
  */
-export default function renderToString(vnode, context, _rendererState) {
+export function renderToString(vnode, context, _rendererState) {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -79,7 +79,15 @@ const EMPTY_OBJ = {};
 function renderClassComponent(vnode, context) {
 	let type = /** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
 
-	let c = new type(vnode.props, context);
+	let isMounting = true;
+	let c;
+	if (vnode[COMPONENT]) {
+		isMounting = false;
+		c = vnode[COMPONENT];
+		c.state = c[NEXT_STATE];
+	} else {
+		c = new type(vnode.props, context);
+	}
 
 	vnode[COMPONENT] = c;
 	c[VNODE] = vnode;
@@ -101,12 +109,14 @@ function renderClassComponent(vnode, context) {
 			c.state,
 			type.getDerivedStateFromProps(c.props, c.state)
 		);
-	} else if (c.componentWillMount) {
+	} else if (isMounting && c.componentWillMount) {
 		c.componentWillMount();
 
 		// If the user called setState in cWM we need to flush pending,
 		// state updates. This is the same behaviour in React.
 		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
+	} else if (!isMounting && c.componentWillUpdate) {
+		c.componentWillUpdate();
 	}
 
 	if (renderHook) renderHook(vnode);
@@ -181,6 +191,12 @@ function _renderToString(
 	// Invoke rendering on Components
 	if (typeof type === 'function') {
 		if (type === Fragment) {
+			// Fragments are the least used components of core that's why
+			// branching here for comments has the least effect on perf.
+			if (props.UNSTABLE_comment) {
+				return '<!--' + encodeEntities(props.UNSTABLE_comment || '') + '-->';
+			}
+
 			rendered = props.children;
 		} else {
 			contextType = type.contextType;
@@ -224,6 +240,69 @@ function _renderToString(
 
 			if (component.getChildContext != null) {
 				context = assign({}, context, component.getChildContext());
+			}
+
+			if (
+				(type.getDerivedStateFromError || component.componentDidCatch) &&
+				options.errorBoundaries
+			) {
+				let str = '';
+				// When a component returns a Fragment node we flatten it in core, so we
+				// need to mirror that logic here too
+				let isTopLevelFragment =
+					rendered != null &&
+					rendered.type === Fragment &&
+					rendered.key == null;
+				rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+				try {
+					str = _renderToString(
+						rendered,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode
+					);
+					return str;
+				} catch (err) {
+					if (type.getDerivedStateFromError) {
+						component[NEXT_STATE] = type.getDerivedStateFromError(err);
+					}
+
+					if (component.componentDidCatch) {
+						component.componentDidCatch(err, {});
+					}
+
+					if (component[DIRTY]) {
+						rendered = renderClassComponent(vnode, context);
+						component = vnode[COMPONENT];
+
+						if (component.getChildContext != null) {
+							context = assign({}, context, component.getChildContext());
+						}
+
+						let isTopLevelFragment =
+							rendered != null &&
+							rendered.type === Fragment &&
+							rendered.key == null;
+						rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+						str = _renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode
+						);
+					}
+
+					return str;
+				} finally {
+					if (afterDiff) afterDiff(vnode);
+					vnode[PARENT] = undefined;
+
+					if (ummountHook) ummountHook(vnode);
+				}
 			}
 		}
 
@@ -425,3 +504,7 @@ const SELF_CLOSING = new Set([
 	'track',
 	'wbr'
 ]);
+
+export default renderToString;
+export const render = renderToString;
+export const renderToStaticMarkup = renderToString;

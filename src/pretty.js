@@ -8,8 +8,9 @@ import {
 	UNSAFE_NAME,
 	XLINK,
 	VOID_ELEMENTS
-} from './lib/util';
+} from './lib/util.js';
 import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './lib/constants';
+import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './constants.js';
 import { options, Fragment } from 'preact';
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
