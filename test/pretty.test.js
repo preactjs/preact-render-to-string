@@ -5,7 +5,7 @@ import { expect } from 'chai';
 import { dedent } from './utils.js';
 
 describe('pretty', () => {
-	let prettyRender = (jsx) => render(jsx, {}, { pretty: true });
+	let prettyRender = (jsx, opts) => render(jsx, {}, { pretty: true, ...opts });
 
 	it('should render no whitespace by default', () => {
 		let rendered = basicRender(
@@ -195,5 +195,45 @@ describe('pretty', () => {
 
 	it('should not render function children', () => {
 		expect(prettyRender(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
+
+	it('transforms attributes with custom attributeHook option', () => {
+		function attributeHook(name) {
+			const DASHED_ATTRS = /^(acceptC|httpE|(clip|color|fill|font|glyph|marker|stop|stroke|text|vert)[A-Z])/;
+			const CAMEL_ATTRS = /^(isP|viewB)/;
+			const COLON_ATTRS = /^(xlink|xml|xmlns)([A-Z])/;
+			const CAPITAL_REGEXP = /([A-Z])/g;
+			if (CAMEL_ATTRS.test(name)) return name;
+			if (DASHED_ATTRS.test(name))
+				return name.replace(CAPITAL_REGEXP, '-$1').toLowerCase();
+			if (COLON_ATTRS.test(name))
+				return name.replace(CAPITAL_REGEXP, ':$1').toLowerCase();
+			return name.toLowerCase();
+		}
+
+		const content = (
+			<html>
+				<head>
+					<meta charSet="utf=8" />
+					<meta httpEquiv="refresh" />
+					<link rel="preconnect" href="https://foo.com" crossOrigin />
+					<link rel="preconnect" href="https://bar.com" crossOrigin={false} />
+				</head>
+				<body>
+					<img srcSet="foo.png, foo2.png 2x" />
+					<svg xmlSpace="preserve" viewBox="0 0 10 10" fillRule="nonzero">
+						<foreignObject>
+							<div xlinkHref="#" />
+						</foreignObject>
+					</svg>
+				</body>
+			</html>
+		);
+
+		const expected =
+			'<html>\n\t<head>\n\t\t<meta charset="utf=8" />\n\t\t<meta http-equiv="refresh" />\n\t\t<link rel="preconnect" href="https://foo.com" crossorigin />\n\t\t<link rel="preconnect" href="https://bar.com" />\n\t</head>\n\t<body>\n\t\t<img srcset="foo.png, foo2.png 2x" />\n\t\t<svg xml:space="preserve" viewBox="0 0 10 10" fill-rule="nonzero">\n\t\t\t<foreignObject>\n\t\t\t\t<div xlink:href="#"></div>\n\t\t\t</foreignObject>\n\t\t</svg>\n\t</body>\n</html>';
+
+		const rendered = prettyRender(content, { attributeHook });
+		expect(rendered).to.equal(expected);
 	});
 });

@@ -8,6 +8,7 @@ interface Options {
 	functions?: boolean;
 	functionNames?: boolean;
 	skipFalseAttributes?: boolean;
+	attributeHook?: (name: string) => string;
 }
 
 export default function renderToStringPretty(

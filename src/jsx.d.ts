@@ -8,6 +8,7 @@ interface Options {
 	functions?: boolean;
 	functionNames?: boolean;
 	skipFalseAttributes?: boolean;
+	attributeHook?: (name: string) => string;
 }
 
 export default function renderToStringPretty(
@@ -15,6 +16,7 @@ export default function renderToStringPretty(
 	context?: any,
 	options?: Options
 ): string;
+
 export function render(vnode: VNode, context?: any, options?: Options): string;
 
 export function shallowRender(

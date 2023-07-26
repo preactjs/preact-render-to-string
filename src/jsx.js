@@ -25,7 +25,7 @@ let prettyFormatOpts = {
 	plugins: [preactPlugin]
 };
 
-function attributeHook(name, value, context, opts, isComponent) {
+function jsxAttributeHook(name, value, context, opts, isComponent) {
 	let type = typeof value;
 
 	// Use render-to-string's built-in handling for these properties
@@ -60,7 +60,7 @@ function attributeHook(name, value, context, opts, isComponent) {
 }
 
 let defaultOpts = {
-	attributeHook,
+	jsxAttributeHook,
 	jsx: true,
 	xml: false,
 	functions: true,
@@ -83,7 +83,7 @@ let defaultOpts = {
  */
 export default function renderToStringPretty(vnode, context, options) {
 	const opts = Object.assign({}, defaultOpts, options || {});
-	if (!opts.jsx) opts.attributeHook = null;
+	if (!opts.jsx || opts.attributeHook) opts.jsxAttributeHook = null;
 	return renderToString(vnode, context, opts);
 }
 export { renderToStringPretty as render };

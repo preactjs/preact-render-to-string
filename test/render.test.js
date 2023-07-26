@@ -1600,45 +1600,44 @@ describe('render', () => {
 	});
 
 	describe('Render Options', () => {
-		describe('Attribute Hook', () => {
-			it('Transforms attributes with custom attrHook option', () => {
-				function attrHook(name) {
-					const DASHED_ATTRS = /^(acceptC|httpE|(clip|color|fill|font|glyph|marker|stop|stroke|text|vert)[A-Z])/;
-					const CAMEL_ATTRS = /^(isP|viewB)/;
-					const COLON_ATTRS = /^(xlink|xml|xmlns)([A-Z])/;
-					const CAPITAL_REGEXP = /([A-Z])/g;
-					if (CAMEL_ATTRS.test(name)) return name;
-					if (DASHED_ATTRS.test(name))
-						return name.replace(CAPITAL_REGEXP, '-$1').toLowerCase();
-					if (COLON_ATTRS.test(name))
-						return name.replace(CAPITAL_REGEXP, ':$1').toLowerCase();
-					return name.toLowerCase();
-				}
+		it('transforms attributes with custom attributeHook option', () => {
+			function attributeHook(name) {
+				const DASHED_ATTRS = /^(acceptC|httpE|(clip|color|fill|font|glyph|marker|stop|stroke|text|vert)[A-Z])/;
+				const CAMEL_ATTRS = /^(isP|viewB)/;
+				const COLON_ATTRS = /^(xlink|xml|xmlns)([A-Z])/;
+				const CAPITAL_REGEXP = /([A-Z])/g;
+				if (CAMEL_ATTRS.test(name)) return name;
+				if (DASHED_ATTRS.test(name))
+					return name.replace(CAPITAL_REGEXP, '-$1').toLowerCase();
+				if (COLON_ATTRS.test(name))
+					return name.replace(CAPITAL_REGEXP, ':$1').toLowerCase();
+				return name.toLowerCase();
+			}
 
-				const content = (
-					<html>
-						<head>
-							<meta charSet="utf=8" />
-							<meta httpEquiv="refresh" />
-							<link rel="preconnect" href="https://foo.com" crossOrigin />
-						</head>
-						<body>
-							<img srcSet="foo.png, foo2.png 2x" />
-							<svg xmlSpace="preserve" viewBox="0 0 10 10" fillRule="nonzero">
-								<foreignObject>
-									<div xlinkHref="#" />
-								</foreignObject>
-							</svg>
-						</body>
-					</html>
-				);
+			const content = (
+				<html>
+					<head>
+						<meta charSet="utf=8" />
+						<meta httpEquiv="refresh" />
+						<link rel="preconnect" href="https://foo.com" crossOrigin />
+						<link rel="preconnect" href="https://bar.com" crossOrigin={false} />
+					</head>
+					<body>
+						<img srcSet="foo.png, foo2.png 2x" />
+						<svg xmlSpace="preserve" viewBox="0 0 10 10" fillRule="nonzero">
+							<foreignObject>
+								<div xlinkHref="#" />
+							</foreignObject>
+						</svg>
+					</body>
+				</html>
+			);
 
-				const expected =
-					'<html><head><meta charset="utf=8"/><meta http-equiv="refresh"/><link rel="preconnect" href="https://foo.com" crossorigin/></head><body><img srcset="foo.png, foo2.png 2x"/><svg xml:space="preserve" viewBox="0 0 10 10" fill-rule="nonzero"><foreignObject><div xlink:href="#"></div></foreignObject></svg></body></html>';
+			const expected =
+				'<html><head><meta charset="utf=8"/><meta http-equiv="refresh"/><link rel="preconnect" href="https://foo.com" crossorigin/><link rel="preconnect" href="https://bar.com"/></head><body><img srcset="foo.png, foo2.png 2x"/><svg xml:space="preserve" viewBox="0 0 10 10" fill-rule="nonzero"><foreignObject><div xlink:href="#"></div></foreignObject></svg></body></html>';
 
-				const rendered = render(content, {}, { attrHook });
-				expect(rendered).to.equal(expected);
-			});
+			const rendered = render(content, {}, { attributeHook });
+			expect(rendered).to.equal(expected);
 		});
 	});
 });

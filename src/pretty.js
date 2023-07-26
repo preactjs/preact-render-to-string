@@ -209,6 +209,8 @@ function _renderToStringPretty(
 		propChildren,
 		html;
 
+	const attributeHook = opts && opts.attributeHook;
+
 	if (props) {
 		let attrs = Object.keys(props);
 
@@ -263,8 +265,8 @@ function _renderToStringPretty(
 			}
 
 			let hooked =
-				opts.attributeHook &&
-				opts.attributeHook(name, v, context, opts, isComponent);
+				opts.jsxAttributeHook &&
+				opts.jsxAttributeHook(name, v, context, opts, isComponent);
 			if (hooked || hooked === '') {
 				s = s + hooked;
 				continue;
@@ -280,6 +282,7 @@ function _renderToStringPretty(
 					v = name;
 					// in non-xml mode, allow boolean attributes
 					if (!opts || !opts.xml) {
+						if (attributeHook) name = attributeHook(name);
 						s = s + ' ' + name;
 						continue;
 					}
@@ -299,6 +302,7 @@ function _renderToStringPretty(
 						s = s + ` selected`;
 					}
 				}
+				if (attributeHook) name = attributeHook(name);
 				s = s + ` ${name}="${encodeEntities(v + '')}"`;
 			}
 		}
