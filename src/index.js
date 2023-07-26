@@ -21,7 +21,7 @@ const isArray = Array.isArray;
 const assign = Object.assign;
 
 // Global state for the current render pass
-let beforeDiff, afterDiff, renderHook, ummountHook;
+let beforeDiff, afterDiff, renderHook, ummountHook, attrHook;
 
 /**
  * Render Preact JSX + Components to an HTML string.
@@ -29,7 +29,7 @@ let beforeDiff, afterDiff, renderHook, ummountHook;
  * @param {Object} [context={}] Initial root context object
  * @returns {string} serialized HTML
  */
-export function renderToString(vnode, context) {
+export function renderToString(vnode, context, renderOpts) {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -43,6 +43,7 @@ export function renderToString(vnode, context) {
 	afterDiff = options[DIFFED];
 	renderHook = options[RENDER];
 	ummountHook = options.unmount;
+	attrHook = renderOpts?.attrHook;
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
@@ -398,6 +399,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				}
 			}
 		}
+
+		if (attrHook) name = attrHook(name);
 
 		// write this attribute to the buffer
 		if (v != null && v !== false && typeof v !== 'function') {
