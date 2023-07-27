@@ -336,6 +336,22 @@ describe('render', () => {
 				`<svg><image xlink:href="#"></image><foreignObject><div xlinkHref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
+
+		it('should convert svg strokeWidth to stroke-width', () => {
+			let rendered = render(
+				<svg>
+					<path
+						d="M 2 50 A 48 48 0 0 1 50 2"
+						stroke="#gradLeft-1"
+						strokeWidth="4"
+						fill="none"
+					/>
+				</svg>
+			);
+			expect(rendered).to.equal(
+				`<svg><path d="M 2 50 A 48 48 0 0 1 50 2" stroke="#gradLeft-1" stroke-width="4" fill="none"></path></svg>`
+			);
+		});
 	});
 
 	describe('Functional Components', () => {

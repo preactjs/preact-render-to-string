@@ -395,6 +395,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
 					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
 					v += '';
+				} else if (isSvgMode && name === 'strokeWidth') {
+					name = 'stroke-width';
 				}
 			}
 		}
