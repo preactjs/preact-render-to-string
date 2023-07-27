@@ -384,6 +384,12 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					v = styleObjToCss(v);
 				}
 				break;
+			case 'acceptCharset':
+				name = 'accept-charset';
+				break;
+			case 'httpEquiv':
+				name = 'http-equiv';
+				break;
 
 			default: {
 				if (isSvgMode && XLINK.test(name)) {
@@ -395,6 +401,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
 					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
 					v += '';
+				} else if (isSvgMode) {
+					if (SVG_CAMEL_CASE.test(name)) {
+						name = name === 'panose1' ? 'panose-1' : camelToKebab(name);
+					} else if (XML_REPLACE_REGEX.test(name)) {
+						name = name.toLowerCase().replace(XML_REPLACE_REGEX, 'xml:');
+					}
+				} else if (!HTML_SKIP_CASE.test(name)) {
+					name = name.toLowerCase();
 				}
 			}
 		}
@@ -439,6 +453,16 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	return s + '>' + html + '</' + type + '>';
 }
 
+/**
+ * Convert fooBar strings to foo-bar
+ * @param {string} str
+ */
+const camelToKebab = (str) =>
+	str.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
+
+const HTML_SKIP_CASE = /^cell|^default|use/;
+const SVG_CAMEL_CASE = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|color|dominant|enable|fill|flood|font|glyph[^R]|horiz|image|letter|lighting|marker[^WUH]|overline|panose|pointe|paint|rendering|shape|stop|strikethrough|stroke|text[^L]|transform|underline|unicode|units|^v[^i]|^w|^xH/;
+const XML_REPLACE_REGEX = /^xml:?/;
 const XLINK_REPLACE_REGEX = /^xlink:?/;
 const SELF_CLOSING = new Set([
 	'area',
