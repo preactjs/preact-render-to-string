@@ -1,4 +1,4 @@
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util.js';
+import { encodeEntities, styleObjToCss, UNSAFE_NAME } from './util.js';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -392,8 +392,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				break;
 
 			default: {
-				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
+				if (NAMESPACE_REPLACE_REGEX.test(name)) {
+					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
 				} else if ((name[4] === '-' || name === 'draggable') && v != null) {
@@ -407,8 +407,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 							name === 'panose1'
 								? 'panose-1'
 								: name.replace(/([A-Z])/g, '-$1').toLowerCase();
-					} else if (XML_REPLACE_REGEX.test(name)) {
-						name = name.toLowerCase().replace(XML_REPLACE_REGEX, 'xml:');
 					}
 				} else if (HTML_LOWER_CASE.test(name)) {
 					name = name.toLowerCase();
@@ -458,8 +456,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 const HTML_LOWER_CASE = /^accessK|^auto[A-Z]|^ch|^col|cont|cross|dateT|encT|form[A-Z]|frame|hrefL|inputM|maxL|minL|noV|playsI|readO|rowS|spellC|src[A-Z]|tabI|item[A-Z]/;
 const SVG_CAMEL_CASE = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|color|dominant|enable|fill|flood|font|glyph[^R]|horiz|image|letter|lighting|marker[^WUH]|overline|panose|pointe|paint|rendering|shape|stop|strikethrough|stroke|text[^L]|transform|underline|unicode|units|^v[^i]|^w|^xH/;
-const XML_REPLACE_REGEX = /^xml:?/;
-const XLINK_REPLACE_REGEX = /^xlink:?/;
+const NAMESPACE_REPLACE_REGEX = /^(xlink|xmlns|xml)(:|[A-Z])/;
 const SELF_CLOSING = new Set([
 	'area',
 	'base',
