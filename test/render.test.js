@@ -333,7 +333,7 @@ describe('render', () => {
 			);
 
 			expect(rendered).to.equal(
-				`<svg><image xlink:href="#"></image><foreignObject><div xlinkHref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
+				`<svg><image xlink:href="#"></image><foreignObject><div xlink:href="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
 	});
@@ -1853,6 +1853,21 @@ describe('render', () => {
 				);
 				expect(rendered).to.equal(`<svg><path ${value}="foo"></path></svg>`);
 			}
+		});
+
+		it('should replace namespaces', () => {
+			let rendered = render(
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					xmlnsXlink="http://www.w3.org/1999/xlink"
+				>
+					<script xlinkHref="cool-script.js" />
+				</svg>
+			);
+
+			expect(rendered).to.equal(
+				'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><script xlink:href="cool-script.js"></script></svg>'
+			);
 		});
 
 		it('should have correct HTML casing', () => {
