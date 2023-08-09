@@ -1,5 +1,15 @@
 # preact-render-to-string
 
+## 6.2.1
+
+### Patch Changes
+
+- [#308](https://github.com/preactjs/preact-render-to-string/pull/308) [`a331699`](https://github.com/preactjs/preact-render-to-string/commit/a331699666e38d33554bdd85fb1afdef82051ec5) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix incorrect casing of HTML attributes and SVG attributes
+
+* [#310](https://github.com/preactjs/preact-render-to-string/pull/310) [`017a8bb`](https://github.com/preactjs/preact-render-to-string/commit/017a8bb41211f88ee01138b0830005fac1c93e02) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix casing of namespaced attribute names
+
+- [#311](https://github.com/preactjs/preact-render-to-string/pull/311) [`bccd1d6`](https://github.com/preactjs/preact-render-to-string/commit/bccd1d6b4094a8481282484b0d6ca20677ce2532) Thanks [@gpoitch](https://github.com/gpoitch)! - Apply attribute name handling in pretty mode
+
 ## 6.2.0
 
 ### Minor Changes
