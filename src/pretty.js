@@ -6,8 +6,10 @@ import {
 	getChildren,
 	createComponent,
 	UNSAFE_NAME,
-	XLINK,
-	VOID_ELEMENTS
+	VOID_ELEMENTS,
+	NAMESPACE_REPLACE_REGEX,
+	HTML_LOWER_CASE,
+	SVG_CAMEL_CASE
 } from './util.js';
 import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './constants.js';
 import { options, Fragment } from 'preact';
@@ -243,8 +245,21 @@ function _renderToStringPretty(
 			} else if (name === 'className') {
 				if (typeof props.class !== 'undefined') continue;
 				name = 'class';
-			} else if (isSvgMode && XLINK.test(name)) {
-				name = name.toLowerCase().replace(/^xlink:?/, 'xlink:');
+			} else if (name === 'acceptCharset') {
+				name = 'accept-charset';
+			} else if (name === 'httpEquiv') {
+				name = 'http-equiv';
+			} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
+				name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
+			} else if (isSvgMode) {
+				if (SVG_CAMEL_CASE.test(name)) {
+					name =
+						name === 'panose1'
+							? 'panose-1'
+							: name.replace(/([A-Z])/g, '-$1').toLowerCase();
+				}
+			} else if (HTML_LOWER_CASE.test(name)) {
+				name = name.toLowerCase();
 			}
 
 			if (name === 'htmlFor') {

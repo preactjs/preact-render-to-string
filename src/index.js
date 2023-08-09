@@ -1,4 +1,11 @@
-import { encodeEntities, styleObjToCss, UNSAFE_NAME } from './util.js';
+import {
+	encodeEntities,
+	styleObjToCss,
+	UNSAFE_NAME,
+	NAMESPACE_REPLACE_REGEX,
+	HTML_LOWER_CASE,
+	SVG_CAMEL_CASE
+} from './util.js';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -454,9 +461,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	return s + '>' + html + '</' + type + '>';
 }
 
-const HTML_LOWER_CASE = /^accessK|^auto[A-Z]|^ch|^col|cont|cross|dateT|encT|form[A-Z]|frame|hrefL|inputM|maxL|minL|noV|playsI|readO|rowS|spellC|src[A-Z]|tabI|item[A-Z]/;
-const SVG_CAMEL_CASE = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|color|dominant|enable|fill|flood|font|glyph[^R]|horiz|image|letter|lighting|marker[^WUH]|overline|panose|pointe|paint|rendering|shape|stop|strikethrough|stroke|text[^L]|transform|underline|unicode|units|^v[^i]|^w|^xH/;
-const NAMESPACE_REPLACE_REGEX = /^(xlink|xmlns|xml)(:|[A-Z])/;
 const SELF_CLOSING = new Set([
 	'area',
 	'base',

@@ -2,10 +2,10 @@ import basicRender from '../src/index.js';
 import { render } from '../src/jsx.js';
 import { h, Fragment } from 'preact';
 import { expect } from 'chai';
-import { dedent } from './utils.js';
+import { dedent, svgAttributes, htmlAttributes } from './utils.js';
 
 describe('pretty', () => {
-	let prettyRender = (jsx) => render(jsx, {}, { pretty: true });
+	let prettyRender = (jsx, opts) => render(jsx, {}, { pretty: true, ...opts });
 
 	it('should render no whitespace by default', () => {
 		let rendered = basicRender(
@@ -195,5 +195,57 @@ describe('pretty', () => {
 
 	it('should not render function children', () => {
 		expect(prettyRender(<div>{() => {}}</div>)).to.equal('<div></div>');
+	});
+
+	it('should render SVG elements', () => {
+		let rendered = prettyRender(
+			<svg>
+				<image xlinkHref="#" />
+				<foreignObject>
+					<div xlinkHref="#" />
+				</foreignObject>
+				<g>
+					<image xlinkHref="#" />
+				</g>
+			</svg>
+		);
+
+		expect(rendered).to.equal(
+			`<svg>\n\t<image xlink:href="#"></image>\n\t<foreignObject>\n\t\t<div xlink:href="#"></div>\n\t</foreignObject>\n\t<g>\n\t\t<image xlink:href="#"></image>\n\t</g>\n</svg>`
+		);
+	});
+
+	describe('Attribute casing', () => {
+		it('should have correct SVG casing', () => {
+			for (let name in svgAttributes) {
+				let value = svgAttributes[name];
+
+				let rendered = prettyRender(
+					<svg>
+						<path {...{ [name]: 'foo' }} />
+					</svg>
+				);
+				expect(rendered).to.equal(
+					`<svg>\n\t<path ${value}="foo"></path>\n</svg>`
+				);
+			}
+		});
+
+		it('should have correct HTML casing', () => {
+			for (let name in htmlAttributes) {
+				let value = htmlAttributes[name];
+
+				if (name === 'checked') {
+					let rendered = prettyRender(<input type="checkbox" checked />, {
+						jsx: false
+					});
+					expect(rendered).to.equal(`<input type="checkbox" checked />`);
+					continue;
+				} else {
+					let rendered = prettyRender(<div {...{ [name]: 'foo' }} />);
+					expect(rendered).to.equal(`<div ${value}="foo"></div>`);
+				}
+			}
+		});
 	});
 });
