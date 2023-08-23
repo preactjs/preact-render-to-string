@@ -1,5 +1,5 @@
 ---
-"preact-render-to-string": patch
+"preact-render-to-string": major
 ---
 
 fix: escape a single quote
