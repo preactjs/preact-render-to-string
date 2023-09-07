@@ -19,6 +19,7 @@ import {
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
+import { svgAttributes, htmlAttributes } from './utils.js';
 
 function shallowRender(vnode) {
 	const context = {};
@@ -334,7 +335,7 @@ describe('render', () => {
 			);
 
 			expect(rendered).to.equal(
-				`<svg><image xlink:href="#"></image><foreignObject><div xlinkHref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
+				`<svg><image xlink:href="#"></image><foreignObject><div xlink:href="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
 	});
@@ -1597,6 +1598,51 @@ describe('render', () => {
 				let res = renderWithError(<ErrorBoundary />);
 				expect(res).to.equal('<p>fail</p>');
 			});
+		});
+	});
+
+	describe('Attribute casing', () => {
+		it('should have correct SVG casing', () => {
+			for (let name in svgAttributes) {
+				let value = svgAttributes[name];
+
+				let rendered = render(
+					<svg>
+						<path {...{ [name]: 'foo' }} />
+					</svg>
+				);
+				expect(rendered).to.equal(`<svg><path ${value}="foo"></path></svg>`);
+			}
+		});
+
+		it('should replace namespaces', () => {
+			let rendered = render(
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					xmlnsXlink="http://www.w3.org/1999/xlink"
+				>
+					<script xlinkHref="cool-script.js" />
+				</svg>
+			);
+
+			expect(rendered).to.equal(
+				'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><script xlink:href="cool-script.js"></script></svg>'
+			);
+		});
+
+		it('should have correct HTML casing', () => {
+			for (let name in htmlAttributes) {
+				let value = htmlAttributes[name];
+
+				if (name === 'checked') {
+					let rendered = render(<input type="checkbox" checked />);
+					expect(rendered).to.equal(`<input type="checkbox" checked/>`);
+					continue;
+				} else {
+					let rendered = render(<div {...{ [name]: 'foo' }} />);
+					expect(rendered).to.equal(`<div ${value}="foo"></div>`);
+				}
+			}
 		});
 	});
 });

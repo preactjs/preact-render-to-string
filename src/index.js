@@ -1,5 +1,12 @@
+import {
+	encodeEntities,
+	styleObjToCss,
+	UNSAFE_NAME,
+	NAMESPACE_REPLACE_REGEX,
+	HTML_LOWER_CASE,
+	SVG_CAMEL_CASE
+} from './lib/util.js';
 import { options, h, Fragment } from 'preact';
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './lib/util.js';
 import {
 	CHILDREN,
 	COMMIT,
@@ -423,10 +430,16 @@ function _renderToString(
 					v = styleObjToCss(v);
 				}
 				break;
+			case 'acceptCharset':
+				name = 'accept-charset';
+				break;
+			case 'httpEquiv':
+				name = 'http-equiv';
+				break;
 
 			default: {
-				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
+				if (NAMESPACE_REPLACE_REGEX.test(name)) {
+					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
 				} else if ((name[4] === '-' || name === 'draggable') && v != null) {
@@ -434,6 +447,15 @@ function _renderToString(
 					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
 					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
 					v += '';
+				} else if (isSvgMode) {
+					if (SVG_CAMEL_CASE.test(name)) {
+						name =
+							name === 'panose1'
+								? 'panose-1'
+								: name.replace(/([A-Z])/g, '-$1').toLowerCase();
+					}
+				} else if (HTML_LOWER_CASE.test(name)) {
+					name = name.toLowerCase();
 				}
 			}
 		}
@@ -485,7 +507,6 @@ function _renderToString(
 	return s + '>' + html + '</' + type + '>';
 }
 
-const XLINK_REPLACE_REGEX = /^xlink:?/;
 const SELF_CLOSING = new Set([
 	'area',
 	'base',
