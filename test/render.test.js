@@ -22,6 +22,7 @@ import { spy, stub, match } from 'sinon';
 import { svgAttributes, htmlAttributes } from './utils.js';
 
 function shallowRender(vnode) {
+	const context = {};
 	return renderToStringJSX(vnode, context, {
 		jsx: false,
 		xml: false,

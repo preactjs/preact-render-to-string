@@ -5,7 +5,7 @@ import {
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
 	SVG_CAMEL_CASE
-} from './util.js';
+} from './lib/util.js';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -18,10 +18,9 @@ import {
 	PARENT,
 	RENDER,
 	SKIP_EFFECTS,
-	VNODE
-} from './constants.js';
-
-/** @typedef {import('preact').VNode} VNode */
+	VNODE,
+	CATCH_ERROR
+} from './lib/constants.js';
 
 const EMPTY_ARR = [];
 const isArray = Array.isArray;
@@ -34,9 +33,10 @@ let beforeDiff, afterDiff, renderHook, ummountHook;
  * Render Preact JSX + Components to an HTML string.
  * @param {VNode} vnode	JSX Element / VNode to render
  * @param {Object} [context={}] Initial root context object
+ * @param {RendererState} [_rendererState] for internal use
  * @returns {string} serialized HTML
  */
-export function renderToString(vnode, context) {
+export function renderToString(vnode, context, _rendererState) {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -60,7 +60,8 @@ export function renderToString(vnode, context) {
 			context || EMPTY_OBJ,
 			false,
 			undefined,
-			parent
+			parent,
+			_rendererState
 		);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
@@ -137,9 +138,17 @@ function renderClassComponent(vnode, context) {
  * @param {boolean} isSvgMode
  * @param {any} selectValue
  * @param {VNode} parent
+ * @param {RendererState | undefined} [renderer]
  * @returns {string}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
+function _renderToString(
+	vnode,
+	context,
+	isSvgMode,
+	selectValue,
+	parent,
+	renderer
+) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -161,7 +170,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 			rendered =
 				rendered +
-				_renderToString(child, context, isSvgMode, selectValue, parent);
+				_renderToString(
+					child,
+					context,
+					isSvgMode,
+					selectValue,
+					parent,
+					renderer
+				);
 		}
 		return rendered;
 	}
@@ -303,20 +319,43 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered != null && rendered.type === Fragment && rendered.key == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
-		if (afterDiff) afterDiff(vnode);
-		vnode[PARENT] = undefined;
+		try {
+			// Recurse into children before invoking the after-diff hook
+			const str = _renderToString(
+				rendered,
+				context,
+				isSvgMode,
+				selectValue,
+				vnode,
+				renderer
+			);
 
-		if (ummountHook) ummountHook(vnode);
+			if (afterDiff) afterDiff(vnode);
+			// when we are dealing with suspense we can't do this...
+			// vnode[PARENT] = undefined;
 
-		return str;
+			if (options.unmount) options.unmount(vnode);
+
+			return str;
+		} catch (error) {
+			if (renderer && renderer.onError) {
+				let res = renderer.onError(error, vnode, (child) =>
+					_renderToString(
+						child,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode,
+						renderer
+					)
+				);
+				if (res !== undefined) return res;
+			}
+
+			let errorHook = options[CATCH_ERROR];
+			if (errorHook) errorHook(error, vnode);
+			return '';
+		}
 	}
 
 	// Serialize Element VNodes to HTML
@@ -446,11 +485,18 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		// recurse into this element VNode's children
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
+		html = _renderToString(
+			children,
+			context,
+			childSvgMode,
+			selectValue,
+			vnode,
+			renderer
+		);
 	}
 
 	if (afterDiff) afterDiff(vnode);
-	vnode[PARENT] = undefined;
+	//vnode[PARENT] = undefined;
 	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
