@@ -337,6 +337,12 @@ describe('render', () => {
 				`<svg><image xlink:href="#"></image><foreignObject><div xlink:href="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
+
+		it('should not add extra colon on SVG elements', () => {
+			let rendered = render(<svg>{h('image', { 'xlink:href': '#' })}</svg>);
+
+			expect(rendered).to.equal(`<svg><image xlink:href="#"></image></svg>`);
+		});
 	});
 
 	describe('Functional Components', () => {
