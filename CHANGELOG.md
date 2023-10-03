@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.2.2
+
+### Patch Changes
+
+- [#315](https://github.com/preactjs/preact-render-to-string/pull/315) [`f1d81be`](https://github.com/preactjs/preact-render-to-string/commit/f1d81be1e56d64bf7bf0ecc975a7b54d2db2ad45) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - avoid adding double colon for namespaced attributes
+
 ## 6.2.1
 
 ### Patch Changes
