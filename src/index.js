@@ -182,9 +182,36 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Invoke rendering on Components
 	if (typeof type === 'function') {
 		if (type === Fragment) {
-			// Fragments are the least used components of core that's why
-			// branching here for comments has the least effect on perf.
-			if (props.UNSTABLE_comment) {
+			// Serialized precompiled JSX.
+			if (props.tpl) {
+				let out = '';
+				for (let i = 0; i < props.tpl.length; i++) {
+					out += props.tpl[i];
+
+					if (props.exprs && i < props.exprs.length) {
+						const value = props.exprs[i];
+						if (value == null) continue;
+
+						// Check if we're dealing with a vnode
+						if (typeof value === 'object' && value.constructor === undefined) {
+							out += _renderToString(
+								value,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode
+							);
+						} else {
+							// Values are pre-escaped by the JSX transform
+							out += props.exprs[i];
+						}
+					}
+				}
+
+				return out;
+			} else if (props.UNSTABLE_comment) {
+				// Fragments are the least used components of core that's why
+				// branching here for comments has the least effect on perf.
 				return '<!--' + encodeEntities(props.UNSTABLE_comment || '') + '-->';
 			}
 
