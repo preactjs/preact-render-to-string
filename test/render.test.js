@@ -1650,4 +1650,28 @@ describe('render', () => {
 			}
 		});
 	});
+
+	describe('precompiled JSX', () => {
+		it('should render template', () => {
+			let vnode = <Fragment tpl={['<div>foo</div>']} exprs={[]} />;
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo</div>');
+		});
+
+		it('should render template with attribute expressions', () => {
+			let vnode = (
+				<Fragment tpl={['<div ', '>foo</div>']} exprs={['class="foo"']} />
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div class="foo">foo</div>');
+		});
+
+		it('should render template with child expressions', () => {
+			let vnode = (
+				<Fragment tpl={['<div>foo', '</div>']} exprs={[<span>bar</span>]} />
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo<span>bar</span></div>');
+		});
+	});
 });
