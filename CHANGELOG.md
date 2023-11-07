@@ -1,5 +1,20 @@
 # preact-render-to-string
 
+## 6.3.0
+
+### Minor Changes
+
+- [`926827c`](https://github.com/preactjs/preact-render-to-string/commit/926827c0745889545a97774535e778da3c808dd0) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add support for precompiled JSX transform, see https://deno.com/blog/v1.38#fastest-jsx-transform. Compared to traditional JSX transforms, the precompiled JSX transform tries to pre-serialize as much of the JSX as possible. That way less objects need to be created and serialized which relieves a lot of GC pressure.
+
+  ```jsx
+  // input
+  <div class="foo">hello</div>;
+
+  // output
+  const tpl = [`<div class="foo">hello</div>`];
+  jsxTemplate(tpl);
+  ```
+
 ## 6.2.2
 
 ### Patch Changes
