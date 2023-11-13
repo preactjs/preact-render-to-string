@@ -192,8 +192,11 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 						const value = props.exprs[i];
 						if (value == null) continue;
 
-						// Check if we're dealing with a vnode
-						if (typeof value === 'object' && value.constructor === undefined) {
+						// Check if we're dealing with a vnode or an array of nodes
+						if (
+							typeof value === 'object' &&
+							(value.constructor === undefined || isArray(value))
+						) {
 							out += _renderToString(
 								value,
 								context,
@@ -203,7 +206,7 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 							);
 						} else {
 							// Values are pre-escaped by the JSX transform
-							out += props.exprs[i];
+							out += value;
 						}
 					}
 				}
