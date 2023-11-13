@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.3.1
+
+### Patch Changes
+
+- [#324](https://github.com/preactjs/preact-render-to-string/pull/324) [`6bf321d`](https://github.com/preactjs/preact-render-to-string/commit/6bf321d31d97d679910f892d4310ae79b3a70e84) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix mapped children not working with Deno's new precompile JSX transform.
+
 ## 6.3.0
 
 ### Minor Changes
