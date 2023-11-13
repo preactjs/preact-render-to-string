@@ -1673,5 +1673,18 @@ describe('render', () => {
 			let rendered = render(vnode);
 			expect(rendered).to.equal('<div>foo<span>bar</span></div>');
 		});
+
+		it('should render mapped children', () => {
+			let vnode = (
+				<Fragment
+					tpl={['<div>foo', '', '</div>']}
+					exprs={[<span>bar</span>, [<p>foo</p>, <p>bar</p>]]}
+				/>
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal(
+				'<div>foo<span>bar</span><p>foo</p><p>bar</p></div>'
+			);
+		});
 	});
 });
