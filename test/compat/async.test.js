@@ -1,12 +1,5 @@
 import render from '../../src/index.js';
-import {
-	h,
-	Component,
-	createContext,
-	Fragment,
-	options,
-	createRef
-} from 'preact';
+import { h } from 'preact';
 import { Suspense } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.js';
