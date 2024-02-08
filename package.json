@@ -35,7 +35,7 @@
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
 		"test": "eslint src test && tsc && npm run test:mocha && npm run test:mocha:compat && npm run test:mocha:debug && npm run bench",
 		"test:mocha": "BABEL_ENV=test mocha -r @babel/register -r test/setup.js test/*.test.js",
-		"test:mocha:compat": "BABEL_ENV=test mocha -r @babel/register -r test/setup.js 'test/compat/index.test.js'",
+		"test:mocha:compat": "BABEL_ENV=test mocha -r @babel/register -r test/setup.js 'test/compat/*.test.js'",
 		"test:mocha:debug": "BABEL_ENV=test mocha -r @babel/register -r test/setup.js 'test/debug/index.test.js'",
 		"format": "prettier src/**/*.{d.ts,js} test/**/*.js --write",
 		"prepublishOnly": "npm run build",
