@@ -21,6 +21,7 @@ import {
 import { Suspense } from 'preact/compat';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
+import { svgAttributes, htmlAttributes } from './utils.js';
 
 function shallowRender(vnode) {
 	return renderToStringJSX(vnode, context, {
@@ -389,8 +390,14 @@ describe('render', () => {
 			);
 
 			expect(rendered).to.equal(
-				`<svg><image xlink:href="#"></image><foreignObject><div xlinkHref="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
+				`<svg><image xlink:href="#"></image><foreignObject><div xlink:href="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
+		});
+
+		it('should not add extra colon on SVG elements', () => {
+			let rendered = render(<svg>{h('image', { 'xlink:href': '#' })}</svg>);
+
+			expect(rendered).to.equal(`<svg><image xlink:href="#"></image></svg>`);
 		});
 	});
 
@@ -1365,6 +1372,24 @@ describe('render', () => {
 		expect(render(<div>{() => {}}</div>)).to.equal('<div></div>');
 	});
 
+	describe('HTML Comments', () => {
+		it('should render HTML comments via Fragments', () => {
+			expect(render(<Fragment UNSTABLE_comment="foo" />)).to.equal(
+				'<!--foo-->'
+			);
+		});
+
+		it('should ignore children with comment prop', () => {
+			expect(
+				render(
+					<Fragment UNSTABLE_comment="foo">
+						<p>foo</p>
+					</Fragment>
+				)
+			).to.equal('<!--foo-->');
+		});
+	});
+
 	describe('vnode masks (useId)', () => {
 		it('should skip component top level Fragment child', () => {
 			const Wrapper = ({ children }) => <Fragment>{children}</Fragment>;
@@ -1387,6 +1412,335 @@ describe('render', () => {
 			}
 
 			expect(render(<App />)).to.equal('<div><p>P0-0</p><p>P0-1</p></div>');
+		});
+	});
+
+	describe('Error Handling', () => {
+		function Thrower() {
+			throw new Error('fail');
+		}
+
+		function renderWithError(vnode) {
+			options.errorBoundaries = true;
+			try {
+				return render(vnode);
+			} finally {
+				options.errorBoundaries = false;
+			}
+		}
+
+		describe('componentDidCatch', () => {
+			it('should disable componentDidCatch by default', () => {
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error) {
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				expect(() => render(<ErrorBoundary />)).to.throw('fail');
+			});
+
+			it('should invoke componentDidCatch', () => {
+				let args = null;
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error, info) {
+						args = { error: error.message, info };
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+				expect(args).to.deep.equal({ error: 'fail', info: {} });
+			});
+
+			it("should not invoke parent's componentDidCatch", () => {
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error) {
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let called = false;
+				class App extends Component {
+					componentDidCatch() {
+						called = true;
+					}
+					render() {
+						return <ErrorBoundary />;
+					}
+				}
+
+				renderWithError(<App />);
+				expect(called).to.equal(false, "Parent's componentDidCatch was called");
+			});
+
+			it('should invoke componentDidCatch if child throws in gDSFP', () => {
+				let throwerCatchCalled = false;
+
+				class Thrower extends Component {
+					static getDerivedStateFromProps(props) {
+						throw new Error('fail');
+					}
+
+					componentDidCatch() {
+						throwerCatchCalled = true;
+					}
+
+					render() {
+						return <p>it doesn't work</p>;
+					}
+				}
+
+				let args = null;
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentDidCatch(error, info) {
+						args = { error: error.message, info };
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+				expect(args).to.deep.equal({ error: 'fail', info: {} });
+
+				expect(throwerCatchCalled).to.equal(
+					false,
+					"Thrower's componentDidCatch should not be called"
+				);
+			});
+
+			it('should invoke componentWillUpdate on state render', () => {
+				let calledWillUpdate = false;
+
+				class ErrorBoundary extends Component {
+					constructor(props) {
+						super(props);
+						this.state = { error: null };
+					}
+					componentWillUpdate() {
+						calledWillUpdate = true;
+					}
+					componentDidCatch(error, info) {
+						this.setState({ error });
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+				expect(calledWillUpdate).to.equal(
+					true,
+					'Did not call componentWillUpdate'
+				);
+			});
+		});
+
+		describe('getDerivedStateFromError', () => {
+			it('should disable gDSFE by default', () => {
+				class ErrorBoundary extends Component {
+					static getDerivedStateFromError(error) {
+						return { error };
+					}
+
+					render() {
+						return this.state.error ? (
+							<p>{this.state.error.message}</p>
+						) : (
+							<Thrower />
+						);
+					}
+				}
+
+				expect(() => render(<ErrorBoundary />)).to.throw('fail');
+			});
+
+			it('should be invoked', () => {
+				let calls = [];
+				let cDCState = null;
+				let renderState = null;
+				class ErrorBoundary extends Component {
+					static getDerivedStateFromError(error) {
+						calls.push(['gDSFE', error.message]);
+						return { foo: 1 };
+					}
+
+					componentDidCatch(error, info) {
+						calls.push(['cDC', error.message]);
+						cDCState = this.state;
+						this.setState({ bar: 2 });
+					}
+
+					render() {
+						renderState = this.state;
+						return this.state.foo ? <p>it works</p> : <Thrower />;
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>it works</p>');
+				expect(calls).to.deep.equal([
+					['gDSFE', 'fail'],
+					['cDC', 'fail']
+				]);
+				expect(cDCState).to.deep.equal({});
+				expect(renderState).to.deep.equal({
+					foo: 1,
+					bar: 2
+				});
+			});
+
+			it('should work without componentDidCatch', () => {
+				class ErrorBoundary extends Component {
+					static getDerivedStateFromError(error) {
+						return { error: error.message };
+					}
+
+					render() {
+						return this.state.error ? <p>{this.state.error}</p> : <Thrower />;
+					}
+				}
+
+				let res = renderWithError(<ErrorBoundary />);
+				expect(res).to.equal('<p>fail</p>');
+			});
+		});
+	});
+
+	describe('Attribute casing', () => {
+		it('should have correct SVG casing', () => {
+			for (let name in svgAttributes) {
+				let value = svgAttributes[name];
+
+				let rendered = render(
+					<svg>
+						<path {...{ [name]: 'foo' }} />
+					</svg>
+				);
+				expect(rendered).to.equal(`<svg><path ${value}="foo"></path></svg>`);
+			}
+		});
+
+		it('should replace namespaces', () => {
+			let rendered = render(
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					xmlnsXlink="http://www.w3.org/1999/xlink"
+				>
+					<script xlinkHref="cool-script.js" />
+				</svg>
+			);
+
+			expect(rendered).to.equal(
+				'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><script xlink:href="cool-script.js"></script></svg>'
+			);
+		});
+
+		it('should have correct HTML casing', () => {
+			for (let name in htmlAttributes) {
+				let value = htmlAttributes[name];
+
+				if (name === 'checked') {
+					let rendered = render(<input type="checkbox" checked />);
+					expect(rendered).to.equal(`<input type="checkbox" checked/>`);
+					continue;
+				} else {
+					let rendered = render(<div {...{ [name]: 'foo' }} />);
+					expect(rendered).to.equal(`<div ${value}="foo"></div>`);
+				}
+			}
+		});
+	});
+
+	describe('precompiled JSX', () => {
+		it('should render template', () => {
+			let vnode = <Fragment tpl={['<div>foo</div>']} exprs={[]} />;
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo</div>');
+		});
+
+		it('should render template with attribute expressions', () => {
+			let vnode = (
+				<Fragment tpl={['<div ', '>foo</div>']} exprs={['class="foo"']} />
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div class="foo">foo</div>');
+		});
+
+		it('should render template with child expressions', () => {
+			let vnode = (
+				<Fragment tpl={['<div>foo', '</div>']} exprs={[<span>bar</span>]} />
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo<span>bar</span></div>');
+		});
+
+		it('should render mapped children', () => {
+			let vnode = (
+				<Fragment
+					tpl={['<div>foo', '', '</div>']}
+					exprs={[<span>bar</span>, [<p>foo</p>, <p>bar</p>]]}
+				/>
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal(
+				'<div>foo<span>bar</span><p>foo</p><p>bar</p></div>'
+			);
 		});
 	});
 });

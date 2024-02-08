@@ -1,5 +1,63 @@
 # preact-render-to-string
 
+## 6.3.1
+
+### Patch Changes
+
+- [#324](https://github.com/preactjs/preact-render-to-string/pull/324) [`6bf321d`](https://github.com/preactjs/preact-render-to-string/commit/6bf321d31d97d679910f892d4310ae79b3a70e84) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix mapped children not working with Deno's new precompile JSX transform.
+
+## 6.3.0
+
+### Minor Changes
+
+- [`926827c`](https://github.com/preactjs/preact-render-to-string/commit/926827c0745889545a97774535e778da3c808dd0) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add support for precompiled JSX transform, see https://deno.com/blog/v1.38#fastest-jsx-transform. Compared to traditional JSX transforms, the precompiled JSX transform tries to pre-serialize as much of the JSX as possible. That way less objects need to be created and serialized which relieves a lot of GC pressure.
+
+  ```jsx
+  // input
+  <div class="foo">hello</div>;
+
+  // output
+  const tpl = [`<div class="foo">hello</div>`];
+  jsxTemplate(tpl);
+  ```
+
+## 6.2.2
+
+### Patch Changes
+
+- [#315](https://github.com/preactjs/preact-render-to-string/pull/315) [`f1d81be`](https://github.com/preactjs/preact-render-to-string/commit/f1d81be1e56d64bf7bf0ecc975a7b54d2db2ad45) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - avoid adding double colon for namespaced attributes
+
+## 6.2.1
+
+### Patch Changes
+
+- [#308](https://github.com/preactjs/preact-render-to-string/pull/308) [`a331699`](https://github.com/preactjs/preact-render-to-string/commit/a331699666e38d33554bdd85fb1afdef82051ec5) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix incorrect casing of HTML attributes and SVG attributes
+
+* [#310](https://github.com/preactjs/preact-render-to-string/pull/310) [`017a8bb`](https://github.com/preactjs/preact-render-to-string/commit/017a8bb41211f88ee01138b0830005fac1c93e02) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix casing of namespaced attribute names
+
+- [#311](https://github.com/preactjs/preact-render-to-string/pull/311) [`bccd1d6`](https://github.com/preactjs/preact-render-to-string/commit/bccd1d6b4094a8481282484b0d6ca20677ce2532) Thanks [@gpoitch](https://github.com/gpoitch)! - Apply attribute name handling in pretty mode
+
+## 6.2.0
+
+### Minor Changes
+
+- [#305](https://github.com/preactjs/preact-render-to-string/pull/305) [`568f139`](https://github.com/preactjs/preact-render-to-string/commit/568f139a6c7916e0b6eebb7c51f1abf035850b7c) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add support for error boundaries via `componentDidCatch` and `getDerivedStateFromError`
+
+  This feature is disabled by default and can be enabled by toggling the `errorBoundaries` option:
+
+  ```js
+  import { options } from 'preact';
+
+  // Enable error boundaries
+  options.errorBoundaries = true;
+  ```
+
+## 6.1.0
+
+### Minor Changes
+
+- [#301](https://github.com/preactjs/preact-render-to-string/pull/301) [`659b456`](https://github.com/preactjs/preact-render-to-string/commit/659b45623093ae0a93cb29354b069a25cf6351b5) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add experimental ability to render HTML comments via `<Fragment UNSTABLE_comment="my-comment" />`. When the `UNSTABLE_comment` prop is present all children of that `Fragment` will be ignored and a HTML comment will be rendered instead. This feature is added to allow framework authors to experiment with marking DOM for hydration in the client. Note that it's marked as unstable and might change in the future.
+
 ## 6.0.3
 
 ### Patch Changes

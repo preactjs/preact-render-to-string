@@ -1,4 +1,11 @@
-import { encodeEntities, styleObjToCss, UNSAFE_NAME, XLINK } from './util.js';
+import {
+	encodeEntities,
+	styleObjToCss,
+	UNSAFE_NAME,
+	NAMESPACE_REPLACE_REGEX,
+	HTML_LOWER_CASE,
+	SVG_CAMEL_CASE
+} from './util.js';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -84,7 +91,15 @@ const EMPTY_OBJ = {};
 function renderClassComponent(vnode, context) {
 	let type = /** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
 
-	let c = new type(vnode.props, context);
+	let isMounting = true;
+	let c;
+	if (vnode[COMPONENT]) {
+		isMounting = false;
+		c = vnode[COMPONENT];
+		c.state = c[NEXT_STATE];
+	} else {
+		c = new type(vnode.props, context);
+	}
 
 	vnode[COMPONENT] = c;
 	c[VNODE] = vnode;
@@ -106,12 +121,14 @@ function renderClassComponent(vnode, context) {
 			c.state,
 			type.getDerivedStateFromProps(c.props, c.state)
 		);
-	} else if (c.componentWillMount) {
+	} else if (isMounting && c.componentWillMount) {
 		c.componentWillMount();
 
 		// If the user called setState in cWM we need to flush pending,
 		// state updates. This is the same behaviour in React.
 		c.state = c[NEXT_STATE] !== c.state ? c[NEXT_STATE] : c.state;
+	} else if (!isMounting && c.componentWillUpdate) {
+		c.componentWillUpdate();
 	}
 
 	if (renderHook) renderHook(vnode);
@@ -198,6 +215,42 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	// Invoke rendering on Components
 	if (typeof type === 'function') {
 		if (type === Fragment) {
+			// Serialized precompiled JSX.
+			if (props.tpl) {
+				let out = '';
+				for (let i = 0; i < props.tpl.length; i++) {
+					out += props.tpl[i];
+
+					if (props.exprs && i < props.exprs.length) {
+						const value = props.exprs[i];
+						if (value == null) continue;
+
+						// Check if we're dealing with a vnode or an array of nodes
+						if (
+							typeof value === 'object' &&
+							(value.constructor === undefined || isArray(value))
+						) {
+							out += _renderToString(
+								value,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode
+							);
+						} else {
+							// Values are pre-escaped by the JSX transform
+							out += value;
+						}
+					}
+				}
+
+				return out;
+			} else if (props.UNSTABLE_comment) {
+				// Fragments are the least used components of core that's why
+				// branching here for comments has the least effect on perf.
+				return '<!--' + encodeEntities(props.UNSTABLE_comment || '') + '-->';
+			}
+
 			rendered = props.children;
 		} else {
 			contextType = type.contextType;
@@ -241,6 +294,69 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 			if (component.getChildContext != null) {
 				context = assign({}, context, component.getChildContext());
+			}
+
+			if (
+				(type.getDerivedStateFromError || component.componentDidCatch) &&
+				options.errorBoundaries
+			) {
+				let str = '';
+				// When a component returns a Fragment node we flatten it in core, so we
+				// need to mirror that logic here too
+				let isTopLevelFragment =
+					rendered != null &&
+					rendered.type === Fragment &&
+					rendered.key == null;
+				rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+				try {
+					str = _renderToString(
+						rendered,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode
+					);
+					return str;
+				} catch (err) {
+					if (type.getDerivedStateFromError) {
+						component[NEXT_STATE] = type.getDerivedStateFromError(err);
+					}
+
+					if (component.componentDidCatch) {
+						component.componentDidCatch(err, {});
+					}
+
+					if (component[DIRTY]) {
+						rendered = renderClassComponent(vnode, context);
+						component = vnode[COMPONENT];
+
+						if (component.getChildContext != null) {
+							context = assign({}, context, component.getChildContext());
+						}
+
+						let isTopLevelFragment =
+							rendered != null &&
+							rendered.type === Fragment &&
+							rendered.key == null;
+						rendered = isTopLevelFragment ? rendered.props.children : rendered;
+
+						str = _renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode
+						);
+					}
+
+					return str;
+				} finally {
+					if (afterDiff) afterDiff(vnode);
+					vnode[PARENT] = undefined;
+
+					if (ummountHook) ummountHook(vnode);
+				}
 			}
 		}
 
@@ -346,10 +462,16 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					v = styleObjToCss(v);
 				}
 				break;
+			case 'acceptCharset':
+				name = 'accept-charset';
+				break;
+			case 'httpEquiv':
+				name = 'http-equiv';
+				break;
 
 			default: {
-				if (isSvgMode && XLINK.test(name)) {
-					name = name.toLowerCase().replace(XLINK_REPLACE_REGEX, 'xlink:');
+				if (NAMESPACE_REPLACE_REGEX.test(name)) {
+					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
 				} else if ((name[4] === '-' || name === 'draggable') && v != null) {
@@ -357,6 +479,15 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
 					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
 					v += '';
+				} else if (isSvgMode) {
+					if (SVG_CAMEL_CASE.test(name)) {
+						name =
+							name === 'panose1'
+								? 'panose-1'
+								: name.replace(/([A-Z])/g, '-$1').toLowerCase();
+					}
+				} else if (HTML_LOWER_CASE.test(name)) {
+					name = name.toLowerCase();
 				}
 			}
 		}
@@ -407,7 +538,6 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 	return startTag + html + endTag;
 }
 
-const XLINK_REPLACE_REGEX = /^xlink:?/;
 const SELF_CLOSING = new Set([
 	'area',
 	'base',

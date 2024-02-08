@@ -17,5 +17,3 @@ export default function renderToStringPretty(
 ): string;
 
 export function shallowRender(vnode: VNode, context?: any): string;
-
-export default render;
