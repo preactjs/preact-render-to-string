@@ -55,12 +55,61 @@ export function renderToString(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
+		return _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent,
+			false
+		);
+	} catch (e) {
+		if (e.then) {
+			throw new Error('Use "renderToStringAsync" for suspenseful rendering.');
+		}
+
+		throw e;
+	} finally {
+		// options._commit, we don't schedule any effects in this library right now,
+		// so we can pass an empty queue to this hook.
+		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+		options[SKIP_EFFECTS] = previousSkipEffects;
+		EMPTY_ARR.length = 0;
+	}
+}
+
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @returns {string} serialized HTML
+ */
+export function renderToStringAsync(vnode, context) {
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	// store options hooks once before each synchronous render call
+	beforeDiff = options[DIFF];
+	afterDiff = options[DIFFED];
+	renderHook = options[RENDER];
+	ummountHook = options.unmount;
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	try {
 		const rendered = _renderToString(
 			vnode,
 			context || EMPTY_OBJ,
 			false,
 			undefined,
-			parent
+			parent,
+			true
 		);
 
 		if (Array.isArray(rendered)) {
@@ -143,9 +192,17 @@ function renderClassComponent(vnode, context) {
  * @param {boolean} isSvgMode
  * @param {any} selectValue
  * @param {VNode} parent
+ * @param {boolean} asyncMode
  * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
+function _renderToString(
+	vnode,
+	context,
+	isSvgMode,
+	selectValue,
+	parent,
+	asyncMode
+) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -171,7 +228,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				context,
 				isSvgMode,
 				selectValue,
-				parent
+				parent,
+				asyncMode
 			);
 
 			if (typeof childRender === 'string') {
@@ -235,7 +293,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 								context,
 								isSvgMode,
 								selectValue,
-								vnode
+								vnode,
+								asyncMode
 							);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -315,7 +374,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 						context,
 						isSvgMode,
 						selectValue,
-						vnode
+						vnode,
+						asyncMode
 					);
 					return str;
 				} catch (err) {
@@ -346,7 +406,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 							context,
 							isSvgMode,
 							selectValue,
-							vnode
+							vnode,
+							asyncMode
 						);
 					}
 
@@ -373,7 +434,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 				context,
 				isSvgMode,
 				selectValue,
-				vnode
+				vnode,
+				asyncMode
 			);
 			if (afterDiff) afterDiff(vnode);
 			vnode[PARENT] = undefined;
@@ -382,10 +444,19 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 			return str;
 		} catch (error) {
+			if (!asyncMode) throw error;
+
 			if (!error || typeof error.then !== 'function') throw error;
 
 			return error.then(() =>
-				_renderToString(rendered, context, isSvgMode, selectValue, vnode)
+				_renderToString(
+					rendered,
+					context,
+					isSvgMode,
+					selectValue,
+					vnode,
+					asyncMode
+				)
 			);
 		}
 	}
@@ -517,7 +588,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		// recurse into this element VNode's children
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
+		html = _renderToString(
+			children,
+			context,
+			childSvgMode,
+			selectValue,
+			vnode,
+			asyncMode
+		);
 	}
 
 	if (afterDiff) afterDiff(vnode);

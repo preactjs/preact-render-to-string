@@ -1,6 +1,7 @@
 ---
-"preact-render-to-string": major
+"preact-render-to-string": minor
 ---
 
-Allow prepass like behavior in renderToString where a Promise
-will be awaited and then continued
+Allow prepass like behavior where a Promise
+will be awaited and then continued, this is done with
+the new `renderToStringAsync` export
