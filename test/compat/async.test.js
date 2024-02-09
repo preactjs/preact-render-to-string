@@ -1,4 +1,4 @@
-import render from '../../src/index.js';
+import { renderToStringAsync } from '../../src/index.js';
 import { h } from 'preact';
 import { Suspense } from 'preact/compat';
 import { expect } from 'chai';
@@ -8,7 +8,7 @@ describe('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
 		const { Suspender, suspended } = createSuspender();
 
-		const promise = render(
+		const promise = renderToStringAsync(
 			<Suspense fallback={<div>loading...</div>}>
 				<Suspender>
 					<div class="foo">bar</div>
@@ -35,7 +35,7 @@ describe('Async renderToString', () => {
 			suspended: suspendedTwo
 		} = createSuspender();
 
-		const promise = render(
+		const promise = renderToStringAsync(
 			<ul>
 				<Suspense fallback={null}>
 					<SuspenderOne>
