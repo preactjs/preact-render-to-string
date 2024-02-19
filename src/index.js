@@ -84,7 +84,7 @@ export function renderToString(vnode, context) {
  * @param {Object} [context={}] Initial root context object
  * @returns {string} serialized HTML
  */
-export function renderToStringAsync(vnode, context) {
+export async function renderToStringAsync(vnode, context) {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -113,7 +113,18 @@ export function renderToStringAsync(vnode, context) {
 		);
 
 		if (Array.isArray(rendered)) {
-			return Promise.all(rendered).then((rendered) => rendered.join(''));
+			let count = 0;
+			let resolved = rendered;
+
+			// Resolving nested Promises with a maximum depth of 25
+			while (
+				resolved.some((element) => typeof element.then === 'function') &&
+				count++ < 25
+			) {
+				resolved = (await Promise.all(resolved)).flat();
+			}
+
+			return resolved.join('');
 		}
 
 		return rendered;

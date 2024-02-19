@@ -25,7 +25,7 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal(expected);
 	});
 
-	it('should render JSX with nested suspense boundary', async () => {
+	it('should render JSX with nested suspended components', async () => {
 		const {
 			Suspender: SuspenderOne,
 			suspended: suspendedOne
@@ -43,6 +43,42 @@ describe('Async renderToString', () => {
 						<SuspenderTwo>
 							<li>two</li>
 						</SuspenderTwo>
+						<li>three</li>
+					</SuspenderOne>
+				</Suspense>
+			</ul>
+		);
+
+		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+
+		suspendedOne.resolve();
+		suspendedTwo.resolve();
+
+		const rendered = await promise;
+
+		expect(rendered).to.equal(expected);
+	});
+
+	it('should render JSX with nested suspense boundaries', async () => {
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+
+		const promise = renderToStringAsync(
+			<ul>
+				<Suspense fallback={null}>
+					<SuspenderOne>
+						<li>one</li>
+						<Suspense fallback={null}>
+							<SuspenderTwo>
+								<li>two</li>
+							</SuspenderTwo>
+						</Suspense>
 						<li>three</li>
 					</SuspenderOne>
 				</Suspense>
