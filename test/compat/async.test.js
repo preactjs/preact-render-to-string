@@ -25,7 +25,7 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal(expected);
 	});
 
-	it('should render JSX with nested suspense boundary', async () => {
+	it('should render JSX with nested suspended components', async () => {
 		const {
 			Suspender: SuspenderOne,
 			suspended: suspendedOne
@@ -59,7 +59,7 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal(expected);
 	});
 
-	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
+	it('should render JSX with nested suspense boundaries', async () => {
 		const {
 			Suspender: SuspenderOne,
 			suspended: suspendedOne
@@ -74,18 +74,64 @@ describe('Async renderToString', () => {
 				<Suspense fallback={null}>
 					<SuspenderOne>
 						<li>one</li>
+						<Suspense fallback={null}>
+							<SuspenderTwo>
+								<li>two</li>
+							</SuspenderTwo>
+						</Suspense>
+						<li>three</li>
 					</SuspenderOne>
-					<SuspenderTwo>
-						<li>two</li>
-					</SuspenderTwo>
 				</Suspense>
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li></ul>`;
+		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
+
+		const rendered = await promise;
+
+		expect(rendered).to.equal(expected);
+	});
+
+	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
+
+		const promise = renderToStringAsync(
+			<ul>
+				<Suspense fallback={null}>
+					<SuspenderOne>
+						<li>one</li>
+					</SuspenderOne>
+					<Suspense fallback={null}>
+						<SuspenderTwo>
+							<li>two</li>
+						</SuspenderTwo>
+					</Suspense>
+					<SuspenderThree>
+						<li>three</li>
+					</SuspenderThree>
+				</Suspense>
+			</ul>
+		);
+
+		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+
+		suspendedOne.resolve();
+		suspendedTwo.resolve();
+		suspendedThree.resolve();
 
 		const rendered = await promise;
 
