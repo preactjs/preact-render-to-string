@@ -60,8 +60,74 @@ export function renderToString(vnode, context) {
 			context || EMPTY_OBJ,
 			false,
 			undefined,
-			parent
+			parent,
+			false
 		);
+	} catch (e) {
+		if (e.then) {
+			throw new Error('Use "renderToStringAsync" for suspenseful rendering.');
+		}
+
+		throw e;
+	} finally {
+		// options._commit, we don't schedule any effects in this library right now,
+		// so we can pass an empty queue to this hook.
+		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+		options[SKIP_EFFECTS] = previousSkipEffects;
+		EMPTY_ARR.length = 0;
+	}
+}
+
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @returns {string} serialized HTML
+ */
+export async function renderToStringAsync(vnode, context) {
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	// store options hooks once before each synchronous render call
+	beforeDiff = options[DIFF];
+	afterDiff = options[DIFFED];
+	renderHook = options[RENDER];
+	ummountHook = options.unmount;
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	try {
+		const rendered = _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent,
+			true
+		);
+
+		if (Array.isArray(rendered)) {
+			let count = 0;
+			let resolved = rendered;
+
+			// Resolving nested Promises with a maximum depth of 25
+			while (
+				resolved.some((element) => typeof element.then === 'function') &&
+				count++ < 25
+			) {
+				resolved = (await Promise.all(resolved)).flat();
+			}
+
+			return resolved.join('');
+		}
+
+		return rendered;
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -137,9 +203,17 @@ function renderClassComponent(vnode, context) {
  * @param {boolean} isSvgMode
  * @param {any} selectValue
  * @param {VNode} parent
- * @returns {string}
+ * @param {boolean} asyncMode
+ * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
-function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
+function _renderToString(
+	vnode,
+	context,
+	isSvgMode,
+	selectValue,
+	parent,
+	asyncMode
+) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
 		return '';
@@ -153,16 +227,44 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
-		let rendered = '';
+		let rendered = '',
+			renderArray;
 		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			let child = vnode[i];
 			if (child == null || typeof child === 'boolean') continue;
 
-			rendered =
-				rendered +
-				_renderToString(child, context, isSvgMode, selectValue, parent);
+			const childRender = _renderToString(
+				child,
+				context,
+				isSvgMode,
+				selectValue,
+				parent,
+				asyncMode
+			);
+
+			if (typeof childRender === 'string') {
+				rendered += childRender;
+			} else {
+				renderArray = renderArray || [];
+
+				if (rendered) renderArray.push(rendered);
+
+				rendered = '';
+
+				if (Array.isArray(childRender)) {
+					renderArray.push(...childRender);
+				} else {
+					renderArray.push(childRender);
+				}
+			}
 		}
+
+		if (renderArray) {
+			if (rendered) renderArray.push(rendered);
+			return renderArray;
+		}
+
 		return rendered;
 	}
 
@@ -202,7 +304,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 								context,
 								isSvgMode,
 								selectValue,
-								vnode
+								vnode,
+								asyncMode
 							);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -282,7 +385,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 						context,
 						isSvgMode,
 						selectValue,
-						vnode
+						vnode,
+						asyncMode
 					);
 					return str;
 				} catch (err) {
@@ -313,7 +417,8 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 							context,
 							isSvgMode,
 							selectValue,
-							vnode
+							vnode,
+							asyncMode
 						);
 					}
 
@@ -333,20 +438,44 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 			rendered != null && rendered.type === Fragment && rendered.key == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-		// Recurse into children before invoking the after-diff hook
-		const str = _renderToString(
-			rendered,
-			context,
-			isSvgMode,
-			selectValue,
-			vnode
-		);
-		if (afterDiff) afterDiff(vnode);
-		vnode[PARENT] = undefined;
+		const renderChildren = () =>
+			_renderToString(
+				rendered,
+				context,
+				isSvgMode,
+				selectValue,
+				vnode,
+				asyncMode
+			);
 
-		if (ummountHook) ummountHook(vnode);
+		try {
+			// Recurse into children before invoking the after-diff hook
+			const str = renderChildren();
 
-		return str;
+			if (afterDiff) afterDiff(vnode);
+			vnode[PARENT] = undefined;
+
+			if (ummountHook) ummountHook(vnode);
+
+			return str;
+		} catch (error) {
+			if (!asyncMode) throw error;
+
+			if (!error || typeof error.then !== 'function') throw error;
+
+			const renderNestedChildren = () => {
+				try {
+					return renderChildren();
+				} catch (e) {
+					return e.then(
+						() => renderChildren(),
+						() => renderNestedChildren()
+					);
+				}
+			};
+
+			return error.then(() => renderNestedChildren());
+		}
 	}
 
 	// Serialize Element VNodes to HTML
@@ -476,7 +605,14 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		// recurse into this element VNode's children
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
-		html = _renderToString(children, context, childSvgMode, selectValue, vnode);
+		html = _renderToString(
+			children,
+			context,
+			childSvgMode,
+			selectValue,
+			vnode,
+			asyncMode
+		);
 	}
 
 	if (afterDiff) afterDiff(vnode);
@@ -488,7 +624,13 @@ function _renderToString(vnode, context, isSvgMode, selectValue, parent) {
 		return s + '/>';
 	}
 
-	return s + '>' + html + '</' + type + '>';
+	const endTag = '</' + type + '>';
+	const startTag = s + '>';
+
+	if (Array.isArray(html)) return [startTag, ...html, endTag];
+	else if (typeof html !== 'string') return [startTag, html, endTag];
+
+	return startTag + html + endTag;
 }
 
 const SELF_CLOSING = new Set([
