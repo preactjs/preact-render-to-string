@@ -137,4 +137,32 @@ describe('Async renderToString', () => {
 
 		expect(rendered).to.equal(expected);
 	});
+
+	it('should rethrow error thrown after suspending', async () => {
+		const { suspended, getResolved } = createSuspender();
+
+		function Suspender() {
+			if (!getResolved()) {
+				throw suspended.promise;
+			}
+
+			throw new Error('fail');
+		}
+
+		const promise = renderToStringAsync(
+			<Suspense fallback={<div>loading...</div>}>
+				<Suspender />
+			</Suspense>
+		);
+
+		let msg = '';
+		try {
+			suspended.resolve();
+			await promise;
+		} catch (err) {
+			msg = err.message;
+		}
+
+		expect(msg).to.equal('fail');
+	});
 });
