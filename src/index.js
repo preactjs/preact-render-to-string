@@ -467,6 +467,8 @@ function _renderToString(
 				try {
 					return renderChildren();
 				} catch (e) {
+					if (!e || typeof e.then !== 'function') throw e;
+
 					return e.then(
 						() => renderChildren(),
 						() => renderNestedChildren()

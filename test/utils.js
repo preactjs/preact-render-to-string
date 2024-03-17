@@ -27,6 +27,9 @@ export function createSuspender() {
 	}
 
 	return {
+		getResolved() {
+			return resolved;
+		},
 		suspended: deferred,
 		Suspender
 	};
