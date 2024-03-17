@@ -97,10 +97,10 @@ options.errorBoundaries = true;
 
 ---
 
-### `Suspense` & `lazy` components with [`preact/compat`](https://www.npmjs.com/package/preact) & [`preact-ssr-prepass`](https://www.npmjs.com/package/preact-ssr-prepass)
+### `Suspense` & `lazy` components with [`preact/compat`](https://www.npmjs.com/package/preact)
 
 ```bash
-npm install preact preact-render-to-string preact-ssr-prepass
+npm install preact preact-render-to-string
 ```
 
 ```jsx
@@ -125,19 +125,12 @@ const Main = () => {
 ```
 
 ```jsx
-import { render } from 'preact-render-to-string';
-import prepass from 'preact-ssr-prepass';
+import { renderToStringAsync } from 'preact-render-to-string';
 import { Main } from './main';
 
 const main = async () => {
-	// Creation of the virtual DOM
-	const vdom = <Main />;
-
-	// Pre-rendering of lazy components
-	await prepass(vdom);
-
-	// Rendering of components
-	const html = render(vdom);
+	// Rendering of lazy components
+	const html = await renderToStringAsync(<Main />);
 
 	console.log(html);
 	// <h1>Home page</h1>
