@@ -425,7 +425,7 @@ function _renderToString(
 					return str;
 				} finally {
 					if (afterDiff) afterDiff(vnode);
-					vnode[PARENT] = undefined;
+					vnode[PARENT] = null;
 
 					if (ummountHook) ummountHook(vnode);
 				}
@@ -453,7 +453,7 @@ function _renderToString(
 			const str = renderChildren();
 
 			if (afterDiff) afterDiff(vnode);
-			vnode[PARENT] = undefined;
+			vnode[PARENT] = null;
 
 			if (ummountHook) ummountHook(vnode);
 
@@ -618,7 +618,7 @@ function _renderToString(
 	}
 
 	if (afterDiff) afterDiff(vnode);
-	vnode[PARENT] = undefined;
+	vnode[PARENT] = null;
 	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
