@@ -1,6 +1,6 @@
 import { renderToStringAsync } from '../../src/index.js';
 import { h } from 'preact';
-import { Suspense } from 'preact/compat';
+import { Suspense, useId } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.js';
 
@@ -164,5 +164,29 @@ describe('Async renderToString', () => {
 		}
 
 		expect(msg).to.equal('fail');
+	});
+
+	it('should support hooks', async () => {
+		const { suspended, getResolved } = createSuspender();
+
+		function Suspender() {
+			const id = useId();
+
+			if (!getResolved()) {
+				throw suspended.promise;
+			}
+
+			return <p>{typeof id === 'string' ? 'ok' : 'fail'}</p>;
+		}
+
+		const promise = renderToStringAsync(
+			<Suspense fallback={<div>loading...</div>}>
+				<Suspender />
+			</Suspense>
+		);
+
+		suspended.resolve();
+		const rendered = await promise;
+		expect(rendered).to.equal('<p>ok</p>');
 	});
 });
