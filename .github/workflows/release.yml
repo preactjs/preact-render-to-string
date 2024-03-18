@@ -9,6 +9,14 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      repository-projects: write
+      deployments: write
+      packages: write
+      pull-requests: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -38,6 +46,9 @@ jobs:
         run: npm ci
 
       - name: Create Release Pull Request
-        uses: changesets/action@master
+        uses: changesets/action@1.4.6
+        with:
+          publish: npm run changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
