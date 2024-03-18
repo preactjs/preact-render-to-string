@@ -46,7 +46,7 @@ jobs:
         run: npm ci
 
       - name: Create Release Pull Request
-        uses: changesets/action@1.4.6
+        uses: changesets/action@v1.4.6
         with:
           publish: npm run changeset publish
         env:
