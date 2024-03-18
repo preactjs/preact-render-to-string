@@ -12,10 +12,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
-      issues: write
-      repository-projects: write
-      deployments: write
-      packages: write
+      issues: read
       pull-requests: write
     steps:
       - name: Checkout Repo
@@ -45,8 +42,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Create Release Pull Request
-        uses: changesets/action@1.4.6
+      - name: Create Release PR or Publish
+        uses: changesets/action@v1.4.6
         with:
           publish: npm run changeset publish
         env:
