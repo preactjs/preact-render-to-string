@@ -45,7 +45,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Create Release Pull Request
+      - name: Create Release PR or Publish
         uses: changesets/action@v1.4.6
         with:
           publish: npm run changeset publish
