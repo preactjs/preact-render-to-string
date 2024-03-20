@@ -1,5 +1,15 @@
 # preact-render-to-string
 
+## 6.4.1
+
+### Patch Changes
+
+- [#344](https://github.com/preactjs/preact-render-to-string/pull/344) [`27a8b0e`](https://github.com/preactjs/preact-render-to-string/commit/27a8b0e0654663e31df01e03f5bf34c74ec76e67) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Ensure commonjs also has the async export
+
+* [#336](https://github.com/preactjs/preact-render-to-string/pull/336) [`c46fb59`](https://github.com/preactjs/preact-render-to-string/commit/c46fb593eaf0c0be699acba6b9953dd01da0ea81) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix error thrown after suspending not being rethrown.
+
+- [#339](https://github.com/preactjs/preact-render-to-string/pull/339) [`4462822`](https://github.com/preactjs/preact-render-to-string/commit/44628228dec6b10c59023c21e17a140f205ed0c9) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix invalid parent pointer empty value when rendering a suspended vnode
+
 ## 6.4.0
 
 ### Minor Changes
