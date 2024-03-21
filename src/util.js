@@ -5,7 +5,7 @@ export const HTML_LOWER_CASE = /^accessK|^auto[A-Z]|^ch|^col|cont|cross|dateT|en
 export const SVG_CAMEL_CASE = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|color|dominant|enable|fill|flood|font|glyph[^R]|horiz|image|letter|lighting|marker[^WUH]|overline|panose|pointe|paint|rendering|shape|stop|strikethrough|stroke|text[^L]|transform|underline|unicode|units|^v[^i]|^w|^xH/;
 
 // DOM properties that should NOT have "px" added when numeric
-const ENCODED_ENTITIES = /["&<]/;
+const ENCODED_ENTITIES = /["'&<]/;
 
 /** @param {string} str */
 export function encodeEntities(str) {
@@ -25,6 +25,9 @@ export function encodeEntities(str) {
 				break;
 			case 38:
 				ch = '&amp;';
+				break;
+			case 39:
+				ch = '&#x27;';
 				break;
 			case 60:
 				ch = '&lt;';

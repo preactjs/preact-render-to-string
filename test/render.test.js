@@ -213,8 +213,8 @@ describe('render', () => {
 		});
 
 		it('should encode entities', () => {
-			let rendered = render(<div a={'"<>&'}>{'"<>&'}</div>),
-				expected = `<div a="&quot;&lt;>&amp;">&quot;&lt;>&amp;</div>`;
+			let rendered = render(<div a={'"\'<>&'}>{'"\'<>&'}</div>),
+				expected = `<div a="&quot;&#x27;&lt;>&amp;">&quot;&#x27;&lt;>&amp;</div>`;
 
 			expect(rendered).to.equal(expected);
 		});
