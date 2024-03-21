@@ -104,10 +104,12 @@ function _renderToStringPretty(
 	// components
 	if (typeof nodeName === 'function') {
 		isComponent = true;
-		if (opts.shallow && (inner || opts.renderRootComponent === false)) {
-			nodeName = getComponentName(nodeName);
-		} else if (nodeName === Fragment) {
-			const children = [];
+
+		let isFragment = nodeName === Fragment,
+			isShallow = opts.shallow && (inner || opts.renderRootComponent === false);
+
+		if (isFragment || (isShallow && isFragment)) {
+			let children = [];
 			getChildren(children, vnode.props.children);
 			return _renderToStringPretty(
 				children,
@@ -117,6 +119,8 @@ function _renderToStringPretty(
 				isSvgMode,
 				selectValue
 			);
+		} else if (isShallow) {
+			nodeName = getComponentName(nodeName);
 		} else {
 			let rendered;
 

@@ -52,12 +52,26 @@ describe('shallowRender()', () => {
 		expect(Test).to.have.been.calledOnce;
 	});
 
-	it('should ignore Fragments', () => {
-		let rendered = shallowRender(
-			<Fragment>
-				<div>foo</div>
-			</Fragment>
-		);
-		expect(rendered).to.equal(`<div>foo</div>`);
+	describe('should ignore Fragments', () => {
+		it('passed directly', () => {
+			let rendered = shallowRender(
+				<Fragment>
+					<div>foo</div>
+				</Fragment>
+			);
+			expect(rendered).to.equal(`<div>foo</div>`);
+		});
+
+		it('passed from FC', () => {
+			const Test = () => (
+				<Fragment>
+					<div>foo</div>
+				</Fragment>
+			);
+
+			let rendered = shallowRender(<Test />);
+
+			expect(rendered).to.equal(`<div>foo</div>`);
+		});
 	});
 });
