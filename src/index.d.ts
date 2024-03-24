@@ -11,6 +11,10 @@ export function renderToStringAsync<P = {}>(
 	vnode: VNode<P>,
 	context?: any
 ): string | Promise<string>;
+export function renderToStream<P = {}>(
+	vnode: VNode<P>,
+	context?: any
+): ReadableStream<string>;
 export function renderToStaticMarkup<P = {}>(
 	vnode: VNode<P>,
 	context?: any

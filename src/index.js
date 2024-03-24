@@ -30,13 +30,7 @@ const assign = Object.assign;
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
 
-/**
- * Render Preact JSX + Components to an HTML string.
- * @param {VNode} vnode	JSX Element / VNode to render
- * @param {Object} [context={}] Initial root context object
- * @returns {string} serialized HTML
- */
-export function renderToString(vnode, context) {
+function prepare() {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -50,6 +44,30 @@ export function renderToString(vnode, context) {
 	afterDiff = options[DIFFED];
 	renderHook = options[RENDER];
 	ummountHook = options.unmount;
+
+	return previousSkipEffects;
+}
+
+/**
+ * @param {VNode} vnode
+ * @param {any} previousSkipEffects
+ */
+function finalize(vnode, previousSkipEffects) {
+	// options._commit, we don't schedule any effects in this library right now,
+	// so we can pass an empty queue to this hook.
+	if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+	options[SKIP_EFFECTS] = previousSkipEffects;
+	EMPTY_ARR.length = 0;
+}
+
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @returns {string} serialized HTML
+ */
+export function renderToString(vnode, context) {
+	const previousSkipEffects = prepare();
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
@@ -70,11 +88,95 @@ export function renderToString(vnode, context) {
 
 		throw e;
 	} finally {
-		// options._commit, we don't schedule any effects in this library right now,
-		// so we can pass an empty queue to this hook.
-		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
-		options[SKIP_EFFECTS] = previousSkipEffects;
-		EMPTY_ARR.length = 0;
+		finalize(vnode, previousSkipEffects);
+	}
+}
+
+const DEFAULT_RENDER_SLOT = (idx) =>
+	`<!--preact-slot:${idx}--><!--/preact-slot:${idx}-->`;
+
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @param {(idx: number) => string} [renderSlot] Render slot marker
+ * @returns {ReadableStream<string>|string} serialized HTML
+ */
+export function renderToStream(
+	vnode,
+	context,
+	renderSlot = DEFAULT_RENDER_SLOT
+) {
+	const previousSkipEffects = prepare();
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	try {
+		const rendered = _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent,
+			true
+		);
+
+		if (Array.isArray(rendered)) {
+			let outer = '';
+
+			/** @type {ReadableStreamDefaultController | null} */
+			let controller = null;
+
+			/** @type {ReadableStream<string> | null} */
+			let readable = null;
+
+			let count = 0;
+			let idx = 0;
+			let pending = 0;
+			let suffix = '';
+			for (let i = 0; i < rendered.length; i++) {
+				const element = rendered[i];
+				if (typeof element.then === 'function') {
+					if (readable === null) {
+						readable = new ReadableStream({
+							start(ctrl) {
+								controller = ctrl;
+							}
+						});
+					}
+
+					outer += renderSlot(idx);
+					idx++;
+					pending++;
+					element.then((r) => {
+						controller.enqueue(r);
+						if (count++ < 25 || --pending === 0) {
+							if (suffix !== '') {
+								controller.enqueue(suffix);
+							}
+							controller.close();
+						}
+					});
+				} else if (element === '</body>' || element === '</html>') {
+					suffix += element;
+				} else {
+					outer += element;
+				}
+			}
+
+			if (readable === null) {
+				return outer + suffix;
+			}
+
+			controller.enqueue(outer);
+
+			return readable;
+		}
+
+		return rendered;
+	} finally {
+		finalize(vnode, previousSkipEffects);
 	}
 }
 
@@ -82,22 +184,10 @@ export function renderToString(vnode, context) {
  * Render Preact JSX + Components to an HTML string.
  * @param {VNode} vnode	JSX Element / VNode to render
  * @param {Object} [context={}] Initial root context object
- * @returns {string} serialized HTML
+ * @returns {Promise<string>} serialized HTML
  */
 export async function renderToStringAsync(vnode, context) {
-	// Performance optimization: `renderToString` is synchronous and we
-	// therefore don't execute any effects. To do that we pass an empty
-	// array to `options._commit` (`__c`). But we can go one step further
-	// and avoid a lot of dirty checks and allocations by setting
-	// `options._skipEffects` (`__s`) too.
-	const previousSkipEffects = options[SKIP_EFFECTS];
-	options[SKIP_EFFECTS] = true;
-
-	// store options hooks once before each synchronous render call
-	beforeDiff = options[DIFF];
-	afterDiff = options[DIFFED];
-	renderHook = options[RENDER];
-	ummountHook = options.unmount;
+	const previousSkipEffects = prepare();
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
@@ -129,11 +219,7 @@ export async function renderToStringAsync(vnode, context) {
 
 		return rendered;
 	} finally {
-		// options._commit, we don't schedule any effects in this library right now,
-		// so we can pass an empty queue to this hook.
-		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
-		options[SKIP_EFFECTS] = previousSkipEffects;
-		EMPTY_ARR.length = 0;
+		finalize(vnode, previousSkipEffects);
 	}
 }
 
