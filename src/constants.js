@@ -14,3 +14,8 @@ export const PARENT = '__';
 export const VNODE = '__v';
 export const DIRTY = '__d';
 export const NEXT_STATE = '__s';
+
+// Rendering modes
+export const MODE_SYNC = 0;
+export const MODE_ASYNC = 1;
+export const MODE_STREAM = 2;

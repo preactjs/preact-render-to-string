@@ -16,7 +16,7 @@ async function drain(iter) {
 	return out;
 }
 
-describe('streaming renderToString', () => {
+describe('renderToStream', () => {
 	it('should render JSX after a suspense boundary', async () => {
 		const { Suspender, suspended } = createSuspender();
 
@@ -24,7 +24,7 @@ describe('streaming renderToString', () => {
 			renderToStream(
 				<div>
 					<h1>foo</h1>
-					<Suspense fallback={<div>loading...</div>}>
+					<Suspense>
 						<Suspender>
 							<div class="foo">bar</div>
 						</Suspender>
@@ -36,7 +36,7 @@ describe('streaming renderToString', () => {
 		suspended.resolve();
 		const rendered = await promise;
 		expect(rendered).to.deep.equal([
-			'<div><h1>foo</h1><!--preact-slot:0--><!--/preact-slot:0--><p>baz</p></div>',
+			'<div><h1>foo</h1><!--p:slot:0--><!--/p:slot:0--><p>baz</p></div>',
 			'<div class="foo">bar</div>'
 		]);
 	});
@@ -50,7 +50,7 @@ describe('streaming renderToString', () => {
 					<body>
 						<div>
 							<h1>foo</h1>
-							<Suspense fallback={<div>loading...</div>}>
+							<Suspense>
 								<Suspender>
 									<div class="foo">bar</div>
 								</Suspender>
@@ -64,9 +64,33 @@ describe('streaming renderToString', () => {
 		suspended.resolve();
 		const rendered = await promise;
 		expect(rendered).to.deep.equal([
-			'<html><body><div><h1>foo</h1><!--preact-slot:0--><!--/preact-slot:0--><p>baz</p></div>',
+			'<html><body><div><h1>foo</h1><!--p:slot:0--><!--/p:slot:0--><p>baz</p></div>',
 			'<div class="foo">bar</div>',
 			'</body></html>'
+		]);
+	});
+
+	it.only('should render suspense fallback in placeholder', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const promise = drain(
+			renderToStream(
+				<div>
+					<h1>foo</h1>
+					<Suspense fallback={<p>loading...</p>}>
+						<Suspender>
+							<div class="foo">bar</div>
+						</Suspender>
+					</Suspense>
+					<p>baz</p>
+				</div>
+			)
+		);
+		suspended.resolve();
+		const rendered = await promise;
+		expect(rendered).to.deep.equal([
+			'<div><h1>foo</h1><!--p:slot:0--><!--/p:slot:0--><p>baz</p></div>',
+			'<div class="foo">bar</div>'
 		]);
 	});
 });

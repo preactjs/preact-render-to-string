@@ -14,6 +14,9 @@ import {
 	DIFF,
 	DIFFED,
 	DIRTY,
+	MODE_ASYNC,
+	MODE_STREAM,
+	MODE_SYNC,
 	NEXT_STATE,
 	PARENT,
 	RENDER,
@@ -79,7 +82,7 @@ export function renderToString(vnode, context) {
 			false,
 			undefined,
 			parent,
-			false
+			MODE_SYNC
 		);
 	} catch (e) {
 		if (e.then) {
@@ -92,14 +95,57 @@ export function renderToString(vnode, context) {
 	}
 }
 
-const DEFAULT_RENDER_SLOT = (idx) =>
-	`<!--preact-slot:${idx}--><!--/preact-slot:${idx}-->`;
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @returns {Promise<string>} serialized HTML
+ */
+export async function renderToStringAsync(vnode, context) {
+	const previousSkipEffects = prepare();
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	try {
+		const rendered = _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent,
+			MODE_ASYNC
+		);
+
+		if (Array.isArray(rendered)) {
+			let count = 0;
+			let resolved = rendered;
+
+			// Resolving nested Promises with a maximum depth of 25
+			while (
+				resolved.some((element) => typeof element.then === 'function') &&
+				count++ < 25
+			) {
+				resolved = (await Promise.all(resolved)).flat();
+			}
+
+			return resolved.join('');
+		}
+
+		return rendered;
+	} finally {
+		finalize(vnode, previousSkipEffects);
+	}
+}
+
+const DEFAULT_RENDER_SLOT = (idx, content) =>
+	`<!--p:slot:${idx}-->${content}<!--/p:slot:${idx}-->`;
 
 /**
  * Render Preact JSX + Components to an HTML string.
  * @param {VNode} vnode	JSX Element / VNode to render
  * @param {Object} [context={}] Initial root context object
- * @param {(idx: number) => string} [renderSlot] Render slot marker
+ * @param {(idx: number, content: string) => string} [renderSlot] Render slot marker
  * @returns {ReadableStream<string>|string} serialized HTML
  */
 export function renderToStream(
@@ -119,7 +165,7 @@ export function renderToStream(
 			false,
 			undefined,
 			parent,
-			true
+			MODE_STREAM
 		);
 
 		if (Array.isArray(rendered)) {
@@ -172,49 +218,6 @@ export function renderToStream(
 			controller.enqueue(outer);
 
 			return readable;
-		}
-
-		return rendered;
-	} finally {
-		finalize(vnode, previousSkipEffects);
-	}
-}
-
-/**
- * Render Preact JSX + Components to an HTML string.
- * @param {VNode} vnode	JSX Element / VNode to render
- * @param {Object} [context={}] Initial root context object
- * @returns {Promise<string>} serialized HTML
- */
-export async function renderToStringAsync(vnode, context) {
-	const previousSkipEffects = prepare();
-
-	const parent = h(Fragment, null);
-	parent[CHILDREN] = [vnode];
-
-	try {
-		const rendered = _renderToString(
-			vnode,
-			context || EMPTY_OBJ,
-			false,
-			undefined,
-			parent,
-			true
-		);
-
-		if (Array.isArray(rendered)) {
-			let count = 0;
-			let resolved = rendered;
-
-			// Resolving nested Promises with a maximum depth of 25
-			while (
-				resolved.some((element) => typeof element.then === 'function') &&
-				count++ < 25
-			) {
-				resolved = (await Promise.all(resolved)).flat();
-			}
-
-			return resolved.join('');
 		}
 
 		return rendered;
@@ -290,6 +293,7 @@ function renderClassComponent(vnode, context) {
  * @param {any} selectValue
  * @param {VNode} parent
  * @param {boolean} asyncMode
+ * @param {number} renderMode
  * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
 function _renderToString(
@@ -298,7 +302,7 @@ function _renderToString(
 	isSvgMode,
 	selectValue,
 	parent,
-	asyncMode
+	renderMode
 ) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
@@ -326,7 +330,7 @@ function _renderToString(
 				isSvgMode,
 				selectValue,
 				parent,
-				asyncMode
+				renderMode
 			);
 
 			if (typeof childRender === 'string') {
@@ -391,7 +395,7 @@ function _renderToString(
 								isSvgMode,
 								selectValue,
 								vnode,
-								asyncMode
+								renderMode
 							);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -472,7 +476,7 @@ function _renderToString(
 						isSvgMode,
 						selectValue,
 						vnode,
-						asyncMode
+						renderMode
 					);
 					return str;
 				} catch (err) {
@@ -504,7 +508,7 @@ function _renderToString(
 							isSvgMode,
 							selectValue,
 							vnode,
-							asyncMode
+							renderMode
 						);
 					}
 
@@ -531,7 +535,7 @@ function _renderToString(
 				isSvgMode,
 				selectValue,
 				vnode,
-				asyncMode
+				renderMode
 			);
 
 		try {
@@ -545,10 +549,11 @@ function _renderToString(
 
 			return str;
 		} catch (error) {
-			if (!asyncMode) throw error;
+			if (renderMode === MODE_SYNC) throw error;
 
 			if (!error || typeof error.then !== 'function') throw error;
 
+			console.log(renderMode, error);
 			const renderNestedChildren = () => {
 				try {
 					return renderChildren();
@@ -699,7 +704,7 @@ function _renderToString(
 			childSvgMode,
 			selectValue,
 			vnode,
-			asyncMode
+			renderMode
 		);
 	}
 
