@@ -1686,5 +1686,18 @@ describe('render', () => {
 				'<div>foo<span>bar</span><p>foo</p><p>bar</p></div>'
 			);
 		});
+
+		it('should bypass top level fragment detection', () => {
+			function Foo(props) {
+				return props.children;
+			}
+			let vnode = (
+				<Foo>
+					<Fragment tpl={['<div>foo', '</div>']} exprs={[<span>bar</span>]} />
+				</Foo>
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo<span>bar</span></div>');
+		});
 	});
 });
