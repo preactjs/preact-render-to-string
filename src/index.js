@@ -438,8 +438,9 @@ function _renderToString(
 			rendered != null && rendered.type === Fragment && rendered.key == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-		const renderChildren = () =>
-			_renderToString(
+		try {
+			// Recurse into children before invoking the after-diff hook
+			const str = _renderToString(
 				rendered,
 				context,
 				isSvgMode,
@@ -447,10 +448,6 @@ function _renderToString(
 				vnode,
 				asyncMode
 			);
-
-		try {
-			// Recurse into children before invoking the after-diff hook
-			const str = renderChildren();
 
 			if (afterDiff) afterDiff(vnode);
 			vnode[PARENT] = null;
@@ -465,12 +462,27 @@ function _renderToString(
 
 			const renderNestedChildren = () => {
 				try {
-					return renderChildren();
+					return _renderToString(
+						rendered,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode,
+						asyncMode
+					);
 				} catch (e) {
 					if (!e || typeof e.then !== 'function') throw e;
 
 					return e.then(
-						() => renderChildren(),
+						() =>
+							_renderToString(
+								rendered,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode,
+								asyncMode
+							),
 						() => renderNestedChildren()
 					);
 				}
