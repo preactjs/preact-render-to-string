@@ -435,7 +435,10 @@ function _renderToString(
 		// When a component returns a Fragment node we flatten it in core, so we
 		// need to mirror that logic here too
 		let isTopLevelFragment =
-			rendered != null && rendered.type === Fragment && rendered.key == null;
+			rendered != null &&
+			rendered.type === Fragment &&
+			rendered.key == null &&
+			rendered.props.tpl == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		const renderChildren = () =>
