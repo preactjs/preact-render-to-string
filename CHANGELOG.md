@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 6.4.2
+
+### Patch Changes
+
+- [#347](https://github.com/preactjs/preact-render-to-string/pull/347) [`7bc77a3`](https://github.com/preactjs/preact-render-to-string/commit/7bc77a3cb859069cddf0befc9bd247b2a137f10a) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix JSX template being detected as a top level Fragment when Deno's jsx `precompile` option is used
+
+* [#348](https://github.com/preactjs/preact-render-to-string/pull/348) [`303b8c0`](https://github.com/preactjs/preact-render-to-string/commit/303b8c0990f74648b23343c9e725899122cbded1) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Perf: Remove unnecessary closure when rendering child nodes
+
 ## 6.4.1
 
 ### Patch Changes
