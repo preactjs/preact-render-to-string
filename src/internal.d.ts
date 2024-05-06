@@ -1,7 +1,4 @@
-// import { VNode } from 'preact';
-
-type VNode = import('preact').VNode;
-type ComponentChildren = import('preact').ComponentChildren;
+import { ComponentChildren, VNode } from 'preact';
 
 interface Suspended {
 	id: string;

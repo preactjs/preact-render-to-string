@@ -15,3 +15,5 @@ export default function render(
 	context?: any,
 	options?: Options
 ): string;
+
+export function shallowRender(vnode: VNode, context?: any): string;

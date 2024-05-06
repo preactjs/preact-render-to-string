@@ -34,7 +34,6 @@ export function renderToReadableStream(vnode, context) {
 					controller.error(error);
 					allReady.reject(error);
 				});
-			// controller.enqueue(encoder.encode(shell));
 		}
 	});
 

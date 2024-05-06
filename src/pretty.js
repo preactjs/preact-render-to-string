@@ -9,7 +9,8 @@ import {
 	VOID_ELEMENTS,
 	NAMESPACE_REPLACE_REGEX,
 	SVG_CAMEL_CASE,
-	HTML_LOWER_CASE
+	HTML_LOWER_CASE,
+	getContext
 } from './lib/util.js';
 import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './lib/constants.js';
 import { options, Fragment } from 'preact';
@@ -122,18 +123,11 @@ function _renderToStringPretty(
 
 			let renderHook = options[RENDER];
 
-			let cctx = context;
-			let cxType = nodeName.contextType;
-			if (cxType != null) {
-				let provider = context[cxType.__c];
-				cctx = provider ? provider.props.value : cxType.__;
-			}
-
 			if (
 				!nodeName.prototype ||
 				typeof nodeName.prototype.render !== 'function'
 			) {
-				// let cctx = getContext(nodeName, context);
+				let cctx = getContext(nodeName, context);
 
 				// If a hook invokes setState() to invalidate the component during rendering,
 				// re-render it up to 25 times to allow "settling" of memoized states.
@@ -150,7 +144,7 @@ function _renderToStringPretty(
 					rendered = nodeName.call(vnode.__c, props, cctx);
 				}
 			} else {
-				// let cctx = getContext(nodeName, context);
+				let cctx = getContext(nodeName, context);
 
 				// c = new nodeName(props, context);
 				c = vnode.__c = new nodeName(props, cctx);
