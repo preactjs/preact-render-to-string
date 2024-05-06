@@ -61,8 +61,74 @@ export function renderToString(vnode, context, _rendererState) {
 			false,
 			undefined,
 			parent,
+			false,
 			_rendererState
 		);
+	} catch (e) {
+		if (e.then) {
+			throw new Error('Use "renderToStringAsync" for suspenseful rendering.');
+		}
+
+		throw e;
+	} finally {
+		// options._commit, we don't schedule any effects in this library right now,
+		// so we can pass an empty queue to this hook.
+		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
+		options[SKIP_EFFECTS] = previousSkipEffects;
+		EMPTY_ARR.length = 0;
+	}
+}
+
+/**
+ * Render Preact JSX + Components to an HTML string.
+ * @param {VNode} vnode	JSX Element / VNode to render
+ * @param {Object} [context={}] Initial root context object
+ * @returns {string} serialized HTML
+ */
+export async function renderToStringAsync(vnode, context) {
+	// Performance optimization: `renderToString` is synchronous and we
+	// therefore don't execute any effects. To do that we pass an empty
+	// array to `options._commit` (`__c`). But we can go one step further
+	// and avoid a lot of dirty checks and allocations by setting
+	// `options._skipEffects` (`__s`) too.
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	// store options hooks once before each synchronous render call
+	beforeDiff = options[DIFF];
+	afterDiff = options[DIFFED];
+	renderHook = options[RENDER];
+	ummountHook = options.unmount;
+
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
+	try {
+		const rendered = _renderToString(
+			vnode,
+			context || EMPTY_OBJ,
+			false,
+			undefined,
+			parent,
+			true
+		);
+
+		if (Array.isArray(rendered)) {
+			let count = 0;
+			let resolved = rendered;
+
+			// Resolving nested Promises with a maximum depth of 25
+			while (
+				resolved.some((element) => typeof element.then === 'function') &&
+				count++ < 25
+			) {
+				resolved = (await Promise.all(resolved)).flat();
+			}
+
+			return resolved.join('');
+		}
+
+		return rendered;
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -138,8 +204,9 @@ function renderClassComponent(vnode, context) {
  * @param {boolean} isSvgMode
  * @param {any} selectValue
  * @param {VNode} parent
+ * @param {boolean} asyncMode
  * @param {RendererState | undefined} [renderer]
- * @returns {string}
+ * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
 function _renderToString(
 	vnode,
@@ -147,6 +214,7 @@ function _renderToString(
 	isSvgMode,
 	selectValue,
 	parent,
+	asyncMode,
 	renderer
 ) {
 	// Ignore non-rendered VNodes/values
@@ -162,23 +230,45 @@ function _renderToString(
 
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
-		let rendered = '';
+		let rendered = '',
+			renderArray;
 		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			let child = vnode[i];
 			if (child == null || typeof child === 'boolean') continue;
 
-			rendered =
-				rendered +
-				_renderToString(
-					child,
-					context,
-					isSvgMode,
-					selectValue,
-					parent,
-					renderer
-				);
+			const childRender = _renderToString(
+				child,
+				context,
+				isSvgMode,
+				selectValue,
+				parent,
+				asyncMode,
+				renderer
+			);
+
+			if (typeof childRender === 'string') {
+				rendered += childRender;
+			} else {
+				renderArray = renderArray || [];
+
+				if (rendered) renderArray.push(rendered);
+
+				rendered = '';
+
+				if (Array.isArray(childRender)) {
+					renderArray.push(...childRender);
+				} else {
+					renderArray.push(childRender);
+				}
+			}
 		}
+
+		if (renderArray) {
+			if (rendered) renderArray.push(rendered);
+			return renderArray;
+		}
+
 		return rendered;
 	}
 
@@ -198,9 +288,40 @@ function _renderToString(
 	// Invoke rendering on Components
 	if (typeof type === 'function') {
 		if (type === Fragment) {
-			// Fragments are the least used components of core that's why
-			// branching here for comments has the least effect on perf.
-			if (props.UNSTABLE_comment) {
+			// Serialized precompiled JSX.
+			if (props.tpl) {
+				let out = '';
+				for (let i = 0; i < props.tpl.length; i++) {
+					out += props.tpl[i];
+
+					if (props.exprs && i < props.exprs.length) {
+						const value = props.exprs[i];
+						if (value == null) continue;
+
+						// Check if we're dealing with a vnode or an array of nodes
+						if (
+							typeof value === 'object' &&
+							(value.constructor === undefined || isArray(value))
+						) {
+							out += _renderToString(
+								value,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode,
+								asyncMode
+							);
+						} else {
+							// Values are pre-escaped by the JSX transform
+							out += value;
+						}
+					}
+				}
+
+				return out;
+			} else if (props.UNSTABLE_comment) {
+				// Fragments are the least used components of core that's why
+				// branching here for comments has the least effect on perf.
 				return '<!--' + encodeEntities(props.UNSTABLE_comment || '') + '-->';
 			}
 
@@ -268,7 +389,8 @@ function _renderToString(
 						context,
 						isSvgMode,
 						selectValue,
-						vnode
+						vnode,
+						asyncMode
 					);
 					return str;
 				} catch (err) {
@@ -299,14 +421,15 @@ function _renderToString(
 							context,
 							isSvgMode,
 							selectValue,
-							vnode
+							vnode,
+							asyncMode
 						);
 					}
 
 					return str;
 				} finally {
 					if (afterDiff) afterDiff(vnode);
-					vnode[PARENT] = undefined;
+					vnode[PARENT] = null;
 
 					if (ummountHook) ummountHook(vnode);
 				}
@@ -316,7 +439,10 @@ function _renderToString(
 		// When a component returns a Fragment node we flatten it in core, so we
 		// need to mirror that logic here too
 		let isTopLevelFragment =
-			rendered != null && rendered.type === Fragment && rendered.key == null;
+			rendered != null &&
+			rendered.type === Fragment &&
+			rendered.key == null &&
+			rendered.props.tpl == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		try {
@@ -332,13 +458,13 @@ function _renderToString(
 
 			if (afterDiff) afterDiff(vnode);
 			// when we are dealing with suspense we can't do this...
-			// vnode[PARENT] = undefined;
+			vnode[PARENT] = null;
 
 			if (options.unmount) options.unmount(vnode);
 
 			return str;
 		} catch (error) {
-			if (renderer && renderer.onError) {
+			if (!asyncMode && renderer && renderer.onError) {
 				let res = renderer.onError(error, vnode, (child) =>
 					_renderToString(
 						child,
@@ -346,10 +472,46 @@ function _renderToString(
 						isSvgMode,
 						selectValue,
 						vnode,
+						asyncMode,
 						renderer
 					)
 				);
+
 				if (res !== undefined) return res;
+
+				if (!asyncMode) throw error;
+
+				if (!error || typeof error.then !== 'function') throw error;
+
+				const renderNestedChildren = () => {
+					try {
+						return _renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode,
+							asyncMode
+						);
+					} catch (e) {
+						if (!e || typeof e.then !== 'function') throw e;
+
+						return e.then(
+							() =>
+								_renderToString(
+									rendered,
+									context,
+									isSvgMode,
+									selectValue,
+									vnode,
+									asyncMode
+								),
+							() => renderNestedChildren()
+						);
+					}
+				};
+
+				return error.then(() => renderNestedChildren());
 			}
 
 			let errorHook = options[CATCH_ERROR];
@@ -491,12 +653,16 @@ function _renderToString(
 			childSvgMode,
 			selectValue,
 			vnode,
+			asyncMode,
 			renderer
 		);
 	}
 
 	if (afterDiff) afterDiff(vnode);
-	//vnode[PARENT] = undefined;
+
+	// TODO: this was commented before
+	vnode[PARENT] = null;
+
 	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
@@ -504,7 +670,13 @@ function _renderToString(
 		return s + '/>';
 	}
 
-	return s + '>' + html + '</' + type + '>';
+	const endTag = '</' + type + '>';
+	const startTag = s + '>';
+
+	if (Array.isArray(html)) return [startTag, ...html, endTag];
+	else if (typeof html !== 'string') return [startTag, html, endTag];
+
+	return startTag + html + endTag;
 }
 
 const SELF_CLOSING = new Set([

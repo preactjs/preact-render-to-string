@@ -338,6 +338,12 @@ describe('render', () => {
 				`<svg><image xlink:href="#"></image><foreignObject><div xlink:href="#"></div></foreignObject><g><image xlink:href="#"></image></g></svg>`
 			);
 		});
+
+		it('should not add extra colon on SVG elements', () => {
+			let rendered = render(<svg>{h('image', { 'xlink:href': '#' })}</svg>);
+
+			expect(rendered).to.equal(`<svg><image xlink:href="#"></image></svg>`);
+		});
 	});
 
 	describe('Functional Components', () => {
@@ -1643,6 +1649,56 @@ describe('render', () => {
 					expect(rendered).to.equal(`<div ${value}="foo"></div>`);
 				}
 			}
+		});
+	});
+
+	describe('precompiled JSX', () => {
+		it('should render template', () => {
+			let vnode = <Fragment tpl={['<div>foo</div>']} exprs={[]} />;
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo</div>');
+		});
+
+		it('should render template with attribute expressions', () => {
+			let vnode = (
+				<Fragment tpl={['<div ', '>foo</div>']} exprs={['class="foo"']} />
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div class="foo">foo</div>');
+		});
+
+		it('should render template with child expressions', () => {
+			let vnode = (
+				<Fragment tpl={['<div>foo', '</div>']} exprs={[<span>bar</span>]} />
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo<span>bar</span></div>');
+		});
+
+		it('should render mapped children', () => {
+			let vnode = (
+				<Fragment
+					tpl={['<div>foo', '', '</div>']}
+					exprs={[<span>bar</span>, [<p>foo</p>, <p>bar</p>]]}
+				/>
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal(
+				'<div>foo<span>bar</span><p>foo</p><p>bar</p></div>'
+			);
+		});
+
+		it('should bypass top level fragment detection', () => {
+			function Foo(props) {
+				return props.children;
+			}
+			let vnode = (
+				<Foo>
+					<Fragment tpl={['<div>foo', '</div>']} exprs={[<span>bar</span>]} />
+				</Foo>
+			);
+			let rendered = render(vnode);
+			expect(rendered).to.equal('<div>foo<span>bar</span></div>');
 		});
 	});
 });

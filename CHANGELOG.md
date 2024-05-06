@@ -1,5 +1,64 @@
 # preact-render-to-string
 
+## 6.4.2
+
+### Patch Changes
+
+- [#347](https://github.com/preactjs/preact-render-to-string/pull/347) [`7bc77a3`](https://github.com/preactjs/preact-render-to-string/commit/7bc77a3cb859069cddf0befc9bd247b2a137f10a) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix JSX template being detected as a top level Fragment when Deno's jsx `precompile` option is used
+
+* [#348](https://github.com/preactjs/preact-render-to-string/pull/348) [`303b8c0`](https://github.com/preactjs/preact-render-to-string/commit/303b8c0990f74648b23343c9e725899122cbded1) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Perf: Remove unnecessary closure when rendering child nodes
+
+## 6.4.1
+
+### Patch Changes
+
+- [#344](https://github.com/preactjs/preact-render-to-string/pull/344) [`27a8b0e`](https://github.com/preactjs/preact-render-to-string/commit/27a8b0e0654663e31df01e03f5bf34c74ec76e67) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Ensure commonjs also has the async export
+
+* [#336](https://github.com/preactjs/preact-render-to-string/pull/336) [`c46fb59`](https://github.com/preactjs/preact-render-to-string/commit/c46fb593eaf0c0be699acba6b9953dd01da0ea81) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix error thrown after suspending not being rethrown.
+
+- [#339](https://github.com/preactjs/preact-render-to-string/pull/339) [`4462822`](https://github.com/preactjs/preact-render-to-string/commit/44628228dec6b10c59023c21e17a140f205ed0c9) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix invalid parent pointer empty value when rendering a suspended vnode
+
+## 6.4.0
+
+### Minor Changes
+
+- [#333](https://github.com/preactjs/preact-render-to-string/pull/333) [`6acc97a`](https://github.com/preactjs/preact-render-to-string/commit/6acc97aee994bd8291564032307f301745c1ed18) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Allow prepass like behavior where a Promise
+  will be awaited and then continued, this is done with
+  the new `renderToStringAsync` export
+
+### Patch Changes
+
+- [#326](https://github.com/preactjs/preact-render-to-string/pull/326) [`87d8c21`](https://github.com/preactjs/preact-render-to-string/commit/87d8c21e61c8fb9c1ec9d8d69a826bfb3e5db9af) Thanks [@Geo25rey](https://github.com/Geo25rey)! - fix external type definitions of `renderToString`
+
+* [#329](https://github.com/preactjs/preact-render-to-string/pull/329) [`0a0d0ce`](https://github.com/preactjs/preact-render-to-string/commit/0a0d0ceba22d89fa82a177305c7e44aa22202398) Thanks [@acelaya](https://github.com/acelaya)! - Remove incorrect second default export from jsx.d.ts
+
+## 6.3.1
+
+### Patch Changes
+
+- [#324](https://github.com/preactjs/preact-render-to-string/pull/324) [`6bf321d`](https://github.com/preactjs/preact-render-to-string/commit/6bf321d31d97d679910f892d4310ae79b3a70e84) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Fix mapped children not working with Deno's new precompile JSX transform.
+
+## 6.3.0
+
+### Minor Changes
+
+- [`926827c`](https://github.com/preactjs/preact-render-to-string/commit/926827c0745889545a97774535e778da3c808dd0) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Add support for precompiled JSX transform, see https://deno.com/blog/v1.38#fastest-jsx-transform. Compared to traditional JSX transforms, the precompiled JSX transform tries to pre-serialize as much of the JSX as possible. That way less objects need to be created and serialized which relieves a lot of GC pressure.
+
+  ```jsx
+  // input
+  <div class="foo">hello</div>;
+
+  // output
+  const tpl = [`<div class="foo">hello</div>`];
+  jsxTemplate(tpl);
+  ```
+
+## 6.2.2
+
+### Patch Changes
+
+- [#315](https://github.com/preactjs/preact-render-to-string/pull/315) [`f1d81be`](https://github.com/preactjs/preact-render-to-string/commit/f1d81be1e56d64bf7bf0ecc975a7b54d2db2ad45) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - avoid adding double colon for namespaced attributes
+
 ## 6.2.1
 
 ### Patch Changes

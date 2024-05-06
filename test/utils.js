@@ -19,15 +19,18 @@ export function createSuspender() {
 	let resolved;
 
 	deferred.promise.then(() => (resolved = true));
-	function Suspender() {
+	function Suspender({ children = null }) {
 		if (!resolved) {
 			throw deferred.promise;
 		}
 
-		return <p>it works</p>;
+		return children;
 	}
 
 	return {
+		getResolved() {
+			return resolved;
+		},
 		suspended: deferred,
 		Suspender
 	};
