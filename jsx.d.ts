@@ -10,7 +10,7 @@ interface Options {
 	skipFalseAttributes?: boolean;
 }
 
-export default function renderToStringPretty(
+export default function render(
 	vnode: VNode,
 	context?: any,
 	options?: Options

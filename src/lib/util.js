@@ -151,6 +151,18 @@ export function createComponent(vnode, context) {
 	};
 }
 
+// Necessary for createContext api. Setting this property will pass
+// the context value as `this.context` just for this component.
+export function getContext(nodeName, context) {
+	let cxType = nodeName.contextType;
+	let provider = cxType && context[cxType.__c];
+	return cxType != null
+		? provider
+			? provider.props.value
+			: cxType.__
+		: context;
+}
+
 /**
  * @template T
  */

@@ -1,4 +1,5 @@
-import { Deferred } from '../src/util';
+import { h } from 'preact';
+import { Deferred } from '../src/lib/util';
 
 /**
  * tag to remove leading whitespace from tagged template
@@ -13,12 +14,13 @@ export function dedent([str]) {
 		.replace(/(^\n+|\n+\s*$)/g, '');
 }
 
+const defaultChildren = <p>it works</p>;
 export function createSuspender() {
 	const deferred = new Deferred();
 	let resolved;
 
 	deferred.promise.then(() => (resolved = true));
-	function Suspender({ children = null }) {
+	function Suspender({ children = defaultChildren }) {
 		if (!resolved) {
 			throw deferred.promise;
 		}
@@ -34,7 +36,6 @@ export function createSuspender() {
 		Suspender
 	};
 }
-
 export const svgAttributes = {
 	accentHeight: 'accent-height',
 	accumulate: 'accumulate',

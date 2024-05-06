@@ -1,9 +1,7 @@
-import './polyfills.js';
+import './lib/polyfills.js';
 import renderToString from './pretty.js';
-import { indent, encodeEntities } from './util.js';
+import { indent, encodeEntities } from './lib/util.js';
 import prettyFormat from 'pretty-format';
-
-/** @typedef {import('preact').VNode} VNode */
 
 // we have to patch in Array support, Possible issue in npm.im/pretty-format
 let preactPlugin = {

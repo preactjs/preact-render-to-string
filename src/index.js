@@ -5,7 +5,7 @@ import {
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
 	SVG_CAMEL_CASE
-} from './util.js';
+} from './lib/util.js';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -18,10 +18,9 @@ import {
 	PARENT,
 	RENDER,
 	SKIP_EFFECTS,
-	VNODE
-} from './constants.js';
-
-/** @typedef {import('preact').VNode} VNode */
+	VNODE,
+	CATCH_ERROR
+} from './lib/constants.js';
 
 const EMPTY_ARR = [];
 const isArray = Array.isArray;
@@ -34,9 +33,10 @@ let beforeDiff, afterDiff, renderHook, ummountHook;
  * Render Preact JSX + Components to an HTML string.
  * @param {VNode} vnode	JSX Element / VNode to render
  * @param {Object} [context={}] Initial root context object
+ * @param {RendererState} [_rendererState] for internal use
  * @returns {string} serialized HTML
  */
-export function renderToString(vnode, context) {
+export function renderToString(vnode, context, _rendererState) {
 	// Performance optimization: `renderToString` is synchronous and we
 	// therefore don't execute any effects. To do that we pass an empty
 	// array to `options._commit` (`__c`). But we can go one step further
@@ -61,7 +61,8 @@ export function renderToString(vnode, context) {
 			false,
 			undefined,
 			parent,
-			false
+			false,
+			_rendererState
 		);
 	} catch (e) {
 		if (e.then) {
@@ -109,7 +110,8 @@ export async function renderToStringAsync(vnode, context) {
 			false,
 			undefined,
 			parent,
-			true
+			true,
+			undefined
 		);
 
 		if (Array.isArray(rendered)) {
@@ -204,6 +206,7 @@ function renderClassComponent(vnode, context) {
  * @param {any} selectValue
  * @param {VNode} parent
  * @param {boolean} asyncMode
+ * @param {RendererState | undefined} [renderer]
  * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
 function _renderToString(
@@ -212,7 +215,8 @@ function _renderToString(
 	isSvgMode,
 	selectValue,
 	parent,
-	asyncMode
+	asyncMode,
+	renderer
 ) {
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
@@ -240,7 +244,8 @@ function _renderToString(
 				isSvgMode,
 				selectValue,
 				parent,
-				asyncMode
+				asyncMode,
+				renderer
 			);
 
 			if (typeof childRender === 'string') {
@@ -305,7 +310,8 @@ function _renderToString(
 								isSvgMode,
 								selectValue,
 								vnode,
-								asyncMode
+								asyncMode,
+								renderer
 							);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -386,7 +392,8 @@ function _renderToString(
 						isSvgMode,
 						selectValue,
 						vnode,
-						asyncMode
+						asyncMode,
+						renderer
 					);
 					return str;
 				} catch (err) {
@@ -418,7 +425,8 @@ function _renderToString(
 							isSvgMode,
 							selectValue,
 							vnode,
-							asyncMode
+							asyncMode,
+							renderer
 						);
 					}
 
@@ -449,16 +457,38 @@ function _renderToString(
 				isSvgMode,
 				selectValue,
 				vnode,
-				asyncMode
+				asyncMode,
+				renderer
 			);
 
 			if (afterDiff) afterDiff(vnode);
+			// when we are dealing with suspense we can't do this...
 			vnode[PARENT] = null;
 
-			if (ummountHook) ummountHook(vnode);
+			if (options.unmount) options.unmount(vnode);
 
 			return str;
 		} catch (error) {
+			if (!asyncMode && renderer && renderer.onError) {
+				let res = renderer.onError(error, vnode, (child) =>
+					_renderToString(
+						child,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode,
+						asyncMode,
+						renderer
+					)
+				);
+
+				if (res !== undefined) return res;
+
+				let errorHook = options[CATCH_ERROR];
+				if (errorHook) errorHook(error, vnode);
+				return '';
+			}
+
 			if (!asyncMode) throw error;
 
 			if (!error || typeof error.then !== 'function') throw error;
@@ -471,7 +501,8 @@ function _renderToString(
 						isSvgMode,
 						selectValue,
 						vnode,
-						asyncMode
+						asyncMode,
+						renderer
 					);
 				} catch (e) {
 					if (!e || typeof e.then !== 'function') throw e;
@@ -484,7 +515,8 @@ function _renderToString(
 								isSvgMode,
 								selectValue,
 								vnode,
-								asyncMode
+								asyncMode,
+								renderer
 							),
 						() => renderNestedChildren()
 					);
@@ -628,12 +660,16 @@ function _renderToString(
 			childSvgMode,
 			selectValue,
 			vnode,
-			asyncMode
+			asyncMode,
+			renderer
 		);
 	}
 
 	if (afterDiff) afterDiff(vnode);
+
+	// TODO: this was commented before
 	vnode[PARENT] = null;
+
 	if (ummountHook) ummountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
