@@ -110,7 +110,8 @@ export async function renderToStringAsync(vnode, context) {
 			false,
 			undefined,
 			parent,
-			true
+			true,
+			undefined
 		);
 
 		if (Array.isArray(rendered)) {
@@ -309,7 +310,8 @@ function _renderToString(
 								isSvgMode,
 								selectValue,
 								vnode,
-								asyncMode
+								asyncMode,
+								renderer
 							);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -390,7 +392,8 @@ function _renderToString(
 						isSvgMode,
 						selectValue,
 						vnode,
-						asyncMode
+						asyncMode,
+						renderer
 					);
 					return str;
 				} catch (err) {
@@ -422,7 +425,8 @@ function _renderToString(
 							isSvgMode,
 							selectValue,
 							vnode,
-							asyncMode
+							asyncMode,
+							renderer
 						);
 					}
 
@@ -453,6 +457,7 @@ function _renderToString(
 				isSvgMode,
 				selectValue,
 				vnode,
+				asyncMode,
 				renderer
 			);
 
@@ -479,44 +484,46 @@ function _renderToString(
 
 				if (res !== undefined) return res;
 
-				if (!asyncMode) throw error;
-
-				if (!error || typeof error.then !== 'function') throw error;
-
-				const renderNestedChildren = () => {
-					try {
-						return _renderToString(
-							rendered,
-							context,
-							isSvgMode,
-							selectValue,
-							vnode,
-							asyncMode
-						);
-					} catch (e) {
-						if (!e || typeof e.then !== 'function') throw e;
-
-						return e.then(
-							() =>
-								_renderToString(
-									rendered,
-									context,
-									isSvgMode,
-									selectValue,
-									vnode,
-									asyncMode
-								),
-							() => renderNestedChildren()
-						);
-					}
-				};
-
-				return error.then(() => renderNestedChildren());
+				let errorHook = options[CATCH_ERROR];
+				if (errorHook) errorHook(error, vnode);
+				return '';
 			}
 
-			let errorHook = options[CATCH_ERROR];
-			if (errorHook) errorHook(error, vnode);
-			return '';
+			if (!asyncMode) throw error;
+
+			if (!error || typeof error.then !== 'function') throw error;
+
+			const renderNestedChildren = () => {
+				try {
+					return _renderToString(
+						rendered,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode,
+						asyncMode,
+						renderer
+					);
+				} catch (e) {
+					if (!e || typeof e.then !== 'function') throw e;
+
+					return e.then(
+						() =>
+							_renderToString(
+								rendered,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode,
+								asyncMode,
+								renderer
+							),
+						() => renderNestedChildren()
+					);
+				}
+			};
+
+			return error.then(() => renderNestedChildren());
 		}
 	}
 

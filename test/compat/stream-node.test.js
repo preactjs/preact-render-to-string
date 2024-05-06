@@ -66,10 +66,10 @@ describe('renderToPipeableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:19-->loading...<!--/preact-island:19--></div>',
+			'<div><!--preact-island:17-->loading...<!--/preact-island:17--></div>',
 			'<div hidden>',
 			createInitScript(),
-			createSubtree('19', '<p>it works</p>'),
+			createSubtree('17', '<p>it works</p>'),
 			'</div>'
 		]);
 	});
