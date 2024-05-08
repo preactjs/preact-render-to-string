@@ -103,7 +103,11 @@ function _renderToStringPretty(
 	// components
 	if (typeof nodeName === 'function') {
 		isComponent = true;
-		if (opts.shallow && (inner || opts.renderRootComponent === false)) {
+		if (
+			opts.shallow &&
+			(inner || opts.renderRootComponent === false) &&
+			nodeName !== Fragment
+		) {
 			nodeName = getComponentName(nodeName);
 		} else if (nodeName === Fragment) {
 			const children = [];
