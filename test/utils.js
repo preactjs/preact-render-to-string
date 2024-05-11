@@ -375,6 +375,8 @@ export const htmlAttributes = {
 	ping: 'ping',
 	placeholder: 'placeholder',
 	playsInline: 'playsinline',
+	popoverTarget: 'popovertarget',
+	popoverTargetAction: 'popovertargetaction',
 	poster: 'poster',
 	preload: 'preload',
 	readonly: 'readonly',
