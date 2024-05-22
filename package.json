@@ -164,5 +164,8 @@
 		"hooks": {
 			"pre-commit": "lint-staged"
 		}
-	}
+	},
+	"publishConfig": {
+		"provenance": true
+  	}
 }
