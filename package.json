@@ -115,11 +115,14 @@
 			"reduce_funcs": false
 		}
 	},
-	"author": "Jason Miller <jason@developit.ca>",
+	"author": "The Preact Authors (https://github.com/preactjs/preact/contributors)",
 	"license": "MIT",
-	"repository": "developit/preact-render-to-string",
-	"bugs": "https://github.com/developit/preact-render-to-string/issues",
-	"homepage": "https://github.com/developit/preact-render-to-string",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/preactjs/preact-render-to-string"
+	},
+	"bugs": "https://github.com/preactjs/preact-render-to-string/issues",
+	"homepage": "https://github.com/preactjs/preact-render-to-string",
 	"peerDependencies": {
 		"preact": ">=10"
 	},
