@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.1
+
+### Patch Changes
+
+- [#356](https://github.com/preactjs/preact-render-to-string/pull/356) [`4430ecf`](https://github.com/preactjs/preact-render-to-string/commit/4430ecfff5b3c400721295e34f61c6cc0d55c62d) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add back publish with provenance
+
 ## 6.5.0
 
 ### Minor Changes
