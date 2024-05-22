@@ -1,5 +1,21 @@
 # preact-render-to-string
 
+## 6.5.0
+
+### Minor Changes
+
+- [#354](https://github.com/preactjs/preact-render-to-string/pull/354) [`a004914`](https://github.com/preactjs/preact-render-to-string/commit/a0049143e73b3710eeb4c4250c4e03b2a1ff6643) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Introduce a streaming renderer which can be imported from `preact-render-to-string/stream` and `preact-render-to-string/stream-node`
+
+### Patch Changes
+
+- [#354](https://github.com/preactjs/preact-render-to-string/pull/354) [`a004914`](https://github.com/preactjs/preact-render-to-string/commit/a0049143e73b3710eeb4c4250c4e03b2a1ff6643) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Ensure `popoverTarget` and `popoverTargetAction` are serialized to lower case
+
+* [#354](https://github.com/preactjs/preact-render-to-string/pull/354) [`a004914`](https://github.com/preactjs/preact-render-to-string/commit/a0049143e73b3710eeb4c4250c4e03b2a1ff6643) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix for shallow rendering incorrectly transforming Fragments into other nodes
+
+- [#354](https://github.com/preactjs/preact-render-to-string/pull/354) [`a004914`](https://github.com/preactjs/preact-render-to-string/commit/a0049143e73b3710eeb4c4250c4e03b2a1ff6643) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Ensure `cellPadding`, `cellSpacing`, and `useMap` are serialized to lower case
+
+* [#354](https://github.com/preactjs/preact-render-to-string/pull/354) [`a004914`](https://github.com/preactjs/preact-render-to-string/commit/a0049143e73b3710eeb4c4250c4e03b2a1ff6643) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - streaming rendering with Suspense boundaries as flush trigger
+
 ## 6.4.2
 
 ### Patch Changes
