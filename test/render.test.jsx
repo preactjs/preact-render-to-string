@@ -387,6 +387,16 @@ describe('render', () => {
 			);
 		});
 
+		it('should accept nullish __html', () => {
+			const Test = (props) => (
+				<Fragment>
+					<div>hi</div>
+					<div dangerouslySetInnerHTML={{ __html: null }} />
+				</Fragment>
+			);
+			expect(render(<Test />)).to.equal('<div>hi</div><div></div>');
+		});
+
 		it('should apply defaultProps', () => {
 			const Test = (props) => <div {...props} />;
 			Test.defaultProps = {
