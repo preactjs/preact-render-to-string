@@ -55,7 +55,7 @@ export function renderToString(vnode, context, _rendererState) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		return _renderToString(
+		const rendered = _renderToString(
 			vnode,
 			context || EMPTY_OBJ,
 			false,
@@ -64,6 +64,11 @@ export function renderToString(vnode, context, _rendererState) {
 			false,
 			_rendererState
 		);
+
+		if (Array.isArray(rendered)) {
+			return rendered.join('');
+		}
+		return rendered;
 	} catch (e) {
 		if (e.then) {
 			throw new Error('Use "renderToStringAsync" for suspenseful rendering.');
@@ -590,7 +595,7 @@ function _renderToString(
 				break;
 
 			case 'dangerouslySetInnerHTML':
-				html = v && v.__html != null ? v.__html : '';
+				html = v && v.__html;
 				continue;
 
 			// serialize object styles to a CSS string
@@ -682,7 +687,6 @@ function _renderToString(
 
 	if (Array.isArray(html)) return [startTag, ...html, endTag];
 	else if (typeof html !== 'string') return [startTag, html, endTag];
-
 	return startTag + html + endTag;
 }
 
