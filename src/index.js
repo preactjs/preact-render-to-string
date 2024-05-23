@@ -590,7 +590,7 @@ function _renderToString(
 				break;
 
 			case 'dangerouslySetInnerHTML':
-				html = v && v.__html;
+				html = v && v.__html != null ? v.__html : '';
 				continue;
 
 			// serialize object styles to a CSS string
