@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.2
+
+### Patch Changes
+
+- [#360](https://github.com/preactjs/preact-render-to-string/pull/360) [`689e88d`](https://github.com/preactjs/preact-render-to-string/commit/689e88d9db6e14ea101d37f2a454afb96f926594) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Correctly render `null` as an `__html` value as an empty string
+
 ## 6.5.1
 
 ### Patch Changes
