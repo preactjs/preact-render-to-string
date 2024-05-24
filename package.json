@@ -25,14 +25,14 @@
 		},
 		"./stream": {
 			"types": "./stream.d.ts",
-			"import": "./dist/stream.mjs",
 			"browser": "./dist/stream.module.js",
+			"import": "./dist/stream.mjs",
 			"require": "./dist/stream.js"
 		},
 		"./stream-node": {
 			"types": "./stream-node.d.ts",
-			"import": "./dist/stream-node.mjs",
 			"browser": "./dist/stream-node.module.js",
+			"import": "./dist/stream-node.mjs",
 			"require": "./dist/stream-node.js"
 		},
 		"./package.json": "./package.json"
