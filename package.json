@@ -24,13 +24,13 @@
 			"require": "./dist/jsx.js"
 		},
 		"./stream": {
-			"types": "./stream.d.ts",
+			"types": "./dist/stream.d.ts",
 			"browser": "./dist/stream.module.js",
 			"import": "./dist/stream.mjs",
 			"require": "./dist/stream.js"
 		},
 		"./stream-node": {
-			"types": "./stream-node.d.ts",
+			"types": "./dist/stream-node.d.ts",
 			"browser": "./dist/stream-node.module.js",
 			"import": "./dist/stream-node.mjs",
 			"require": "./dist/stream-node.js"
