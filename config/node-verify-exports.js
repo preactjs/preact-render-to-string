@@ -20,14 +20,14 @@ assert(typeof mainCjs.render === 'function');
 })();
 
 // JSX CJS
-const jsxCjs = require(filePath('jsx.js'));
+const jsxCjs = require(filePath('jsx/index.js'));
 assert(typeof jsxCjs === 'function');
 assert(typeof jsxCjs.render === 'function');
 assert(typeof jsxCjs.shallowRender === 'function');
 
 // JSX ESM
 (async () => {
-	const jsxESM = await import(filePath('jsx.mjs'));
+	const jsxESM = await import(filePath('jsx/index.mjs'));
 	assert(typeof jsxESM.default === 'function');
 	assert(typeof jsxESM.render === 'function');
 	assert(typeof jsxESM.shallowRender === 'function');

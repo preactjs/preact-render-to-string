@@ -9,6 +9,6 @@ const copy = (filename) => {
 };
 
 copy('index');
-copy('jsx');
-copy('stream');
-copy('stream-node');
+copy('jsx/index');
+copy('stream/index');
+copy('stream/node/index');
