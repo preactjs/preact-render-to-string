@@ -19,7 +19,6 @@
         "forceConsistentCasingInFileNames": true
     },
     "files": [
-        "src/index.d.ts",
-        "test/preact-render-to-string-tests.tsx"
+        "src/index.d.ts"
     ]
 }
