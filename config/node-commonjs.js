@@ -8,7 +8,6 @@ const filePath = (file) => path.join(process.cwd(), 'dist', file);
 
 // Main entry
 fs.copyFileSync(filePath('index.js'), filePath('commonjs.js'));
-fs.copyFileSync(filePath('index.js.map'), filePath('commonjs.js.map'));
 
 const source = [
 	`const mod = require('./commonjs');`,
@@ -21,13 +20,12 @@ const source = [
 fs.writeFileSync(filePath('index.js'), source, 'utf-8');
 
 // JSX entry
-fs.copyFileSync(filePath('jsx.js'), filePath('jsx-entry.js'));
-fs.copyFileSync(filePath('jsx.js.map'), filePath('jsx-entry.js.map'));
+fs.copyFileSync(filePath('jsx/index.js'), filePath('jsx/commonjs.js'));
 
 const sourceJsx = [
-	`const entry = require('./jsx-entry');`,
+	`const entry = require('./commonjs');`,
 	`entry.default.render = entry.render;`,
 	`entry.default.shallowRender = entry.shallowRender;`,
 	`module.exports = entry.default;`
 ].join('\n');
-fs.writeFileSync(filePath('jsx.js'), sourceJsx, 'utf-8');
+fs.writeFileSync(filePath('jsx/index.js'), sourceJsx, 'utf-8');
