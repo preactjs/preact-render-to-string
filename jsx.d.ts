@@ -10,10 +10,15 @@ interface Options {
 	skipFalseAttributes?: boolean;
 }
 
-export default function render(
+export default function renderToStringPretty(
 	vnode: VNode,
 	context?: any,
 	options?: Options
 ): string;
+export function render(vnode: VNode, context?: any, options?: Options): string;
 
-export function shallowRender(vnode: VNode, context?: any): string;
+export function shallowRender(
+	vnode: VNode,
+	context?: any,
+	options?: Options
+): string;
