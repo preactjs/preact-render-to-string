@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 6.5.3
+
+### Patch Changes
+
+- [#362](https://github.com/preactjs/preact-render-to-string/pull/362) [`3044ac2`](https://github.com/preactjs/preact-render-to-string/commit/3044ac204dd6ff416fb63aa778616cbce40fc043) Thanks [@rschristian](https://github.com/rschristian)! - Correct stream exports
+
+* [#367](https://github.com/preactjs/preact-render-to-string/pull/367) [`8c7e08f`](https://github.com/preactjs/preact-render-to-string/commit/8c7e08f121d4fb5967c0fc63b6aafd45e1613162) Thanks [@rschristian](https://github.com/rschristian)! - Add types for `/stream` and `/stream-node` exports
+
 ## 6.5.2
 
 ### Patch Changes
