@@ -9,10 +9,16 @@ import { renderToChunks } from './lib/chunked.js';
  */
 
 /**
+ * @typedef {object} PipeableStream
+ * @property {() => void} abort
+ * @property {(writable: import('stream').Writable) => void} pipe
+ */
+
+/**
  * @param {import('preact').VNode} vnode
  * @param {RenderToPipeableStreamOptions} options
  * @param {any} [context]
- * @returns {{}}
+ * @returns {PipeableStream}
  */
 export function renderToPipeableStream(vnode, options, context) {
 	const encoder = new TextEncoder('utf-8');
