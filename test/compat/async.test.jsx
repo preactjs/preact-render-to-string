@@ -2,7 +2,7 @@ import { renderToStringAsync } from '../../src/index.js';
 import { h } from 'preact';
 import { Suspense, useId } from 'preact/compat';
 import { expect } from 'chai';
-import { createSuspender } from '../utils.js';
+import { createSuspender } from '../utils.jsx';
 
 describe('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
@@ -26,14 +26,10 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspended components', async () => {
-		const {
-			Suspender: SuspenderOne,
-			suspended: suspendedOne
-		} = createSuspender();
-		const {
-			Suspender: SuspenderTwo,
-			suspended: suspendedTwo
-		} = createSuspender();
+		const { Suspender: SuspenderOne, suspended: suspendedOne } =
+			createSuspender();
+		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
+			createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -60,14 +56,10 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspense boundaries', async () => {
-		const {
-			Suspender: SuspenderOne,
-			suspended: suspendedOne
-		} = createSuspender();
-		const {
-			Suspender: SuspenderTwo,
-			suspended: suspendedTwo
-		} = createSuspender();
+		const { Suspender: SuspenderOne, suspended: suspendedOne } =
+			createSuspender();
+		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
+			createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -96,18 +88,12 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
-		const {
-			Suspender: SuspenderOne,
-			suspended: suspendedOne
-		} = createSuspender();
-		const {
-			Suspender: SuspenderTwo,
-			suspended: suspendedTwo
-		} = createSuspender();
-		const {
-			Suspender: SuspenderThree,
-			suspended: suspendedThree
-		} = createSuspender();
+		const { Suspender: SuspenderOne, suspended: suspendedOne } =
+			createSuspender();
+		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
+			createSuspender();
+		const { Suspender: SuspenderThree, suspended: suspendedThree } =
+			createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>

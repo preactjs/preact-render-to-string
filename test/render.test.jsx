@@ -19,7 +19,7 @@ import {
 } from 'preact/hooks';
 import { expect } from 'chai';
 import { spy, stub, match } from 'sinon';
-import { svgAttributes, htmlAttributes } from './utils.js';
+import { svgAttributes, htmlAttributes } from './utils.jsx';
 
 function shallowRender(vnode) {
 	const context = {};
