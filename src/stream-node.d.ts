@@ -12,7 +12,7 @@ interface PipeableStream {
 	pipe: (writable: WritableStream) => void;
 }
 
-export function renderToReadableStream(
+export function renderToPipeableStream(
 	vnode: VNode,
 	options: RenderToPipeableStreamOptions,
 	context?: any
