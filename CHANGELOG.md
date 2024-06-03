@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.4
+
+### Patch Changes
+
+- [#370](https://github.com/preactjs/preact-render-to-string/pull/370) [`7871a51`](https://github.com/preactjs/preact-render-to-string/commit/7871a5145183f205b013238b8442a6bc28f5db89) Thanks [@dbergey](https://github.com/dbergey)! - Fix incorrect type for renderToPipeableStream
+
 ## 6.5.3
 
 ### Patch Changes
