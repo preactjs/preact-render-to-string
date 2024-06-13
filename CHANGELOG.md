@@ -1,5 +1,12 @@
 # preact-render-to-string
 
+## 6.5.5
+
+### Patch Changes
+
+- [#372](https://github.com/preactjs/preact-render-to-string/pull/372) [`bebe4bf`](https://github.com/preactjs/preact-render-to-string/commit/bebe4bf807f663ed795f1f039222a9a71f741dad) Thanks [@jacob-ebey](https://github.com/jacob-ebey)! - fix: stop client runtime from being corrupted
+  fix: insert ooo chunks in the proper order
+
 ## 6.5.4
 
 ### Patch Changes
