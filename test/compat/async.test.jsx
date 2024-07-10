@@ -4,7 +4,7 @@ import { Suspense, useId } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
 
-describe('Async renderToString', () => {
+describe.only('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
 		const { Suspender, suspended } = createSuspender();
 
@@ -16,7 +16,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<div class="foo">bar</div>`;
+		const expected = `<!-- $s --><div class="foo">bar</div><!-- /$s -->`;
 
 		suspended.resolve();
 
@@ -26,10 +26,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspended components', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -45,7 +49,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><li>three</li><!-- /$s --></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -56,10 +60,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspense boundaries', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -77,7 +85,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><li>three</li><!-- /$s --></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -88,12 +96,18 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
-		const { Suspender: SuspenderThree, suspended: suspendedThree } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -113,7 +127,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+		const expected = `<ul><!-- $s --><li>one</li><!-- /$s --><!-- $s --><li>two</li><!-- /$s --><!-- $s --><li>three</li><!-- /$s --></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -173,6 +187,6 @@ describe('Async renderToString', () => {
 
 		suspended.resolve();
 		const rendered = await promise;
-		expect(rendered).to.equal('<p>ok</p>');
+		expect(rendered).to.equal('<!-- $s --><p>ok</p><!-- /$s -->');
 	});
 });

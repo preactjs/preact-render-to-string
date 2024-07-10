@@ -65,7 +65,7 @@ export function renderToString(vnode, context, _rendererState) {
 			_rendererState
 		);
 
-		if (Array.isArray(rendered)) {
+		if (isArray(rendered)) {
 			return rendered.join('');
 		}
 		return rendered;
@@ -119,7 +119,7 @@ export async function renderToStringAsync(vnode, context) {
 			undefined
 		);
 
-		if (Array.isArray(rendered)) {
+		if (isArray(rendered)) {
 			let count = 0;
 			let resolved = rendered;
 
@@ -223,22 +223,31 @@ function _renderToString(
 	asyncMode,
 	renderer
 ) {
+	const parentDidSuspend = parent._suspended;
+
 	// Ignore non-rendered VNodes/values
 	if (vnode == null || vnode === true || vnode === false || vnode === '') {
-		return '';
+		return parentDidSuspend ? '<!-- $s --><!-- /$s -->' : '';
 	}
 
 	// Text VNodes: escape as HTML
 	if (typeof vnode !== 'object') {
-		if (typeof vnode === 'function') return '';
-		return encodeEntities(vnode + '');
+		if (typeof vnode === 'function')
+			return parentDidSuspend ? '<!-- $s --><!-- /$s -->' : '';
+		return parentDidSuspend
+			? '<!-- $s -->' + ncodeEntities(vnode + '') + '<!-- /$s -->'
+			: encodeEntities(vnode + '');
 	}
 
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
 		let rendered = '',
-			renderArray;
+			renderArray = [];
 		parent[CHILDREN] = vnode;
+		if (parentDidSuspend) {
+			parent._suspended = false;
+			renderArray.push('<!-- $s -->');
+		}
 		for (let i = 0; i < vnode.length; i++) {
 			let child = vnode[i];
 			if (child == null || typeof child === 'boolean') continue;
@@ -256,7 +265,7 @@ function _renderToString(
 			if (typeof childRender === 'string') {
 				rendered += childRender;
 			} else {
-				renderArray = renderArray || [];
+				renderArray = renderArray;
 
 				if (rendered) renderArray.push(rendered);
 
@@ -272,10 +281,15 @@ function _renderToString(
 
 		if (renderArray) {
 			if (rendered) renderArray.push(rendered);
+			if (parentDidSuspend) {
+				renderArray.push('<!-- /$s -->');
+			}
 			return renderArray;
 		}
 
-		return rendered;
+		return parentDidSuspend
+			? '<!-- $s -->' + rendered + '<!-- /$s -->'
+			: rendered;
 	}
 
 	// VNodes have {constructor:undefined} to prevent JSON injection:
@@ -292,6 +306,7 @@ function _renderToString(
 		component;
 
 	// Invoke rendering on Components
+	// TODO: component like return should carry over _suspended from parent I reckon
 	if (typeof type === 'function') {
 		if (type === Fragment) {
 			// Serialized precompiled JSX.
@@ -391,7 +406,7 @@ function _renderToString(
 				rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 				try {
-					str = _renderToString(
+					return _renderToString(
 						rendered,
 						context,
 						isSvgMode,
@@ -400,7 +415,6 @@ function _renderToString(
 						asyncMode,
 						renderer
 					);
-					return str;
 				} catch (err) {
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
@@ -500,6 +514,11 @@ function _renderToString(
 
 			const renderNestedChildren = () => {
 				try {
+					if (Array.isArray(rendered)) {
+						rendered.forEach((x) => (x._suspended = true));
+					} else {
+						rendered._suspended = true;
+					}
 					return _renderToString(
 						rendered,
 						context,
@@ -512,23 +531,21 @@ function _renderToString(
 				} catch (e) {
 					if (!e || typeof e.then !== 'function') throw e;
 
-					return e.then(
-						() =>
-							_renderToString(
-								rendered,
-								context,
-								isSvgMode,
-								selectValue,
-								vnode,
-								asyncMode,
-								renderer
-							),
-						() => renderNestedChildren()
-					);
+					return e.then(() => {
+						return _renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode,
+							asyncMode,
+							renderer
+						);
+					}, renderNestedChildren);
 				}
 			};
 
-			return error.then(() => renderNestedChildren());
+			return error.then(renderNestedChildren);
 		}
 	}
 
@@ -679,15 +696,23 @@ function _renderToString(
 
 	// Emit self-closing tag for empty void elements:
 	if (!html && SELF_CLOSING.has(type)) {
-		return s + '/>';
+		return parentDidSuspend ? '<!-- $s -->' + s + '/><!-- /$s -->' : s + '/>';
 	}
 
 	const endTag = '</' + type + '>';
 	const startTag = s + '>';
 
-	if (Array.isArray(html)) return [startTag, ...html, endTag];
-	else if (typeof html !== 'string') return [startTag, html, endTag];
-	return startTag + html + endTag;
+	if (Array.isArray(html))
+		return parentDidSuspend
+			? ['<!-- $s -->', startTag, ...html, endTag, '<!-- /$s -->']
+			: [startTag, ...html, endTag];
+	else if (typeof html !== 'string')
+		return parentDidSuspend
+			? ['<!-- $s -->', startTag, html, endTag, '<!-- /$s -->']
+			: [startTag, html, endTag];
+	return parentDidSuspend
+		? '<!-- $s -->' + startTag + html + endTag + '<!-- /$s -->'
+		: startTag + html + endTag;
 }
 
 const SELF_CLOSING = new Set([
