@@ -29,6 +29,8 @@ const EMPTY_ARR = [];
 const isArray = Array.isArray;
 const assign = Object.assign;
 const EMPTY_STR = '';
+const BEGIN_SUSPENSE_DENOMINATOR = '<!-- $s -->';
+const END_SUSPENSE_DENOMINATOR = '<!-- /$s -->';
 
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
@@ -372,7 +374,12 @@ function _renderToString(
 
 					if (renderHook) renderHook(vnode);
 
-					rendered = type.call(component, props, cctx);
+					try {
+						rendered = type.call(component, props, cctx);
+					} catch (e) {
+						if (asyncMode) vnode._suspended = true;
+						throw e;
+					}
 				}
 				component[DIRTY] = true;
 			}
@@ -403,6 +410,7 @@ function _renderToString(
 						selectValue,
 						vnode,
 						asyncMode,
+						false,
 						renderer
 					);
 				} catch (err) {
@@ -475,6 +483,21 @@ function _renderToString(
 
 			if (options.unmount) options.unmount(vnode);
 
+			if (vnode._suspended) {
+				if (typeof str === 'string') {
+					return BEGIN_SUSPENSE_DENOMINATOR + str + END_SUSPENSE_DENOMINATOR;
+				} else if (isArray(str)) {
+					str.unshift(BEGIN_SUSPENSE_DENOMINATOR);
+					str.push(END_SUSPENSE_DENOMINATOR);
+					return str;
+				}
+
+				return str.then(
+					(resolved) =>
+						BEGIN_SUSPENSE_DENOMINATOR + resolved + END_SUSPENSE_DENOMINATOR
+				);
+			}
+
 			return str;
 		} catch (error) {
 			if (!asyncMode && renderer && renderer.onError) {
@@ -503,7 +526,7 @@ function _renderToString(
 
 			const renderNestedChildren = () => {
 				try {
-					return _renderToString(
+					const result = _renderToString(
 						rendered,
 						context,
 						isSvgMode,
@@ -512,12 +535,15 @@ function _renderToString(
 						asyncMode,
 						renderer
 					);
+					return vnode._suspended
+						? BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR
+						: result;
 				} catch (e) {
 					if (!e || typeof e.then != 'function') throw e;
 
 					return e.then(
-						() =>
-							_renderToString(
+						() => {
+							const result = _renderToString(
 								rendered,
 								context,
 								isSvgMode,
@@ -525,8 +551,11 @@ function _renderToString(
 								vnode,
 								asyncMode,
 								renderer
-							),
-						renderNestedChildren
+							)
+							return vnode._suspended
+								? BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR
+								: result;
+						}, renderNestedChildren
 					);
 				}
 			};

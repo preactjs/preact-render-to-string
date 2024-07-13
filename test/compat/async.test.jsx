@@ -3,6 +3,7 @@ import { h, Fragment } from 'preact';
 import { Suspense, useId, lazy, createContext } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 describe('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
@@ -16,7 +17,30 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<div class="foo">bar</div>`;
+		const expected = `<!-- $s --><div class="foo">bar</div><!-- /$s -->`;
+
+		suspended.resolve();
+
+		const rendered = await promise;
+
+		expect(rendered).to.equal(expected);
+	});
+
+	it('should correctly denote null returns of suspending components', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const Analytics = () => null;
+
+		const promise = renderToStringAsync(
+			<Suspense fallback={<div>loading...</div>}>
+				<Suspender>
+					<Analytics />
+				</Suspender>
+				<div class="foo">bar</div>
+			</Suspense>
+		);
+
+		const expected = `<!-- $s --><!-- /$s --><div class="foo">bar</div>`;
 
 		suspended.resolve();
 
@@ -49,7 +73,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><li>three</li><!-- /$s --></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -85,10 +109,102 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><li>three</li><!-- /$s --></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
+
+		const rendered = await promise;
+
+		expect(rendered).to.equal(expected);
+	});
+
+	it('should render JSX with nested suspense boundaries containing multiple suspending components', async () => {
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender('three');
+
+		const promise = renderToStringAsync(
+			<ul>
+				<Suspense fallback={null}>
+					<SuspenderOne>
+						<li>one</li>
+						<Suspense fallback={null}>
+							<SuspenderTwo>
+								<li>two</li>
+							</SuspenderTwo>
+							<SuspenderThree>
+								<li>three</li>
+							</SuspenderThree>
+						</Suspense>
+						<li>four</li>
+					</SuspenderOne>
+				</Suspense>
+			</ul>
+		);
+
+		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><!-- $s --><li>three</li><!-- /$s --><li>four</li><!-- /$s --></ul>`;
+
+		suspendedOne.resolve();
+		suspendedTwo.resolve();
+		await wait(0);
+		suspendedThree.resolve();
+
+		const rendered = await promise;
+
+		expect(rendered).to.equal(expected);
+	});
+
+	it.only('should render JSX with deeply nested suspense boundaries', async () => {
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
+
+		const promise = renderToStringAsync(
+			<ul>
+				<Suspense fallback={null}>
+					<SuspenderOne>
+						<li>one</li>
+						<Suspense fallback={null}>
+							<SuspenderTwo>
+								<li>two</li>
+								<Suspense fallback={null}>
+									<SuspenderThree>
+										<li>three</li>
+									</SuspenderThree>
+								</Suspense>
+							</SuspenderTwo>
+						</Suspense>
+						<li>four</li>
+					</SuspenderOne>
+				</Suspense>
+			</ul>
+		);
+
+		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- $s --><li>three</li><!-- /$s --><!-- /$s --><li>four</li><!-- /$s --></ul>`;
+
+		suspendedOne.resolve();
+		suspendedTwo.resolve();
+		await wait(0);
+		suspendedThree.resolve();
 
 		const rendered = await promise;
 
@@ -127,7 +243,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><li>one</li><li>two</li><li>three</li></ul>`;
+		const expected = `<ul><!-- $s --><li>one</li><!-- /$s --><!-- $s --><li>two</li><!-- /$s --><!-- $s --><li>three</li><!-- /$s --></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -187,7 +303,7 @@ describe('Async renderToString', () => {
 
 		suspended.resolve();
 		const rendered = await promise;
-		expect(rendered).to.equal('<p>ok</p>');
+		expect(rendered).to.equal('<!-- $s --><p>ok</p><!-- /$s -->');
 	});
 
 	it('should work with an in-render suspension', async () => {
