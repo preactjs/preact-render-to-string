@@ -1,8 +1,12 @@
 import { renderToStringAsync } from '../../src/index.js';
-import { h } from 'preact';
+import { h, createContext, Fragment } from 'preact';
 import { Suspense, useId } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
+import * as urql from '@urql/preact';
+import { Deferred } from '../../src/lib/util.js';
+import { signal } from '@preact/signals';
+import { useContext } from 'preact/hooks';
 
 describe('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
@@ -26,10 +30,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspended components', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -56,10 +64,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspense boundaries', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -88,12 +100,18 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
-		const { Suspender: SuspenderThree, suspended: suspendedThree } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -174,5 +192,58 @@ describe('Async renderToString', () => {
 		suspended.resolve();
 		const rendered = await promise;
 		expect(rendered).to.equal('<p>ok</p>');
+	});
+
+	it.only('should render JSX after a urql component', async () => {
+		const deferred = new Deferred();
+		const client = urql.createClient({
+			url: 'http://localhost:1234',
+			exchanges: [urql.cacheExchange, urql.fetchExchange],
+			suspense: true,
+			fetch: () =>
+				deferred.promise.then(() => new Response('{ "data": { "foo": 4 } }'))
+			// fetch: (args) => Promise.resolve(new Response('{ "data": { "foo": 4 } }'))
+		});
+		const Context = createContext({
+			store: signal(null)
+		});
+
+		const ContextProvider = ({ children }) => (
+			<Context.Provider value={{ store: signal() }}>
+				{children}
+			</Context.Provider>
+		);
+		const Fetcher = ({ children }) => {
+			const store = useContext(Context).store;
+
+			const [{ data }] = urql.useQuery({
+				query: 'query{ foo }'
+			});
+			store.foo = data.foo;
+			return <Fragment>{children}</Fragment>;
+		};
+
+		const Reactor = () => {
+			const store = useContext(Context).store;
+			return <div>{store.foo}</div>;
+		};
+
+		const promise = renderToStringAsync(
+			<urql.Provider value={client}>
+				<ContextProvider>
+					<Fetcher>
+						<Reactor />
+						<Reactor />
+					</Fetcher>
+				</ContextProvider>
+			</urql.Provider>
+		);
+
+		deferred.resolve();
+		const rendered = await promise;
+
+		const expected = `<div>4</div><div>4</div>`;
+
+		expect(rendered).to.equal(expected);
 	});
 });

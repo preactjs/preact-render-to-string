@@ -119,9 +119,9 @@ export async function renderToStringAsync(vnode, context) {
 			undefined
 		);
 
-		if (rendered instanceof Promise) {
-			rendered = [rendered];
-		}
+		// if (rendered instanceof Promise) {
+		// 	rendered = [rendered];
+		// }
 
 		if (Array.isArray(rendered)) {
 			let count = 0;
