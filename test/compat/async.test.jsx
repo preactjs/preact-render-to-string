@@ -17,7 +17,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!-- $s --><div class="foo">bar</div><!-- /$s -->`;
+		const expected = `<!--$s--><div class="foo">bar</div><!--/$s-->`;
 
 		suspended.resolve();
 
@@ -40,7 +40,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!-- $s --><!-- /$s --><div class="foo">bar</div>`;
+		const expected = `<!--$s--><!--/$s--><div class="foo">bar</div>`;
 
 		suspended.resolve();
 
@@ -73,7 +73,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><li>three</li><!-- /$s --></ul>`;
+		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -109,7 +109,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><li>three</li><!-- /$s --></ul>`;
+		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -152,7 +152,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- /$s --><!-- $s --><li>three</li><!-- /$s --><li>four</li><!-- /$s --></ul>`;
+		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--><li>four</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -164,7 +164,7 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal(expected);
 	});
 
-	it.only('should render JSX with deeply nested suspense boundaries', async () => {
+	it('should render JSX with deeply nested suspense boundaries', async () => {
 		const {
 			Suspender: SuspenderOne,
 			suspended: suspendedOne
@@ -199,7 +199,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!-- $s --><li>one</li><!-- $s --><li>two</li><!-- $s --><li>three</li><!-- /$s --><!-- /$s --><li>four</li><!-- /$s --></ul>`;
+		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--$s--><li>three</li><!--/$s--><!--/$s--><li>four</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -243,7 +243,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!-- $s --><li>one</li><!-- /$s --><!-- $s --><li>two</li><!-- /$s --><!-- $s --><li>three</li><!-- /$s --></ul>`;
+		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -303,7 +303,7 @@ describe('Async renderToString', () => {
 
 		suspended.resolve();
 		const rendered = await promise;
-		expect(rendered).to.equal('<!-- $s --><p>ok</p><!-- /$s -->');
+		expect(rendered).to.equal('<!--$s--><p>ok</p><!--/$s-->');
 	});
 
 	it('should work with an in-render suspension', async () => {
@@ -340,7 +340,10 @@ describe('Async renderToString', () => {
 			</Context.Provider>
 		);
 
-		expect(rendered).to.equal(`<div>2</div>`);
+		// Before we get to the actual DOM this suspends twice
+		expect(rendered).to.equal(
+			`<!--$s--><!--$s--><div>2</div><!--/$s--><!--/$s-->`
+		);
 	});
 
 	describe('dangerouslySetInnerHTML', () => {
