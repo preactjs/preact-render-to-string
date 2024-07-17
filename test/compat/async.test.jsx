@@ -190,8 +190,8 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<p>ok</p>');
 	});
 
-	it('should render JSX after a urql component', async () => {
-		const ThemeContext = createContext('light');
+	it('should work with setup comparable to URQL containing a lazy loaded component', async () => {
+		const Context = createContext();
 
 		let c = 0;
 
@@ -217,11 +217,11 @@ describe('Async renderToString', () => {
 		);
 
 		const rendered = await renderToStringAsync(
-			<ThemeContext.Provider value="dark">
+			<Context.Provider>
 				<Fetcher>
 					<LoadableComponent />
 				</Fetcher>
-			</ThemeContext.Provider>
+			</Context.Provider>
 		);
 
 		expect(rendered).to.equal(`<div>2</div>`);
