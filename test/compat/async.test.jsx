@@ -1,9 +1,8 @@
 import { renderToStringAsync } from '../../src/index.js';
 import { h, Fragment } from 'preact';
-import { Suspense, useId, lazy } from 'preact/compat';
+import { Suspense, useId, lazy, createContext } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
-import * as urql from '@urql/preact';
 
 describe('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
@@ -191,18 +190,8 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<p>ok</p>');
 	});
 
-	it.only('should render JSX after a urql component', async () => {
-		const client = urql.createClient({
-			url: 'http://localhost:1234',
-			exchanges: [urql.cacheExchange, urql.fetchExchange],
-			suspense: true,
-			fetch: () =>
-				Promise.resolve(
-					new Response('{ "data": { "foo": 4 } }', {
-						headers: { 'Content-Type': 'application/json' }
-					})
-				)
-		});
+	it('should render JSX after a urql component', async () => {
+		const ThemeContext = createContext('light');
 
 		let c = 0;
 
@@ -228,11 +217,11 @@ describe('Async renderToString', () => {
 		);
 
 		const rendered = await renderToStringAsync(
-			<urql.Provider value={client}>
+			<ThemeContext.Provider value="dark">
 				<Fetcher>
 					<LoadableComponent />
 				</Fetcher>
-			</urql.Provider>
+			</ThemeContext.Provider>
 		);
 
 		expect(rendered).to.equal(`<div>2</div>`);
