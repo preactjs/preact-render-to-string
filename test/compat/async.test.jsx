@@ -27,10 +27,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspended components', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -57,10 +61,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspense boundaries', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -89,12 +97,18 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
-		const { Suspender: SuspenderThree, suspended: suspendedThree } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -177,7 +191,7 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<p>ok</p>');
 	});
 
-	it('should render JSX after a urql component', async () => {
+	it.only('should render JSX after a urql component', async () => {
 		const client = urql.createClient({
 			url: 'http://localhost:1234',
 			exchanges: [urql.cacheExchange, urql.fetchExchange],
@@ -190,8 +204,13 @@ describe('Async renderToString', () => {
 				)
 		});
 
+		let c = 0;
+
 		const Fetcher = ({ children }) => {
-			urql.useQuery({ query: 'query{ foo }' });
+			c++;
+			if (c === 1) {
+				throw Promise.resolve();
+			}
 			return <Fragment>{children}</Fragment>;
 		};
 
