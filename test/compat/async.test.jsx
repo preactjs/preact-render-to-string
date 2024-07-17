@@ -1,5 +1,5 @@
 import { renderToStringAsync } from '../../src/index.js';
-import { h, createContext, Fragment } from 'preact';
+import { h, Fragment } from 'preact';
 import { Suspense, useId, lazy } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
@@ -209,21 +209,15 @@ describe('Async renderToString', () => {
 			return <Fragment>{children}</Fragment>;
 		};
 
-		const ThemeContext = createContext('light');
-
 		const LazyComponent = lazy(async () => {
-			await new Promise((r) => setTimeout(r, 200));
+			await new Promise((r) => setTimeout(r, 0));
 
 			return function ImportedComponent() {
-				return (
-					<ThemeContext.Provider>
-						<div>2</div>
-					</ThemeContext.Provider>
-				);
+				return <div>2</div>;
 			};
 		});
 
-		const LoadableTheme = ({}) => (
+		const LoadableComponent = ({}) => (
 			<Suspense fallback={'...loading'}>
 				<LazyComponent />
 			</Suspense>
@@ -232,7 +226,7 @@ describe('Async renderToString', () => {
 		const promise = renderToStringAsync(
 			<urql.Provider value={client}>
 				<Fetcher>
-					<LoadableTheme />
+					<LoadableComponent />
 				</Fetcher>
 			</urql.Provider>
 		);
