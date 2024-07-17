@@ -1,8 +1,9 @@
 import { renderToStringAsync } from '../../src/index.js';
-import { h } from 'preact';
-import { Suspense, useId } from 'preact/compat';
+import { h, Fragment } from 'preact';
+import { Suspense, useId, lazy } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
+import * as urql from '@urql/preact';
 
 describe('Async renderToString', () => {
 	it('should render JSX after a suspense boundary', async () => {
