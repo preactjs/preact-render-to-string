@@ -191,12 +191,12 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<p>ok</p>');
 	});
 
-	it.only('should render JSX after a urql component', async () => {
+	it('should render JSX after a urql component', async () => {
 		const client = urql.createClient({
 			url: 'http://localhost:1234',
 			exchanges: [urql.cacheExchange, urql.fetchExchange],
 			suspense: true,
-			fetch: (args) =>
+			fetch: () =>
 				Promise.resolve(
 					new Response('{ "data": { "foo": 4 } }', {
 						headers: { 'Content-Type': 'application/json' }
@@ -222,7 +222,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const promise = renderToStringAsync(
+		const rendered = await renderToStringAsync(
 			<urql.Provider value={client}>
 				<Fetcher>
 					<LoadableComponent />
@@ -230,10 +230,6 @@ describe('Async renderToString', () => {
 			</urql.Provider>
 		);
 
-		const rendered = await promise;
-
-		const expected = `<div>2</div>`;
-
-		expect(rendered).to.equal(expected);
+		expect(rendered).to.equal(`<div>2</div>`);
 	});
 });

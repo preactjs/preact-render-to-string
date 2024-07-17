@@ -109,7 +109,7 @@ export async function renderToStringAsync(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		let rendered = _renderToString(
+		const rendered = await _renderToString(
 			vnode,
 			context || EMPTY_OBJ,
 			false,
@@ -118,10 +118,6 @@ export async function renderToStringAsync(vnode, context) {
 			true,
 			undefined
 		);
-
-		// if (rendered instanceof Promise) {
-		// 	rendered = [rendered];
-		// }
 
 		if (Array.isArray(rendered)) {
 			let count = 0;
