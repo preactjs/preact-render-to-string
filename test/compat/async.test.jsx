@@ -209,13 +209,12 @@ describe('Async renderToString', () => {
 			return <Fragment>{children}</Fragment>;
 		};
 
-		const LazyComponent = lazy(async () => {
-			await new Promise((r) => setTimeout(r, 0));
-
-			return function ImportedComponent() {
-				return <div>2</div>;
-			};
-		});
+		const LazyComponent = lazy(
+			async () =>
+				function ImportedComponent() {
+					return <div>2</div>;
+				}
+		);
 
 		const LoadableComponent = ({}) => (
 			<Suspense fallback={'...loading'}>
