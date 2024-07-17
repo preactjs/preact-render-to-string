@@ -1,7 +1,7 @@
 {
 	"name": "preact-render-to-string",
 	"amdName": "preactRenderToString",
-	"version": "6.5.5",
+	"version": "6.5.6",
 	"description": "Render JSX to an HTML string, with support for Preact components.",
 	"main": "dist/index.js",
 	"umd:main": "dist/index.umd.js",
