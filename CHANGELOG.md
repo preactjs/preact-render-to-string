@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.6
+
+### Patch Changes
+
+- [#378](https://github.com/preactjs/preact-render-to-string/pull/378) [`054dae0`](https://github.com/preactjs/preact-render-to-string/commit/054dae0ae9dc0ab5b86c1c7fd9712b640a09111d) Thanks [@ccouzens](https://github.com/ccouzens)! - Fix issue where preactRenderToString returns a promise of a promise
+
 ## 6.5.5
 
 ### Patch Changes
