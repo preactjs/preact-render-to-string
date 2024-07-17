@@ -190,7 +190,7 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<p>ok</p>');
 	});
 
-	it('should work with setup comparable to URQL containing a lazy loaded component', async () => {
+	it('should work with an in-render suspension', async () => {
 		const Context = createContext();
 
 		let c = 0;
