@@ -1,6 +1,6 @@
 import { renderToStringAsync } from '../../src/index.js';
-import { h } from 'preact';
-import { Suspense, useId } from 'preact/compat';
+import { h, Fragment } from 'preact';
+import { Suspense, useId, lazy, createContext } from 'preact/compat';
 import { expect } from 'chai';
 import { createSuspender } from '../utils.jsx';
 
@@ -26,10 +26,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspended components', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -56,10 +60,14 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with nested suspense boundaries', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -88,12 +96,18 @@ describe('Async renderToString', () => {
 	});
 
 	it('should render JSX with multiple suspended direct children within a single suspense boundary', async () => {
-		const { Suspender: SuspenderOne, suspended: suspendedOne } =
-			createSuspender();
-		const { Suspender: SuspenderTwo, suspended: suspendedTwo } =
-			createSuspender();
-		const { Suspender: SuspenderThree, suspended: suspendedThree } =
-			createSuspender();
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
 
 		const promise = renderToStringAsync(
 			<ul>
@@ -174,5 +188,42 @@ describe('Async renderToString', () => {
 		suspended.resolve();
 		const rendered = await promise;
 		expect(rendered).to.equal('<p>ok</p>');
+	});
+
+	it('should work with an in-render suspension', async () => {
+		const Context = createContext();
+
+		let c = 0;
+
+		const Fetcher = ({ children }) => {
+			c++;
+			if (c === 1) {
+				throw Promise.resolve();
+			}
+			return <Fragment>{children}</Fragment>;
+		};
+
+		const LazyComponent = lazy(
+			async () =>
+				function ImportedComponent() {
+					return <div>2</div>;
+				}
+		);
+
+		const LoadableComponent = ({}) => (
+			<Suspense fallback={'...loading'}>
+				<LazyComponent />
+			</Suspense>
+		);
+
+		const rendered = await renderToStringAsync(
+			<Context.Provider>
+				<Fetcher>
+					<LoadableComponent />
+				</Fetcher>
+			</Context.Provider>
+		);
+
+		expect(rendered).to.equal(`<div>2</div>`);
 	});
 });

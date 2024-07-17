@@ -109,7 +109,7 @@ export async function renderToStringAsync(vnode, context) {
 	parent[CHILDREN] = [vnode];
 
 	try {
-		const rendered = _renderToString(
+		const rendered = await _renderToString(
 			vnode,
 			context || EMPTY_OBJ,
 			false,
