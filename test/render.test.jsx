@@ -387,16 +387,6 @@ describe('render', () => {
 			);
 		});
 
-		it('should accept nullish __html', () => {
-			const Test = (props) => (
-				<Fragment>
-					<div>hi</div>
-					<div dangerouslySetInnerHTML={{ __html: null }} />
-				</Fragment>
-			);
-			expect(render(<Test />)).to.equal('<div>hi</div><div></div>');
-		});
-
 		it('should apply defaultProps', () => {
 			const Test = (props) => <div {...props} />;
 			Test.defaultProps = {
@@ -833,6 +823,26 @@ describe('render', () => {
 				<div id="f" dangerouslySetInnerHTML={{ __html: html }} />
 			);
 			expect(rendered).to.equal(`<div id="f">${html}</div>`);
+		});
+
+		it('should accept undefined dangerouslySetInnerHTML', () => {
+			const Test = () => (
+				<Fragment>
+					<div>hi</div>
+					<div dangerouslySetInnerHTML={undefined} />
+				</Fragment>
+			);
+			expect(render(<Test />)).to.equal('<div>hi</div><div></div>');
+		});
+
+		it('should accept null __html', () => {
+			const Test = () => (
+				<Fragment>
+					<div>hi</div>
+					<div dangerouslySetInnerHTML={{ __html: null }} />
+				</Fragment>
+			);
+			expect(render(<Test />)).to.equal('<div>hi</div><div></div>');
 		});
 
 		it('should override children', () => {
