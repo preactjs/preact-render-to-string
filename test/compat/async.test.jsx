@@ -226,4 +226,47 @@ describe('Async renderToString', () => {
 
 		expect(rendered).to.equal(`<div>2</div>`);
 	});
+
+	describe('dangerouslySetInnerHTML', () => {
+		it('should support dangerouslySetInnerHTML', async () => {
+			// some invalid HTML to make sure we're being flakey:
+			let html = '<a href="foo">asdf</a> some text <ul><li>foo<li>bar</ul>';
+			let rendered = await renderToStringAsync(
+				<div id="f" dangerouslySetInnerHTML={{ __html: html }} />
+			);
+			expect(rendered).to.equal(`<div id="f">${html}</div>`);
+		});
+
+		it('should accept undefined dangerouslySetInnerHTML', async () => {
+			const Test = () => (
+				<Fragment>
+					<div>hi</div>
+					<div dangerouslySetInnerHTML={undefined} />
+				</Fragment>
+			);
+
+			const rendered = await renderToStringAsync(<Test />);
+			expect(rendered).to.equal('<div>hi</div><div></div>');
+		});
+
+		it('should accept null __html', async () => {
+			const Test = () => (
+				<Fragment>
+					<div>hi</div>
+					<div dangerouslySetInnerHTML={{ __html: null }} />
+				</Fragment>
+			);
+			const rendered = await renderToStringAsync(<Test />);
+			expect(rendered).to.equal('<div>hi</div><div></div>');
+		});
+
+		it('should override children', async () => {
+			let rendered = await renderToStringAsync(
+				<div dangerouslySetInnerHTML={{ __html: 'foo' }}>
+					<b>bar</b>
+				</div>
+			);
+			expect(rendered).to.equal('<div>foo</div>');
+		});
+	});
 });
