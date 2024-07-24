@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.7
+
+### Patch Changes
+
+- [#381](https://github.com/preactjs/preact-render-to-string/pull/381) [`481b4f3`](https://github.com/preactjs/preact-render-to-string/commit/481b4f3c6602d9cdab1f8c3c884edb938099c603) Thanks [@rschristian](https://github.com/rschristian)! - Support `dangerouslySetInnerHTML={undefined}` with `renderToStringAsync`
+
 ## 6.5.6
 
 ### Patch Changes
