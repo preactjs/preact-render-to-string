@@ -125,7 +125,9 @@ export async function renderToStringAsync(vnode, context) {
 
 			// Resolving nested Promises with a maximum depth of 25
 			while (
-				resolved.some((element) => typeof element.then === 'function') &&
+				resolved.some(
+					(element) => element && typeof element.then === 'function'
+				) &&
 				count++ < 25
 			) {
 				resolved = (await Promise.all(resolved)).flat();
