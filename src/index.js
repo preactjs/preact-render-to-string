@@ -23,8 +23,11 @@ import {
 } from './lib/constants.js';
 
 const EMPTY_ARR = [];
+const EMPTY_OBJ = {};
 const isArray = Array.isArray;
 const assign = Object.assign;
+const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
+const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
 
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
@@ -65,7 +68,7 @@ export function renderToString(vnode, context, _rendererState) {
 			_rendererState
 		);
 
-		if (Array.isArray(rendered)) {
+		if (isArray(rendered)) {
 			return rendered.join('');
 		}
 		return rendered;
@@ -119,7 +122,7 @@ export async function renderToStringAsync(vnode, context) {
 			undefined
 		);
 
-		if (Array.isArray(rendered)) {
+		if (isArray(rendered)) {
 			let count = 0;
 			let resolved = rendered;
 
@@ -150,8 +153,6 @@ export async function renderToStringAsync(vnode, context) {
 function markAsDirty() {
 	this.__d = true;
 }
-
-const EMPTY_OBJ = {};
 
 /**
  * @param {VNode} vnode
@@ -370,7 +371,14 @@ function _renderToString(
 
 					if (renderHook) renderHook(vnode);
 
-					rendered = type.call(component, props, cctx);
+					try {
+						rendered = type.call(component, props, cctx);
+					} catch (e) {
+						if (asyncMode) {
+							vnode._suspended = true;
+						}
+						throw e;
+					}
 				}
 				component[DIRTY] = true;
 			}
@@ -400,6 +408,7 @@ function _renderToString(
 						selectValue,
 						vnode,
 						asyncMode,
+						false,
 						renderer
 					);
 					return str;
@@ -474,6 +483,21 @@ function _renderToString(
 
 			if (options.unmount) options.unmount(vnode);
 
+			if (vnode._suspended) {
+				if (typeof str === 'string') {
+					return BEGIN_SUSPENSE_DENOMINATOR + str + END_SUSPENSE_DENOMINATOR;
+				} else if (isArray(str)) {
+					str.unshift(BEGIN_SUSPENSE_DENOMINATOR);
+					str.push(END_SUSPENSE_DENOMINATOR);
+					return str;
+				}
+
+				return str.then(
+					(resolved) =>
+						BEGIN_SUSPENSE_DENOMINATOR + resolved + END_SUSPENSE_DENOMINATOR
+				);
+			}
+
 			return str;
 		} catch (error) {
 			if (!asyncMode && renderer && renderer.onError) {
@@ -502,7 +526,7 @@ function _renderToString(
 
 			const renderNestedChildren = () => {
 				try {
-					return _renderToString(
+					const result = _renderToString(
 						rendered,
 						context,
 						isSvgMode,
@@ -511,26 +535,30 @@ function _renderToString(
 						asyncMode,
 						renderer
 					);
+					return vnode._suspended
+						? BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR
+						: result;
 				} catch (e) {
 					if (!e || typeof e.then !== 'function') throw e;
 
-					return e.then(
-						() =>
-							_renderToString(
-								rendered,
-								context,
-								isSvgMode,
-								selectValue,
-								vnode,
-								asyncMode,
-								renderer
-							),
-						() => renderNestedChildren()
-					);
+					return e.then(() => {
+						const result = _renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode,
+							asyncMode,
+							renderer
+						);
+						return vnode._suspended
+							? BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR
+							: result;
+					}, renderNestedChildren);
 				}
 			};
 
-			return error.then(() => renderNestedChildren());
+			return error.then(renderNestedChildren);
 		}
 	}
 
