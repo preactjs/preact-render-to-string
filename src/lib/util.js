@@ -33,12 +33,12 @@ export function encodeEntities(str) {
 				continue;
 		}
 		// Append skipped/buffered characters and the encoded entity:
-		if (i !== last) out += str.slice(last, i);
-		out += ch;
+		if (i !== last) out = out + str.slice(last, i);
+		out = out + ch;
 		// Start the next seek/buffer after the entity's offset:
 		last = i + 1;
 	}
-	if (i !== last) out += str.slice(last, i);
+	if (i !== last) out = out + str.slice(last, i);
 	return out;
 }
 
