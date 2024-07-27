@@ -556,6 +556,8 @@ function _renderToString(
 	for (let name in props) {
 		let v = props[name];
 
+		if (typeof v === 'function') continue;
+
 		switch (name) {
 			case 'children':
 				children = v;
