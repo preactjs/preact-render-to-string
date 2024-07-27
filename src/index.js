@@ -653,7 +653,7 @@ function _renderToString(
 		}
 
 		// write this attribute to the buffer
-		if (v != null && v !== false && typeof v !== 'function') {
+		if (v != null && v !== false) {
 			if (v === true || v === EMPTY_STR) {
 				s = s + ' ' + name;
 			} else {
