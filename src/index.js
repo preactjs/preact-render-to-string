@@ -25,6 +25,7 @@ import {
 const EMPTY_ARR = [];
 const isArray = Array.isArray;
 const assign = Object.assign;
+const EMPTY_STR = '';
 
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
@@ -65,8 +66,8 @@ export function renderToString(vnode, context, _rendererState) {
 			_rendererState
 		);
 
-		if (Array.isArray(rendered)) {
-			return rendered.join('');
+		if (isArray(rendered)) {
+			return rendered.join(EMPTY_STR);
 		}
 		return rendered;
 	} catch (e) {
@@ -119,7 +120,7 @@ export async function renderToStringAsync(vnode, context) {
 			undefined
 		);
 
-		if (Array.isArray(rendered)) {
+		if (isArray(rendered)) {
 			let count = 0;
 			let resolved = rendered;
 
@@ -133,7 +134,7 @@ export async function renderToStringAsync(vnode, context) {
 				resolved = (await Promise.all(resolved)).flat();
 			}
 
-			return resolved.join('');
+			return resolved.join(EMPTY_STR);
 		}
 
 		return rendered;
@@ -226,19 +227,26 @@ function _renderToString(
 	renderer
 ) {
 	// Ignore non-rendered VNodes/values
-	if (vnode == null || vnode === true || vnode === false || vnode === '') {
-		return '';
+	if (
+		vnode == null ||
+		vnode === true ||
+		vnode === false ||
+		vnode === EMPTY_STR
+	) {
+		return EMPTY_STR;
 	}
 
 	// Text VNodes: escape as HTML
 	if (typeof vnode !== 'object') {
-		if (typeof vnode === 'function') return '';
-		return encodeEntities(vnode + '');
+		if (typeof vnode === 'function') return EMPTY_STR;
+		return typeof vnode === 'string'
+			? encodeEntities(vnode)
+			: vnode + EMPTY_STR;
 	}
 
 	// Recurse into children / Arrays
 	if (isArray(vnode)) {
-		let rendered = '',
+		let rendered = EMPTY_STR,
 			renderArray;
 		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
@@ -256,15 +264,15 @@ function _renderToString(
 			);
 
 			if (typeof childRender === 'string') {
-				rendered += childRender;
+				rendered = rendered + childRender;
 			} else {
 				renderArray = renderArray || [];
 
 				if (rendered) renderArray.push(rendered);
 
-				rendered = '';
+				rendered = EMPTY_STR;
 
-				if (Array.isArray(childRender)) {
+				if (isArray(childRender)) {
 					renderArray.push(...childRender);
 				} else {
 					renderArray.push(childRender);
@@ -281,7 +289,7 @@ function _renderToString(
 	}
 
 	// VNodes have {constructor:undefined} to prevent JSON injection:
-	if (vnode.constructor !== undefined) return '';
+	if (vnode.constructor !== undefined) return EMPTY_STR;
 
 	vnode[PARENT] = parent;
 	if (beforeDiff) beforeDiff(vnode);
@@ -298,9 +306,9 @@ function _renderToString(
 		if (type === Fragment) {
 			// Serialized precompiled JSX.
 			if (props.tpl) {
-				let out = '';
+				let out = EMPTY_STR;
 				for (let i = 0; i < props.tpl.length; i++) {
-					out += props.tpl[i];
+					out = out + props.tpl[i];
 
 					if (props.exprs && i < props.exprs.length) {
 						const value = props.exprs[i];
@@ -311,18 +319,20 @@ function _renderToString(
 							typeof value === 'object' &&
 							(value.constructor === undefined || isArray(value))
 						) {
-							out += _renderToString(
-								value,
-								context,
-								isSvgMode,
-								selectValue,
-								vnode,
-								asyncMode,
-								renderer
-							);
+							out =
+								out +
+								_renderToString(
+									value,
+									context,
+									isSvgMode,
+									selectValue,
+									vnode,
+									asyncMode,
+									renderer
+								);
 						} else {
 							// Values are pre-escaped by the JSX transform
-							out += value;
+							out = out + value;
 						}
 					}
 				}
@@ -331,7 +341,9 @@ function _renderToString(
 			} else if (props.UNSTABLE_comment) {
 				// Fragments are the least used components of core that's why
 				// branching here for comments has the least effect on perf.
-				return '<!--' + encodeEntities(props.UNSTABLE_comment || '') + '-->';
+				return (
+					'<!--' + encodeEntities(props.UNSTABLE_comment || EMPTY_STR) + '-->'
+				);
 			}
 
 			rendered = props.children;
@@ -342,11 +354,13 @@ function _renderToString(
 				cctx = provider ? provider.props.value : contextType.__;
 			}
 
-			if (type.prototype && typeof type.prototype.render === 'function') {
+			let isClassComponent =
+				type.prototype && typeof type.prototype.render === 'function';
+			if (isClassComponent) {
 				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
 				component = vnode[COMPONENT];
 			} else {
-				component = {
+				vnode[COMPONENT] = component = {
 					__v: vnode,
 					props,
 					context: cctx,
@@ -357,7 +371,6 @@ function _renderToString(
 					// hooks
 					__h: []
 				};
-				vnode[COMPONENT] = component;
 
 				// If a hook invokes setState() to invalidate the component during rendering,
 				// re-render it up to 25 times to allow "settling" of memoized states.
@@ -380,10 +393,10 @@ function _renderToString(
 			}
 
 			if (
-				(type.getDerivedStateFromError || component.componentDidCatch) &&
-				options.errorBoundaries
+				isClassComponent &&
+				options.errorBoundaries &&
+				(type.getDerivedStateFromError || component.componentDidCatch)
 			) {
-				let str = '';
 				// When a component returns a Fragment node we flatten it in core, so we
 				// need to mirror that logic here too
 				let isTopLevelFragment =
@@ -393,7 +406,7 @@ function _renderToString(
 				rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 				try {
-					str = _renderToString(
+					return _renderToString(
 						rendered,
 						context,
 						isSvgMode,
@@ -402,14 +415,15 @@ function _renderToString(
 						asyncMode,
 						renderer
 					);
-					return str;
 				} catch (err) {
+					let str = EMPTY_STR;
+
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
 					}
 
 					if (component.componentDidCatch) {
-						component.componentDidCatch(err, {});
+						component.componentDidCatch(err, EMPTY_OBJ);
 					}
 
 					if (component[DIRTY]) {
@@ -493,7 +507,7 @@ function _renderToString(
 
 				let errorHook = options[CATCH_ERROR];
 				if (errorHook) errorHook(error, vnode);
-				return '';
+				return EMPTY_STR;
 			}
 
 			if (!asyncMode) throw error;
@@ -525,22 +539,24 @@ function _renderToString(
 								asyncMode,
 								renderer
 							),
-						() => renderNestedChildren()
+						renderNestedChildren
 					);
 				}
 			};
 
-			return error.then(() => renderNestedChildren());
+			return error.then(renderNestedChildren);
 		}
 	}
 
 	// Serialize Element VNodes to HTML
 	let s = '<' + type,
-		html = '',
+		html = EMPTY_STR,
 		children;
 
 	for (let name in props) {
 		let v = props[name];
+
+		if (typeof v === 'function') continue;
 
 		switch (name) {
 			case 'children':
@@ -622,7 +638,7 @@ function _renderToString(
 					// serialize boolean aria-xyz or draggable attribute values as strings
 					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
 					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
-					v += '';
+					v = v + EMPTY_STR;
 				} else if (isSvgMode) {
 					if (SVG_CAMEL_CASE.test(name)) {
 						name =
@@ -637,11 +653,17 @@ function _renderToString(
 		}
 
 		// write this attribute to the buffer
-		if (v != null && v !== false && typeof v !== 'function') {
-			if (v === true || v === '') {
+		if (v != null && v !== false) {
+			if (v === true || v === EMPTY_STR) {
 				s = s + ' ' + name;
 			} else {
-				s = s + ' ' + name + '="' + encodeEntities(v + '') + '"';
+				s =
+					s +
+					' ' +
+					name +
+					'="' +
+					(typeof v === 'string' ? encodeEntities(v) : v + EMPTY_STR) +
+					'"';
 			}
 		}
 	}
@@ -687,7 +709,7 @@ function _renderToString(
 	const endTag = '</' + type + '>';
 	const startTag = s + '>';
 
-	if (Array.isArray(html)) return [startTag, ...html, endTag];
+	if (isArray(html)) return [startTag, ...html, endTag];
 	else if (typeof html !== 'string') return [startTag, html, endTag];
 	return startTag + html + endTag;
 }
