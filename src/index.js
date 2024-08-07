@@ -236,12 +236,11 @@ function _renderToString(
 		return EMPTY_STR;
 	}
 
+	let vnodeType = typeof vnode;
 	// Text VNodes: escape as HTML
-	if (typeof vnode !== 'object') {
-		if (typeof vnode === 'function') return EMPTY_STR;
-		return typeof vnode === 'string'
-			? encodeEntities(vnode)
-			: vnode + EMPTY_STR;
+	if (vnodeType !== 'object') {
+		if (vnodeType === 'function') return EMPTY_STR;
+		return vnodeType === 'string' ? encodeEntities(vnode) : vnode + EMPTY_STR;
 	}
 
 	// Recurse into children / Arrays
@@ -305,7 +304,7 @@ function _renderToString(
 	if (typeof type === 'function') {
 		if (type === Fragment) {
 			// Serialized precompiled JSX.
-			if (props.tpl) {
+			if ('tpl' in props) {
 				let out = EMPTY_STR;
 				for (let i = 0; i < props.tpl.length; i++) {
 					out = out + props.tpl[i];
@@ -338,7 +337,7 @@ function _renderToString(
 				}
 
 				return out;
-			} else if (props.UNSTABLE_comment) {
+			} else if ('UNSTABLE_comment' in props) {
 				// Fragments are the least used components of core that's why
 				// branching here for comments has the least effect on perf.
 				return (
@@ -402,7 +401,8 @@ function _renderToString(
 				let isTopLevelFragment =
 					rendered != null &&
 					rendered.type === Fragment &&
-					rendered.key == null;
+					rendered.key == null &&
+					!('tpl' in rendered.props);
 				rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 				try {
@@ -437,7 +437,8 @@ function _renderToString(
 						let isTopLevelFragment =
 							rendered != null &&
 							rendered.type === Fragment &&
-							rendered.key == null;
+							rendered.key == null &&
+							!('tpl' in rendered.props);
 						rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 						str = _renderToString(
@@ -467,7 +468,7 @@ function _renderToString(
 			rendered != null &&
 			rendered.type === Fragment &&
 			rendered.key == null &&
-			rendered.props.tpl == null;
+			!('tpl' in rendered.props);
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		try {
