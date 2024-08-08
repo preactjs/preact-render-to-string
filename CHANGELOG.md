@@ -1,5 +1,15 @@
 # preact-render-to-string
 
+## 6.5.8
+
+### Patch Changes
+
+- [#386](https://github.com/preactjs/preact-render-to-string/pull/386) [`220ad45`](https://github.com/preactjs/preact-render-to-string/commit/220ad45cc2674cc7d927ca52d555ea8e5ec2ddbc) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add async benchmarks and iterate on perf improvements
+
+* [#383](https://github.com/preactjs/preact-render-to-string/pull/383) [`883e02b`](https://github.com/preactjs/preact-render-to-string/commit/883e02bac3277daea157d996fbed406a71bf2901) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - General performance optimisations
+
+- [#385](https://github.com/preactjs/preact-render-to-string/pull/385) [`45b8e8b`](https://github.com/preactjs/preact-render-to-string/commit/45b8e8b2f4ee1a9653601560ca363ae87b56e0d9) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Improve perf a bit by hoisting the typeof check to reduce calling typeof
+
 ## 6.5.7
 
 ### Patch Changes
