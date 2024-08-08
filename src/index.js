@@ -4,7 +4,8 @@ import {
 	UNSAFE_NAME,
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
-	SVG_CAMEL_CASE
+	SVG_CAMEL_CASE,
+	createComponent
 } from './lib/util.js';
 import { options, h, Fragment } from 'preact';
 import {
@@ -22,6 +23,7 @@ import {
 	CATCH_ERROR
 } from './lib/constants.js';
 
+const EMPTY_OBJ = {};
 const EMPTY_ARR = [];
 const isArray = Array.isArray;
 const assign = Object.assign;
@@ -147,13 +149,6 @@ export async function renderToStringAsync(vnode, context) {
 	}
 }
 
-// Installed as setState/forceUpdate for function components
-function markAsDirty() {
-	this.__d = true;
-}
-
-const EMPTY_OBJ = {};
-
 /**
  * @param {VNode} vnode
  * @param {Record<string, unknown>} context
@@ -238,9 +233,9 @@ function _renderToString(
 
 	let vnodeType = typeof vnode;
 	// Text VNodes: escape as HTML
-	if (vnodeType !== 'object') {
-		if (vnodeType === 'function') return EMPTY_STR;
-		return vnodeType === 'string' ? encodeEntities(vnode) : vnode + EMPTY_STR;
+	if (vnodeType != 'object') {
+		if (vnodeType == 'function') return EMPTY_STR;
+		return vnodeType == 'string' ? encodeEntities(vnode) : vnode + EMPTY_STR;
 	}
 
 	// Recurse into children / Arrays
@@ -250,7 +245,7 @@ function _renderToString(
 		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			let child = vnode[i];
-			if (child == null || typeof child === 'boolean') continue;
+			if (child == null || typeof child == 'boolean') continue;
 
 			const childRender = _renderToString(
 				child,
@@ -262,10 +257,12 @@ function _renderToString(
 				renderer
 			);
 
-			if (typeof childRender === 'string') {
+			if (typeof childRender == 'string') {
 				rendered = rendered + childRender;
 			} else {
-				renderArray = renderArray || [];
+				if (!renderArray) {
+					renderArray = [];
+				}
 
 				if (rendered) renderArray.push(rendered);
 
@@ -294,14 +291,14 @@ function _renderToString(
 	if (beforeDiff) beforeDiff(vnode);
 
 	let type = vnode.type,
-		props = vnode.props,
-		cctx = context,
-		contextType,
-		rendered,
-		component;
+		props = vnode.props;
 
 	// Invoke rendering on Components
-	if (typeof type === 'function') {
+	if (typeof type == 'function') {
+		let cctx = context,
+			contextType,
+			rendered,
+			component;
 		if (type === Fragment) {
 			// Serialized precompiled JSX.
 			if ('tpl' in props) {
@@ -315,7 +312,7 @@ function _renderToString(
 
 						// Check if we're dealing with a vnode or an array of nodes
 						if (
-							typeof value === 'object' &&
+							typeof value == 'object' &&
 							(value.constructor === undefined || isArray(value))
 						) {
 							out =
@@ -340,9 +337,7 @@ function _renderToString(
 			} else if ('UNSTABLE_comment' in props) {
 				// Fragments are the least used components of core that's why
 				// branching here for comments has the least effect on perf.
-				return (
-					'<!--' + encodeEntities(props.UNSTABLE_comment || EMPTY_STR) + '-->'
-				);
+				return '<!--' + encodeEntities(props.UNSTABLE_comment) + '-->';
 			}
 
 			rendered = props.children;
@@ -354,22 +349,15 @@ function _renderToString(
 			}
 
 			let isClassComponent =
-				type.prototype && typeof type.prototype.render === 'function';
+				type.prototype && typeof type.prototype.render == 'function';
 			if (isClassComponent) {
 				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
 				component = vnode[COMPONENT];
 			} else {
-				vnode[COMPONENT] = component = {
-					__v: vnode,
-					props,
-					context: cctx,
-					// silently drop state updates
-					setState: markAsDirty,
-					forceUpdate: markAsDirty,
-					__d: true,
-					// hooks
-					__h: []
-				};
+				vnode[COMPONENT] = component = /**#__NOINLINE__**/ createComponent(
+					vnode,
+					cctx
+				);
 
 				// If a hook invokes setState() to invalidate the component during rendering,
 				// re-render it up to 25 times to allow "settling" of memoized states.
@@ -402,7 +390,7 @@ function _renderToString(
 					rendered != null &&
 					rendered.type === Fragment &&
 					rendered.key == null &&
-					!('tpl' in rendered.props);
+					rendered.props.tpl == null;
 				rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 				try {
@@ -416,8 +404,6 @@ function _renderToString(
 						renderer
 					);
 				} catch (err) {
-					let str = EMPTY_STR;
-
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
 					}
@@ -438,10 +424,10 @@ function _renderToString(
 							rendered != null &&
 							rendered.type === Fragment &&
 							rendered.key == null &&
-							!('tpl' in rendered.props);
+							rendered.props.tpl == null;
 						rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-						str = _renderToString(
+						return _renderToString(
 							rendered,
 							context,
 							isSvgMode,
@@ -452,7 +438,7 @@ function _renderToString(
 						);
 					}
 
-					return str;
+					return EMPTY_STR;
 				} finally {
 					if (afterDiff) afterDiff(vnode);
 					vnode[PARENT] = null;
@@ -468,7 +454,7 @@ function _renderToString(
 			rendered != null &&
 			rendered.type === Fragment &&
 			rendered.key == null &&
-			!('tpl' in rendered.props);
+			rendered.props.tpl == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		try {
@@ -513,7 +499,7 @@ function _renderToString(
 
 			if (!asyncMode) throw error;
 
-			if (!error || typeof error.then !== 'function') throw error;
+			if (!error || typeof error.then != 'function') throw error;
 
 			const renderNestedChildren = () => {
 				try {
@@ -527,7 +513,7 @@ function _renderToString(
 						renderer
 					);
 				} catch (e) {
-					if (!e || typeof e.then !== 'function') throw e;
+					if (!e || typeof e.then != 'function') throw e;
 
 					return e.then(
 						() =>
@@ -557,7 +543,7 @@ function _renderToString(
 	for (let name in props) {
 		let v = props[name];
 
-		if (typeof v === 'function') continue;
+		if (typeof v == 'function') continue;
 
 		switch (name) {
 			case 'children':
@@ -663,7 +649,7 @@ function _renderToString(
 					' ' +
 					name +
 					'="' +
-					(typeof v === 'string' ? encodeEntities(v) : v + EMPTY_STR) +
+					(typeof v == 'string' ? encodeEntities(v) : v + EMPTY_STR) +
 					'"';
 			}
 		}
@@ -711,7 +697,7 @@ function _renderToString(
 	const startTag = s + '>';
 
 	if (isArray(html)) return [startTag, ...html, endTag];
-	else if (typeof html !== 'string') return [startTag, html, endTag];
+	else if (typeof html != 'string') return [startTag, html, endTag];
 	return startTag + html + endTag;
 }
 

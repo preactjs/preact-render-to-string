@@ -147,7 +147,7 @@ export function createComponent(vnode, context) {
 		forceUpdate: markAsDirty,
 		__d: true,
 		// hooks
-		__h: []
+		__h: new Array(0)
 	};
 }
 
