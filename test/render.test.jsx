@@ -154,6 +154,14 @@ describe('render', () => {
 			expect(rendered).to.equal(`<div data-checked="false"></div>`);
 		});
 
+		it('should support spellCheck', () => {
+			let rendered = render(<div spellCheck={false} />);
+			expect(rendered).to.equal(`<div spellcheck="false"></div>`);
+
+			rendered = render(<div spellCheck />);
+			expect(rendered).to.equal(`<div spellcheck="true"></div>`);
+		});
+
 		describe('attribute name sanitization', () => {
 			it('should omit attributes with invalid names', () => {
 				let rendered = render(

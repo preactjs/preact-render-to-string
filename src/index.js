@@ -635,6 +635,9 @@ function _renderToString(
 					}
 				} else if (HTML_LOWER_CASE.test(name)) {
 					name = name.toLowerCase();
+					if (name === 'spellcheck') {
+						v = '' + v;
+					}
 				}
 			}
 		}
