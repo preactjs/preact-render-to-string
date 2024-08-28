@@ -543,7 +543,9 @@ function _renderToString(
 	for (let name in props) {
 		let v = props[name];
 
-		if (typeof v == 'function') continue;
+		if (typeof v == 'function' && name !== 'class' && name !== 'className') {
+			continue;
+		}
 
 		switch (name) {
 			case 'children':
