@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.10
+
+### Patch Changes
+
+- [#391](https://github.com/preactjs/preact-render-to-string/pull/391) [`d80e4dc`](https://github.com/preactjs/preact-render-to-string/commit/d80e4dccecbc7394d2eb903b85a2a8d31a12c8cb) Thanks [@marvinhagemeister](https://github.com/marvinhagemeister)! - Allow any value for `class` + `className` as long as it's stringified to match browser behavior.
+
 ## 6.5.9
 
 ### Patch Changes
