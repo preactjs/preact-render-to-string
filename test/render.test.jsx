@@ -1678,6 +1678,18 @@ describe('render', () => {
 				}
 			}
 		});
+
+		// https://github.com/preactjs/preact-render-to-string/issues/390
+		// The DOM API casts any value to a string here.
+		it('should cast "className" and "class" value to string', () => {
+			const proxy = new Proxy(() => {}, {
+				get() {
+					return () => 'foo';
+				}
+			});
+			let rendered = render(<div className={proxy} />);
+			expect(rendered).to.equal(`<div class="foo"></div>`);
+		});
 	});
 
 	describe('precompiled JSX', () => {
