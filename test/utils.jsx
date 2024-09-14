@@ -400,7 +400,6 @@ export const htmlAttributes = {
 	slot: 'slot',
 	span: 'span',
 	spellcheck: 'spellcheck',
-	spellCheck: 'spellcheck',
 	src: 'src',
 	srcset: 'srcset',
 	srcDoc: 'srcdoc',
