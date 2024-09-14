@@ -4,6 +4,7 @@ import {
 	UNSAFE_NAME,
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
+	HTML_ENUMERATED,
 	SVG_CAMEL_CASE,
 	createComponent
 } from './lib/util.js';
@@ -623,10 +624,11 @@ function _renderToString(
 					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
-				} else if ((name[4] === '-' || name === 'draggable') && v != null) {
-					// serialize boolean aria-xyz or draggable attribute values as strings
-					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
-					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
+				} else if (
+					(name[4] === '-' || HTML_ENUMERATED.has(name)) &&
+					v != null
+				) {
+					// serialize boolean aria-xyz or enumerated attribute values as strings
 					v = v + EMPTY_STR;
 				} else if (isSvgMode) {
 					if (SVG_CAMEL_CASE.test(name)) {
@@ -637,9 +639,6 @@ function _renderToString(
 					}
 				} else if (HTML_LOWER_CASE.test(name)) {
 					name = name.toLowerCase();
-					if (name === 'spellcheck') {
-						v = '' + v;
-					}
 				}
 			}
 		}

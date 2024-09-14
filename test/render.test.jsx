@@ -154,11 +154,11 @@ describe('render', () => {
 			expect(rendered).to.equal(`<div data-checked="false"></div>`);
 		});
 
-		it('should support spellCheck', () => {
-			let rendered = render(<div spellCheck={false} />);
+		it('should support spellcheck', () => {
+			let rendered = render(<div spellcheck={false} />);
 			expect(rendered).to.equal(`<div spellcheck="false"></div>`);
 
-			rendered = render(<div spellCheck />);
+			rendered = render(<div spellcheck />);
 			expect(rendered).to.equal(`<div spellcheck="true"></div>`);
 		});
 
