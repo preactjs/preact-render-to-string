@@ -628,9 +628,7 @@ function _renderToString(
 					(name[4] === '-' || HTML_ENUMERATED.test(name)) &&
 					v != null
 				) {
-					// serialize boolean aria-xyz or draggable attribute values as strings
-					// `draggable` is an enumerated attribute and not Boolean. A value of `true` or `false` is mandatory
-					// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/draggable
+					// serialize boolean aria-xyz or enumerated attribute values as strings
 					v = v + EMPTY_STR;
 				} else if (isSvgMode) {
 					if (SVG_CAMEL_CASE.test(name)) {
