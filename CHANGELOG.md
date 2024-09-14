@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.11
+
+### Patch Changes
+
+- [#393](https://github.com/preactjs/preact-render-to-string/pull/393) [`62ade27`](https://github.com/preactjs/preact-render-to-string/commit/62ade2779e9956287b53cb4b608bdba671a5e3ac) Thanks [@rschristian](https://github.com/rschristian)! - Fix `spellcheck={false}` not rendering as `spellcheck="false"`
+
 ## 6.5.10
 
 ### Patch Changes
