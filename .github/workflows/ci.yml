@@ -21,7 +21,4 @@ jobs:
           cache: npm
       - run: npm ci
       - name: test
-        # Not using `npm test` since it rebuilds source which npm ci has already done
-        run: |
-          npm run build
-          npm run test
+        run: npm run test
