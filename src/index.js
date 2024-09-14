@@ -625,7 +625,7 @@ function _renderToString(
 				} else if (UNSAFE_NAME.test(name)) {
 					continue;
 				} else if (
-					(name[4] === '-' || HTML_ENUMERATED.test(name)) &&
+					(name[4] === '-' || HTML_ENUMERATED.has(name)) &&
 					v != null
 				) {
 					// serialize boolean aria-xyz or enumerated attribute values as strings
