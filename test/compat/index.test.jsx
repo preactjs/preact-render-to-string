@@ -5,7 +5,7 @@ import { expect } from 'chai';
 describe('compat', () => {
 	it('should not duplicate class attribute when className is empty', async () => {
 		let rendered = render(createElement('div', { className: '' }));
-		let expected = `<div class></div>`;
+		let expected = `<div></div>`;
 
 		expect(rendered).to.equal(expected);
 	});
