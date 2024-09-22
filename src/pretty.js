@@ -258,7 +258,7 @@ function _renderToStringPretty(
 							? 'panose-1'
 							: name.replace(/([A-Z])/g, '-$1').toLowerCase();
 				}
-			} else if (HTML_LOWER_CASE.test(name)) {
+			} else if (HTML_LOWER_CASE.has(name)) {
 				name = name.toLowerCase();
 			}
 
