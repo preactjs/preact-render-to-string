@@ -8,7 +8,7 @@ import {
 	UNSAFE_NAME,
 	VOID_ELEMENTS,
 	NAMESPACE_REPLACE_REGEX,
-	SVG_CAMEL_CASE,
+	SVG_KEBAB_CASE,
 	HTML_LOWER_CASE,
 	getContext
 } from './lib/util.js';
@@ -252,13 +252,13 @@ function _renderToStringPretty(
 			} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
 				name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 			} else if (isSvgMode) {
-				if (SVG_CAMEL_CASE.test(name)) {
+				if (SVG_KEBAB_CASE.has(name)) {
 					name =
 						name === 'panose1'
 							? 'panose-1'
 							: name.replace(/([A-Z])/g, '-$1').toLowerCase();
 				}
-			} else if (HTML_LOWER_CASE.test(name)) {
+			} else if (HTML_LOWER_CASE.has(name)) {
 				name = name.toLowerCase();
 			}
 
@@ -332,7 +332,7 @@ function _renderToStringPretty(
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
 	let isVoid =
-		VOID_ELEMENTS.test(nodeName) ||
+		VOID_ELEMENTS.has(nodeName) ||
 		(opts.voidElements && opts.voidElements.test(nodeName));
 	let pieces = [];
 
