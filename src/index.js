@@ -5,7 +5,7 @@ import {
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
 	HTML_ENUMERATED,
-	SVG_CAMEL_CASE,
+	SVG_KEBAB_CASE,
 	createComponent
 } from './lib/util.js';
 import { options, h, Fragment } from 'preact';
@@ -631,7 +631,7 @@ function _renderToString(
 					// serialize boolean aria-xyz or enumerated attribute values as strings
 					v = v + EMPTY_STR;
 				} else if (isSvgMode) {
-					if (SVG_CAMEL_CASE.test(name)) {
+					if (SVG_KEBAB_CASE.has(name)) {
 						name =
 							name === 'panose1'
 								? 'panose-1'
