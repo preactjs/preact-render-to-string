@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.5.12
+
+### Patch Changes
+
+- [#397](https://github.com/preactjs/preact-render-to-string/pull/397) [`6db4f95`](https://github.com/preactjs/preact-render-to-string/commit/6db4f95ab3fc303b754765c11e64a72d9583d87b) Thanks [@rschristian](https://github.com/rschristian)! - Switch `HTML_LOWER_CASE` regex to match all from line start for a marginal perf benefit.
+
 ## 6.5.11
 
 ### Patch Changes
