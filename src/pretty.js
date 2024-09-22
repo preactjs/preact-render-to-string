@@ -332,7 +332,7 @@ function _renderToStringPretty(
 		throw new Error(`${nodeName} is not a valid HTML tag name in ${s}`);
 
 	let isVoid =
-		VOID_ELEMENTS.test(nodeName) ||
+		VOID_ELEMENTS.has(nodeName) ||
 		(opts.voidElements && opts.voidElements.test(nodeName));
 	let pieces = [];
 
