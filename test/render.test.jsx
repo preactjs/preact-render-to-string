@@ -49,13 +49,13 @@ describe('render', () => {
 					);
 				}
 				let rendered = render(
-					<div class="foo">
+					<div>
 						x<a>a</a>
 						<b>b</b>c{children}d
 					</div>
 				);
 
-				expect(rendered).not.to.contain(/\s/);
+				expect(rendered).not.to.match(/\s/);
 			});
 
 			it('should not indent when attributes contain newlines', () => {
