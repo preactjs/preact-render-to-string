@@ -244,7 +244,8 @@ function _renderToString(
 		let rendered = EMPTY_STR,
 			renderArray;
 		parent[CHILDREN] = vnode;
-		for (let i = 0; i < vnode.length; i++) {
+		const vnodeLength = vnode.length;
+		for (let i = 0; i < vnodeLength; i++) {
 			let child = vnode[i];
 			if (child == null || typeof child == 'boolean') continue;
 
@@ -262,7 +263,7 @@ function _renderToString(
 				rendered = rendered + childRender;
 			} else {
 				if (!renderArray) {
-					renderArray = [];
+					renderArray = new Array(vnodeLength);
 				}
 
 				if (rendered) renderArray.push(rendered);
