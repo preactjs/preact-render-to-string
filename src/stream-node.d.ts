@@ -8,7 +8,7 @@ interface RenderToPipeableStreamOptions {
 }
 
 interface PipeableStream {
-	abort: () => void;
+	abort: (reason?: unknown) => void;
 	pipe: (writable: WritableStream) => void;
 }
 
