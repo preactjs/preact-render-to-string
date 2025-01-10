@@ -480,13 +480,13 @@ function _renderToString(
 			return str;
 		} catch (error) {
 			if (!asyncMode && renderer && renderer.onError) {
-				let res = renderer.onError(error, vnode, (child) =>
+				let res = renderer.onError(error, vnode, (child, parent) =>
 					_renderToString(
 						child,
 						context,
 						isSvgMode,
 						selectValue,
-						vnode,
+						parent,
 						asyncMode,
 						renderer
 					)
