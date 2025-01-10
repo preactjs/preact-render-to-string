@@ -12,8 +12,8 @@ interface PipeableStream {
 	pipe: (writable: WritableStream) => void;
 }
 
-export function renderToPipeableStream(
-	vnode: VNode,
+export function renderToPipeableStream<P = {}>(
+	vnode: VNode<P>,
 	options: RenderToPipeableStreamOptions,
 	context?: any
 ): PipeableStream;
