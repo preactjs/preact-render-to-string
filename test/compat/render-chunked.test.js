@@ -1,10 +1,12 @@
 import { h } from 'preact';
 import { expect } from 'chai';
 import { Suspense } from 'preact/compat';
+import { useId } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
 import { createSubtree, createInitScript } from '../../src/lib/client';
 import { createSuspender } from '../utils';
 import { VNODE, PARENT } from '../../src/lib/constants';
+import { Deferred } from '../../src/lib/util';
 
 describe('renderToChunks', () => {
 	it('should render non-suspended JSX in one go', async () => {
@@ -112,6 +114,39 @@ describe('renderToChunks', () => {
 			'<div hidden>',
 			createInitScript(1),
 			createSubtree('16', '<p>it works</p>'),
+			'</div>'
+		]);
+	});
+
+	it('should support using useId hooks inside a suspense boundary', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		function ComponentWithId() {
+			const id = useId();
+			return <p>id: {id}</p>;
+		}
+
+		const result = [];
+		const promise = renderToChunks(
+			<div>
+				<ComponentWithId />
+				<Suspense fallback="loading...">
+					<Suspender>
+						<ComponentWithId />
+					</Suspender>
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s) }
+		);
+
+		suspended.resolve();
+		await promise;
+
+		expect(result).to.deep.equal([
+			'<div><p>id: P0-0</p><!--preact-island:24-->loading...<!--/preact-island:24--></div>',
+			'<div hidden>',
+			createInitScript(1),
+			createSubtree('24', '<p>id: P0-0</p>'),
 			'</div>'
 		]);
 	});
