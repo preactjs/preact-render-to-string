@@ -1,4 +1,4 @@
-import { ComponentChildren, VNode } from 'preact';
+import { ComponentChildren, ComponentChild, VNode } from 'preact';
 
 interface Suspended {
 	id: string;
@@ -15,7 +15,7 @@ interface RendererErrorHandler {
 		this: RendererState,
 		error: any,
 		vnode: VNode<{ fallback: any }>,
-		renderChild: (child: ComponentChildren) => string
+		renderChild: (child: ComponentChildren, parent: ComponentChild) => string
 	): string | undefined;
 }
 
