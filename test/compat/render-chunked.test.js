@@ -6,7 +6,6 @@ import { renderToChunks } from '../../src/lib/chunked';
 import { createSubtree, createInitScript } from '../../src/lib/client';
 import { createSuspender } from '../utils';
 import { VNODE, PARENT } from '../../src/lib/constants';
-import { Deferred } from '../../src/lib/util';
 
 describe('renderToChunks', () => {
 	it('should render non-suspended JSX in one go', async () => {
