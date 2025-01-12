@@ -44,7 +44,12 @@ export function renderToPipeableStream(vnode, options, context) {
 			stream.end();
 		})
 		.catch((error) => {
-			stream.destroy(error);
+			stream.destroy();
+			if (options.onError) {
+				options.onError(error);
+			} else {
+				throw error;
+			}
 		});
 
 	Promise.resolve().then(() => {
@@ -52,9 +57,15 @@ export function renderToPipeableStream(vnode, options, context) {
 	});
 
 	return {
-		abort() {
+		/**
+		 * @param {unknown} [reason]
+		 */
+		abort(reason = new Error('The render was aborted by the server without a reason.')) {
 			controller.abort();
-			stream.destroy(new Error('aborted'));
+			stream.destroy();
+			if (options.onError) {
+				options.onError(reason);
+			}
 		},
 		/**
 		 * @param {import("stream").Writable} writable
