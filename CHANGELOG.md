@@ -1,5 +1,16 @@
 # preact-render-to-string
 
+## 6.5.13
+
+### Patch Changes
+
+- [#408](https://github.com/preactjs/preact-render-to-string/pull/408) [`8e8e8ac`](https://github.com/preactjs/preact-render-to-string/commit/8e8e8acc588436938ad036cea7982ba5c4728e8a) Thanks [@f0x52](https://github.com/f0x52)! - Ensure that the `_parent` is kept around across multiple suspensions and avoid circular references.
+  In doing so our `useId` hook should always output unique ids during renderingToString.
+
+* [#409](https://github.com/preactjs/preact-render-to-string/pull/409) [`2afaf31`](https://github.com/preactjs/preact-render-to-string/commit/2afaf31c0093549c6a6519be0e3c026648a9338a) Thanks [@f0x52](https://github.com/f0x52)! - Ensure the renderToStream types of `/stream` and `/stream-node` accept a generic for the props of the passed in VNode
+
+- [#405](https://github.com/preactjs/preact-render-to-string/pull/405) [`0a698f6`](https://github.com/preactjs/preact-render-to-string/commit/0a698f68daf2aee2fa6ea07481dc1980ec5d1de3) Thanks [@f0x52](https://github.com/f0x52)! - renderToPipeableStream: expose errors through onError, no longer emit un-catchable error event on internal stream
+
 ## 6.5.12
 
 ### Patch Changes
