@@ -145,7 +145,48 @@ describe('renderToChunks', () => {
 			'<div><p>id: P0-0</p><!--preact-island:24-->loading...<!--/preact-island:24--></div>',
 			'<div hidden>',
 			createInitScript(1),
-			createSubtree('24', '<p>id: P0-0</p>'),
+			createSubtree('24', '<p>id: P0-1</p>'),
+			'</div>'
+		]);
+	});
+
+	it('should support using multiple useId hooks inside multiple suspense boundaries', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const { Suspender: Suspender2, suspended: suspended2 } = createSuspender();
+
+		function ComponentWithId() {
+			const id = useId();
+			return <p>id: {id}</p>;
+		}
+
+		const result = [];
+		const promise = renderToChunks(
+			<div>
+				<ComponentWithId />
+				<Suspense fallback="loading...">
+					<Suspender>
+						<ComponentWithId />
+					</Suspender>
+				</Suspense>
+				<Suspense fallback="loading...">
+					<Suspender2>
+						<ComponentWithId />
+					</Suspender2>
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s) }
+		);
+
+		suspended.resolve();
+		suspended2.resolve();
+		await promise;
+
+		expect(result).to.deep.equal([
+			'<div><p>id: P0-0</p><!--preact-island:33-->loading...<!--/preact-island:33--><!--preact-island:36-->loading...<!--/preact-island:36--></div>',
+			'<div hidden>',
+			createInitScript(1),
+			createSubtree('33', '<p>id: P0-1</p>'),
+			createSubtree('36', '<p>id: P0-2</p>'),
 			'</div>'
 		]);
 	});

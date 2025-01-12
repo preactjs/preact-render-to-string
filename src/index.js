@@ -443,7 +443,6 @@ function _renderToString(
 					return EMPTY_STR;
 				} finally {
 					if (afterDiff) afterDiff(vnode);
-					vnode[PARENT] = null;
 
 					if (ummountHook) ummountHook(vnode);
 				}
@@ -473,7 +472,6 @@ function _renderToString(
 
 			if (afterDiff) afterDiff(vnode);
 			// when we are dealing with suspense we can't do this...
-			vnode[PARENT] = null;
 
 			if (options.unmount) options.unmount(vnode);
 
@@ -687,9 +685,6 @@ function _renderToString(
 	}
 
 	if (afterDiff) afterDiff(vnode);
-
-	// TODO: this was commented before
-	vnode[PARENT] = null;
 
 	if (ummountHook) ummountHook(vnode);
 
