@@ -75,7 +75,7 @@ function handleError(error, vnode, renderChild) {
 	const promise = error.then(
 		() => {
 			if (abortSignal && abortSignal.aborted) return;
-			const child = renderChild(vnode.props.children);
+			const child = renderChild(vnode.props.children, vnode);
 			if (child) this.onWrite(createSubtree(id, child));
 		},
 		// TODO: Abort and send hydration code snippet to client
