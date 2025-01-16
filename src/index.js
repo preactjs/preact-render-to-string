@@ -542,21 +542,8 @@ function _renderToString(
 						: result;
 				} catch (e) {
 					if (!e || typeof e.then != 'function') throw e;
-
-					return e.then(() => {
-						const result = _renderToString(
-							rendered,
-							context,
-							isSvgMode,
-							selectValue,
-							vnode,
-							asyncMode,
-							renderer
-						);
-						return vnode._suspended
-							? BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR
-							: result;
-					}, renderNestedChildren);
+					
+					return e.then(renderNestedChildren);
 				}
 			};
 
