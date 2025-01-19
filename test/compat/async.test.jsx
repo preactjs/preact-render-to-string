@@ -254,6 +254,48 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal(expected);
 	});
 
+	it('should render JSX with multiple suspended direct children within a single suspense boundary that resolve one-after-another', async () => {
+		const {
+			Suspender: SuspenderOne,
+			suspended: suspendedOne
+		} = createSuspender();
+		const {
+			Suspender: SuspenderTwo,
+			suspended: suspendedTwo
+		} = createSuspender();
+		const {
+			Suspender: SuspenderThree,
+			suspended: suspendedThree
+		} = createSuspender();
+
+		const promise = renderToStringAsync(
+			<ul>
+				<Suspense fallback={null}>
+					<SuspenderOne>
+						<li>one</li>
+					</SuspenderOne>
+					<SuspenderTwo>
+						<li>two</li>
+					</SuspenderTwo>
+					<SuspenderThree>
+						<li>three</li>
+					</SuspenderThree>
+				</Suspense>
+			</ul>
+		);
+
+		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
+
+		suspendedOne.promise.then(() => { void suspendedTwo.resolve();});
+		suspendedTwo.promise.then(() => { void suspendedThree.resolve();});
+
+		suspendedOne.resolve();
+
+		const rendered = await promise;
+
+		expect(rendered).to.equal(expected);
+	});
+
 	it('should rethrow error thrown after suspending', async () => {
 		const { suspended, getResolved } = createSuspender();
 
