@@ -73,4 +73,19 @@ describe('renderToPipeableStream', () => {
 			'</div>'
 		]);
 	});
+
+	it('should not error if the stream has already been closed', async () => {
+		let error;
+		const sink = createSink();
+		const { pipe, abort } = renderToPipeableStream(<div class="foo">bar</div>, {
+			onAllReady: () => {
+				pipe(sink.stream);
+			},
+			onError: (e) => (error = e)
+		});
+		await sink.promise;
+		abort();
+
+		expect(error).to.be.undefined;
+	});
 });

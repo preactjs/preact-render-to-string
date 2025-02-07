@@ -60,7 +60,14 @@ export function renderToPipeableStream(vnode, options, context) {
 		/**
 		 * @param {unknown} [reason]
 		 */
-		abort(reason = new Error('The render was aborted by the server without a reason.')) {
+		abort(
+			reason = new Error(
+				'The render was aborted by the server without a reason.'
+			)
+		) {
+			// Remix/React-Router will always call abort after a timeout, even on success
+			if (stream.closed) return;
+
 			controller.abort();
 			stream.destroy();
 			if (options.onError) {
