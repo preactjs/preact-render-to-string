@@ -73,4 +73,41 @@ describe('renderToPipeableStream', () => {
 			'</div>'
 		]);
 	});
+
+	it('should render full html documents', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const sink = createSink();
+		const { pipe } = renderToPipeableStream(
+			<html lang="en">
+				<head>
+					<meta charSet="utf-8" />
+				</head>
+				<body>
+					<div>
+						<Suspense fallback="loading...">
+							<Suspender />
+						</Suspense>
+					</div>
+				</body>
+			</html>,
+			{
+				onShellReady: () => {
+					pipe(sink.stream);
+				}
+			}
+		);
+		suspended.resolve();
+
+		const result = await sink.promise;
+
+		expect(result).to.deep.equal([
+			'<html lang="en"><head><meta charset="utf-8"/></head><body><div><!--preact-island:54-->loading...<!--/preact-island:54--></div>',
+			'<div hidden>',
+			createInitScript(),
+			createSubtree('54', '<p>it works</p>'),
+			'</div>',
+			'</body></html>'
+		]);
+	});
 });

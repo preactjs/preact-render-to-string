@@ -82,11 +82,43 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:54-->loading...<!--/preact-island:54--></div>',
+			'<div><!--preact-island:63-->loading...<!--/preact-island:63--></div>',
 			'<div hidden>',
 			createInitScript(),
-			createSubtree('54', '<p>it works</p>'),
+			createSubtree('63', '<p>it works</p>'),
 			'</div>'
+		]);
+	});
+
+	it('should render full html documents', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const stream = renderToReadableStream(
+			<html lang="en">
+				<head>
+					<meta charSet="utf-8" />
+				</head>
+				<body>
+					<div>
+						<Suspense fallback="loading...">
+							<Suspender />
+						</Suspense>
+					</div>
+				</body>
+			</html>
+		);
+		const sink = createSink(stream);
+		suspended.resolve();
+
+		const result = await sink.promise;
+
+		expect(result).to.deep.equal([
+			'<html lang="en"><head><meta charset="utf-8"/></head><body><div><!--preact-island:70-->loading...<!--/preact-island:70--></div>',
+			'<div hidden>',
+			createInitScript(),
+			createSubtree('70', '<p>it works</p>'),
+			'</div>',
+			'</body></html>'
 		]);
 	});
 });
