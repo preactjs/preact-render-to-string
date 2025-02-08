@@ -861,6 +861,30 @@ describe('render', () => {
 			);
 			expect(rendered).to.equal('<div>foo</div>');
 		});
+
+		it('should accept dangerouslySetInnerHTML on Fragments', () => {
+			// some invalid HTML to make sure we're being flakey:
+			let html = '<a href="foo">asdf</a> some text <ul><li>foo<li>bar</ul>';
+			let rendered = render(
+				<div>
+					<Fragment dangerouslySetInnerHTML={{ __html: html }} />
+				</div>
+			);
+			expect(rendered).to.equal(`<div>${html}</div>`);
+		});
+
+		it('should accept dangerouslySetInnerHTML on Fragments in Components', () => {
+			// some invalid HTML to make sure we're being flakey:
+			let html = '<a href="foo">asdf</a> some text <ul><li>foo<li>bar</ul>';
+			const Foo = () => <Fragment dangerouslySetInnerHTML={{ __html: html }} />;
+
+			let rendered = render(
+				<div>
+					<Foo />
+				</div>
+			);
+			expect(rendered).to.equal(`<div>${html}</div>`);
+		});
 	});
 
 	describe('className / class massaging', () => {
