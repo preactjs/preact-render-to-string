@@ -1,7 +1,7 @@
 import basicRender from '../src/index.js';
 import { render } from '../src/jsx.js';
 import { h, Fragment } from 'preact';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 import { dedent, svgAttributes, htmlAttributes } from './utils.jsx';
 
 describe('pretty', () => {

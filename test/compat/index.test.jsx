@@ -1,6 +1,6 @@
 import render from '../../src/index.js';
 import { createElement as h, Component } from 'preact/compat';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 
 describe('compat', () => {
 	it('should not duplicate class attribute when className is empty', async () => {

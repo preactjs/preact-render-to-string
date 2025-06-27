@@ -1,11 +1,10 @@
 import { shallowRender } from '../src/jsx.js';
 import { h, Fragment } from 'preact';
-import { expect } from 'chai';
-import { spy } from 'sinon';
+import { vi, describe, it, expect } from 'vitest';
 
 describe('shallowRender()', () => {
 	it('should not render nested components', () => {
-		let Test = spy(({ foo, children }) => (
+		let Test = vi.fn(({ foo, children }) => (
 			<div bar={foo}>
 				<b>test child</b>
 				{children}
@@ -26,11 +25,11 @@ describe('shallowRender()', () => {
 		expect(rendered).to.equal(
 			`<section><Test foo="1"><span>asdf</span></Test></section>`
 		);
-		expect(Test).not.to.have.been.called;
+		expect(Test).not.toHaveBeenCalled();
 	});
 
 	it('should always render root component', () => {
-		let Test = spy(({ foo, children }) => (
+		let Test = vi.fn(({ foo, children }) => (
 			<div bar={foo}>
 				<b>test child</b>
 				{children}
@@ -49,7 +48,7 @@ describe('shallowRender()', () => {
 		expect(rendered).to.equal(
 			`<div bar="1"><b>test child</b><span>asdf</span></div>`
 		);
-		expect(Test).to.have.been.calledOnce;
+		expect(Test).toHaveBeenCalledTimes(1);
 	});
 
 	describe('should ignore Fragments', () => {

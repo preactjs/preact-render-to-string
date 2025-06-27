@@ -1,6 +1,6 @@
 /*global globalThis*/
 import { h } from 'preact';
-import { expect } from 'chai';
+import { expect, beforeAll, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { createSubtree, createInitScript } from '../../src/lib/client';
 import { renderToReadableStream } from '../../src/stream';
@@ -42,7 +42,7 @@ function createSink(input) {
 }
 
 describe('renderToReadableStream', () => {
-	before(async () => {
+	beforeAll(async () => {
 		// attempt to use native web streams in Node 18, otherwise fall back to a polyfill:
 		let streams;
 		try {
@@ -81,11 +81,11 @@ describe('renderToReadableStream', () => {
 
 		const result = await sink.promise;
 
-		expect(result).to.deep.equal([
-			'<div><!--preact-island:56-->loading...<!--/preact-island:56--></div>',
+		expect(result).toEqual([
+			'<div><!--preact-island:5-->loading...<!--/preact-island:5--></div>',
 			'<div hidden>',
 			createInitScript(),
-			createSubtree('56', '<p>it works</p>'),
+			createSubtree('5', '<p>it works</p>'),
 			'</div>'
 		]);
 	});
