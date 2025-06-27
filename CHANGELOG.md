@@ -1,5 +1,17 @@
 # preact-render-to-string
 
+## 6.6.0
+
+### Minor Changes
+
+- [#376](https://github.com/preactjs/preact-render-to-string/pull/376) [`81e7da3`](https://github.com/preactjs/preact-render-to-string/commit/81e7da321da925dbd8eba345ecbd46b1cf456b69) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Insert comment markers for suspended trees, only in renderToStringAsync
+
+### Patch Changes
+
+- [#413](https://github.com/preactjs/preact-render-to-string/pull/413) [`27f340b`](https://github.com/preactjs/preact-render-to-string/commit/27f340b6e7d77ec7775a49a78d105cad26fa0857) Thanks [@f0x52](https://github.com/f0x52)! - Fix async rendering of multiple suspended components in a single Suspense boundary
+
+* [#417](https://github.com/preactjs/preact-render-to-string/pull/417) [`441dea2`](https://github.com/preactjs/preact-render-to-string/commit/441dea2ad420607306610e6cb3f4697a495cc4a5) Thanks [@rschristian](https://github.com/rschristian)! - Only abort/report errors from `renderToPipeableStream()` if the stream hasn't already been closed
+
 ## 6.5.13
 
 ### Patch Changes
