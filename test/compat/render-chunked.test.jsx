@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { useId } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
@@ -14,7 +14,7 @@ describe('renderToChunks', () => {
 			onWrite: (s) => result.push(s)
 		});
 
-		expect(result).to.deep.equal(['<div class="foo">bar</div>']);
+		expect(result).toEqual(['<div class="foo">bar</div>']);
 	});
 
 	it('should render fallback + attach loaded subtree on suspend', async () => {
@@ -181,7 +181,7 @@ describe('renderToChunks', () => {
 		suspended2.resolve();
 		await promise;
 
-		expect(result).to.deep.equal([
+		expect(result).toEqual([
 			'<div><p>id: P0-0</p><!--preact-island:33-->loading...<!--/preact-island:33--><!--preact-island:36-->loading...<!--/preact-island:36--></div>',
 			'<div hidden>',
 			createInitScript(1),

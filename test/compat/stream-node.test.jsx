@@ -1,6 +1,6 @@
 import { PassThrough } from 'node:stream';
 import { h } from 'preact';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { createSubtree, createInitScript } from '../../src/lib/client';
 import { renderToPipeableStream } from '../../src/stream-node';
@@ -66,10 +66,10 @@ describe('renderToPipeableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:47-->loading...<!--/preact-island:47--></div>',
+			'<div><!--preact-island:5-->loading...<!--/preact-island:5--></div>',
 			'<div hidden>',
 			createInitScript(),
-			createSubtree('47', '<p>it works</p>'),
+			createSubtree('5', '<p>it works</p>'),
 			'</div>'
 		]);
 	});

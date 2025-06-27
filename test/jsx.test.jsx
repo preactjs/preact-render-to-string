@@ -1,6 +1,6 @@
 import render from '../src/jsx.js';
 import { h } from 'preact';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 import { dedent } from './utils.jsx';
 
 describe('jsx', () => {

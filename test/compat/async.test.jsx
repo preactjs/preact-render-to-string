@@ -1,7 +1,7 @@
 import { renderToStringAsync } from '../../src/index.js';
 import { h, Fragment } from 'preact';
 import { Suspense, useId, lazy, createContext } from 'preact/compat';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 import { createSuspender } from '../utils.jsx';
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -286,8 +286,12 @@ describe('Async renderToString', () => {
 
 		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
 
-		suspendedOne.promise.then(() => { void suspendedTwo.resolve();});
-		suspendedTwo.promise.then(() => { void suspendedThree.resolve();});
+		suspendedOne.promise.then(() => {
+			void suspendedTwo.resolve();
+		});
+		suspendedTwo.promise.then(() => {
+			void suspendedThree.resolve();
+		});
 
 		suspendedOne.resolve();
 

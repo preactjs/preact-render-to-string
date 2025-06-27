@@ -1,7 +1,7 @@
 import 'preact/debug';
 import render from '../../src/index.js';
 import { h } from 'preact';
-import { expect } from 'chai';
+import { expect, describe, it } from 'vitest';
 
 describe('debug', () => {
 	it('should not throw "Objects are not valid as a child" error', () => {

@@ -17,8 +17,7 @@ import {
 	useMemo,
 	useId
 } from 'preact/hooks';
-import { expect } from 'chai';
-import { spy, stub, match } from 'sinon';
+import { expect, vi, describe, it } from 'vitest';
 import { svgAttributes, htmlAttributes } from './utils.jsx';
 
 function shallowRender(vnode) {
@@ -356,23 +355,25 @@ describe('render', () => {
 
 	describe('Functional Components', () => {
 		it('should render functional components', () => {
-			let Test = spy(({ foo, children }) => <div foo={foo}>{children}</div>);
+			let Test = vi.fn(({ foo, children }) => <div foo={foo}>{children}</div>);
 
 			let rendered = render(<Test foo="test">content</Test>);
 
 			expect(rendered).to.equal(`<div foo="test">content</div>`);
 
-			expect(Test).to.have.been.calledOnce.and.calledWithExactly(
-				match({
+			expect(Test).toHaveBeenCalledOnce();
+
+			expect(Test).toHaveBeenCalledWith(
+				expect.objectContaining({
 					foo: 'test',
 					children: 'content'
 				}),
-				match({})
+				expect.objectContaining({})
 			);
 		});
 
 		it('should render functional components within JSX', () => {
-			let Test = spy(({ foo, children }) => <div foo={foo}>{children}</div>);
+			let Test = vi.fn(({ foo, children }) => <div foo={foo}>{children}</div>);
 
 			let rendered = render(
 				<section>
@@ -386,26 +387,34 @@ describe('render', () => {
 				`<section><div foo="1"><span>asdf</span></div></section>`
 			);
 
-			expect(Test).to.have.been.calledOnce.and.calledWithExactly(
-				match({
+			expect(Test).toHaveBeenCalledOnce();
+			expect(Test).toHaveBeenCalledWith(
+				expect.objectContaining({
 					foo: 1,
-					children: match({ type: 'span', props: { children: 'asdf' } })
+					children: expect.objectContaining({
+						type: 'span',
+						props: { children: 'asdf' }
+					})
 				}),
-				match({})
+				expect.objectContaining({})
 			);
 		});
 	});
 
 	describe('Classical Components', () => {
 		it('should render classical components', () => {
-			let Test = spy(
-				class Test extends Component {
-					render({ foo, children }, state) {
-						return <div foo={foo}>{children}</div>;
-					}
+			let constructorSpy = vi.fn();
+			class Test extends Component {
+				constructor(props, context) {
+					super(props, context);
+					constructorSpy(props, context);
 				}
-			);
-			spy(Test.prototype, 'render');
+
+				render({ foo, children }, state) {
+					return <div foo={foo}>{children}</div>;
+				}
+			}
+			vi.spyOn(Test.prototype, 'render');
 
 			let rendered = render(<Test foo="test">content</Test>);
 
@@ -416,30 +425,34 @@ describe('render', () => {
 
 			expect(rendered).to.equal(`<div foo="test">content</div>`);
 
-			expect(Test).to.have.been.calledOnce.and.calledWith(
-				match(PROPS),
-				match({})
+			expect(constructorSpy).toHaveBeenCalledOnce();
+			expect(constructorSpy).toHaveBeenCalledWith(
+				expect.objectContaining(PROPS),
+				expect.objectContaining({})
 			);
 
-			expect(
-				Test.prototype.render
-			).to.have.been.calledOnce.and.calledWithExactly(
-				match(PROPS),
-				match({}),
-				match({}) // empty context
+			expect(Test.prototype.render).toHaveBeenCalledOnce();
+			expect(Test.prototype.render).toHaveBeenCalledWith(
+				expect.objectContaining(PROPS),
+				expect.objectContaining({}),
+				expect.objectContaining({}) // empty context
 			);
 		});
 
 		it('should render classical components within JSX', () => {
-			let Test = spy(
-				class Test extends Component {
-					render({ foo, children }, state) {
-						return <div foo={foo}>{children}</div>;
-					}
+			let constructorSpy = vi.fn();
+			class Test extends Component {
+				constructor(props) {
+					super(props);
+					constructorSpy();
 				}
-			);
 
-			spy(Test.prototype, 'render');
+				render({ foo, children }, state) {
+					return <div foo={foo}>{children}</div>;
+				}
+			}
+
+			vi.spyOn(Test.prototype, 'render');
 
 			let rendered = render(
 				<section>
@@ -453,22 +466,25 @@ describe('render', () => {
 				`<section><div foo="1"><span>asdf</span></div></section>`
 			);
 
-			expect(Test).to.have.been.calledOnce;
+			expect(constructorSpy).toHaveBeenCalledOnce();
 
-			expect(
-				Test.prototype.render
-			).to.have.been.calledOnce.and.calledWithExactly(
-				match({
+			expect(Test.prototype.render).toHaveBeenCalledOnce();
+
+			expect(Test.prototype.render).toHaveBeenCalledWith(
+				expect.objectContaining({
 					foo: 1,
-					children: match({ type: 'span', props: { children: 'asdf' } })
+					children: expect.objectContaining({
+						type: 'span',
+						props: { children: 'asdf' }
+					})
 				}),
-				match({}),
-				match({})
+				expect.objectContaining({}),
+				expect.objectContaining({})
 			);
 		});
 
 		it('should initialize state as an empty object', () => {
-			const fn = spy();
+			const fn = vi.fn();
 			class Test extends Component {
 				render(state) {
 					fn(this.state, state);
@@ -477,7 +493,11 @@ describe('render', () => {
 			}
 
 			render(<Test />);
-			expect(fn).to.be.calledOnce.and.be.calledWith(match({}), match({}));
+			expect(fn).toHaveBeenCalledOnce();
+			expect(fn).toHaveBeenCalledWith(
+				expect.objectContaining({}),
+				expect.objectContaining({})
+			);
 		});
 
 		it('should invoke getDerivedStateFromProps', () => {
@@ -489,16 +509,17 @@ describe('render', () => {
 					return <div {...props} {...state} />;
 				}
 			}
-			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
-			spy(Test.prototype, 'render');
+			vi.spyOn(Test.prototype.constructor, 'getDerivedStateFromProps');
+			vi.spyOn(Test.prototype, 'render');
 
 			const result = render(<Test />);
 
 			expect(
 				Test.prototype.constructor.getDerivedStateFromProps
-			).to.have.been.calledOnce.and.to.have.been.calledBefore(
-				Test.prototype.render
-			);
+			).toHaveBeenCalledOnce();
+			expect(
+				Test.prototype.constructor.getDerivedStateFromProps
+			).toHaveBeenCalledBefore(Test.prototype.render);
 
 			expect(result).to.equal('<div foo="bar"></div>');
 		});
@@ -510,14 +531,13 @@ describe('render', () => {
 					return <div {...props} />;
 				}
 			}
-			spy(Test.prototype, 'componentWillMount');
-			spy(Test.prototype, 'render');
+			vi.spyOn(Test.prototype, 'componentWillMount');
+			vi.spyOn(Test.prototype, 'render');
 
 			render(<Test />);
 
-			expect(
-				Test.prototype.componentWillMount
-			).to.have.been.calledOnce.and.to.have.been.calledBefore(
+			expect(Test.prototype.componentWillMount).toHaveBeenCalledOnce();
+			expect(Test.prototype.componentWillMount).toHaveBeenCalledBefore(
 				Test.prototype.render
 			);
 		});
@@ -547,18 +567,20 @@ describe('render', () => {
 					return <div {...props} />;
 				}
 			}
-			spy(Test.prototype.constructor, 'getDerivedStateFromProps');
-			spy(Test.prototype, 'componentWillMount');
-			spy(Test.prototype, 'render');
+			vi.spyOn(Test.prototype.constructor, 'getDerivedStateFromProps');
+			vi.spyOn(Test.prototype, 'componentWillMount');
+			vi.spyOn(Test.prototype, 'render');
 
 			render(<Test />);
 
 			expect(
 				Test.prototype.constructor.getDerivedStateFromProps
-			).to.have.been.calledOnce.and.to.have.been.calledBefore(
-				Test.prototype.render
-			);
-			expect(Test.prototype.componentWillMount).to.not.have.been.called;
+			).toHaveBeenCalledOnce();
+
+			expect(
+				Test.prototype.constructor.getDerivedStateFromProps
+			).toHaveBeenCalledBefore(Test.prototype.render);
+			expect(Test.prototype.componentWillMount).not.toHaveBeenCalled();
 		});
 
 		it('should pass context to grandchildren', () => {
@@ -577,31 +599,31 @@ describe('render', () => {
 					);
 				}
 			}
-			spy(Outer.prototype, 'getChildContext');
+			vi.spyOn(Outer.prototype, 'getChildContext');
 
 			class Inner extends Component {
 				render(props, state, context) {
 					return <div>{context && context.a}</div>;
 				}
 			}
-			spy(Inner.prototype, 'render');
+			vi.spyOn(Inner.prototype, 'render');
 
 			render(<Outer />);
 
-			expect(Outer.prototype.getChildContext).to.have.been.calledOnce;
-			expect(Inner.prototype.render).to.have.been.calledWith(
-				match({}),
-				match({}),
+			expect(Outer.prototype.getChildContext).toHaveBeenCalledOnce();
+			expect(Inner.prototype.render).toHaveBeenCalledWith(
+				expect.objectContaining({}),
+				expect.objectContaining({}),
 				CONTEXT
 			);
 
 			CONTEXT.foo = 'bar';
 			render(<Outer {...PROPS} />);
 
-			expect(Outer.prototype.getChildContext).to.have.been.calledTwice;
-			expect(Inner.prototype.render).to.have.been.calledWith(
-				match(PROPS),
-				match({}),
+			expect(Outer.prototype.getChildContext).toHaveBeenCalledTimes(2);
+			expect(Inner.prototype.render).toHaveBeenCalledWith(
+				expect.objectContaining(PROPS),
+				expect.objectContaining({}),
 				CONTEXT
 			);
 		});
@@ -618,37 +640,37 @@ describe('render', () => {
 					return <Inner {...props} />;
 				}
 			}
-			spy(Outer.prototype, 'getChildContext');
+			vi.spyOn(Outer.prototype, 'getChildContext');
 
 			class Inner extends Component {
 				render(props, state, context) {
 					return <div>{context && context.a}</div>;
 				}
 			}
-			spy(Inner.prototype, 'render');
+			vi.spyOn(Inner.prototype, 'render');
 
 			render(<Outer />);
 
-			expect(Outer.prototype.getChildContext).to.have.been.calledOnce;
-			expect(Inner.prototype.render).to.have.been.calledWith(
-				match({}),
-				match({}),
+			expect(Outer.prototype.getChildContext).toHaveBeenCalledOnce();
+			expect(Inner.prototype.render).toHaveBeenCalledWith(
+				expect.objectContaining({}),
+				expect.objectContaining({}),
 				CONTEXT
 			);
 
 			CONTEXT.foo = 'bar';
 			render(<Outer {...PROPS} />);
 
-			expect(Outer.prototype.getChildContext).to.have.been.calledTwice;
-			expect(Inner.prototype.render).to.have.been.calledWith(
-				match(PROPS),
-				match({}),
+			expect(Outer.prototype.getChildContext).toHaveBeenCalledTimes(2);
+			expect(Inner.prototype.render).toHaveBeenCalledWith(
+				expect.objectContaining(PROPS),
+				expect.objectContaining({}),
 				CONTEXT
 			);
 
 			// make sure render() could make use of context.a
-			expect(Inner.prototype.render).to.have.returned(
-				match({ props: { children: 'a' } })
+			expect(Inner.prototype.render).toHaveReturned(
+				expect.objectContaining({ props: { children: 'a' } })
 			);
 		});
 
@@ -683,19 +705,23 @@ describe('render', () => {
 				}
 			}
 
-			spy(Inner.prototype, 'render');
-			spy(InnerMost.prototype, 'render');
+			vi.spyOn(Inner.prototype, 'render');
+			vi.spyOn(InnerMost.prototype, 'render');
 
 			render(<Outer />);
 
-			expect(Inner.prototype.render).to.have.been.calledWith(
-				match({}),
-				match({}),
+			expect(
+				Inner.prototype.render
+			).toHaveBeenCalledWith(
+				expect.objectContaining({}),
+				expect.objectContaining({}),
 				{ outerContext }
 			);
-			expect(InnerMost.prototype.render).to.have.been.calledWith(
-				match({}),
-				match({}),
+			expect(
+				InnerMost.prototype.render
+			).toHaveBeenCalledWith(
+				expect.objectContaining({}),
+				expect.objectContaining({}),
 				{ outerContext, innerContext }
 			);
 		});
@@ -752,11 +778,11 @@ describe('render', () => {
 			function Middle() {
 				return (
 					<div>
-						<Inner />
+						<Inner2 />
 					</div>
 				);
 			}
-			function Inner() {
+			function Inner2() {
 				return 'hi';
 			}
 
@@ -770,8 +796,8 @@ describe('render', () => {
 				shallow: true,
 				shallowHighOrder: false
 			});
-			expect(rendered, '{shallow:true,shallowHighOrder:false}').to.equal(
-				'<div><Inner></Inner></div>',
+			expect(rendered, '{shallow:true,shallowHighOrder:false}').toEqual(
+				'<div><Inner2></Inner2></div>',
 				'but it should never render nested grandchild components'
 			);
 		});
@@ -920,7 +946,7 @@ describe('render', () => {
 		});
 
 		it('should prevent re-rendering', () => {
-			const Bar = stub().returns(<div />);
+			const Bar = vi.fn(() => <div />);
 
 			let count = 0;
 
@@ -935,7 +961,8 @@ describe('render', () => {
 
 			expect(render(<Foo />)).to.equal('<div></div>');
 
-			expect(Bar).to.have.been.calledOnce.and.calledWithMatch({ count: 1 });
+			expect(Bar).toHaveBeenCalledWith({ count: 1 }, expect.anything());
+			expect(Bar).toHaveBeenCalledOnce();
 		});
 	});
 
