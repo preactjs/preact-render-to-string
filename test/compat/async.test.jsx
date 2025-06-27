@@ -372,7 +372,7 @@ describe('Async renderToString', () => {
 				}
 		);
 
-		const LoadableComponent = ({}) => (
+		const LoadableComponent = () => (
 			<Suspense fallback={'...loading'}>
 				<LazyComponent />
 			</Suspense>

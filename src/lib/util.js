@@ -1,4 +1,5 @@
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+// oxlint-disable-next-line no-control-regex
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const NAMESPACE_REPLACE_REGEX = /^(xlink|xmlns|xml)([A-Z])/;
 export const HTML_LOWER_CASE = /^(?:accessK|auto[A-Z]|cell|ch|col|cont|cross|dateT|encT|form[A-Z]|frame|hrefL|inputM|maxL|minL|noV|playsI|popoverT|readO|rowS|src[A-Z]|tabI|useM|item[A-Z])/;
@@ -150,6 +151,7 @@ export function createComponent(vnode, context) {
 		forceUpdate: markAsDirty,
 		__d: true,
 		// hooks
+		// oxlint-disable-next-line no-new-array
 		__h: new Array(0)
 	};
 }
@@ -171,7 +173,6 @@ export function getContext(nodeName, context) {
  */
 export class Deferred {
 	constructor() {
-		// eslint-disable-next-line lines-around-comment
 		/** @type {Promise<T>} */
 		this.promise = new Promise((resolve, reject) => {
 			this.resolve = resolve;

@@ -14,7 +14,7 @@ let preactPlugin = {
 			'key' in object
 		);
 	},
-	print(val, print, indent) {
+	print(val) {
 		return renderToString(val, preactPlugin.context, preactPlugin.opts, true);
 	}
 };

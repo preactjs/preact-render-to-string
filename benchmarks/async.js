@@ -11,15 +11,14 @@ function Leaf() {
 	);
 }
 
-const lazies = new Array(600)
-	.fill(600)
-	.map(() =>
-		lazy(() =>
-			Promise.resolve().then(() => ({
-				default: (props) => <div>{props.children}</div>
-			}))
-		)
-	);
+// oxlint-disable-next-line no-new-array
+const lazies = new Array(600).fill(600).map(() =>
+	lazy(() =>
+		Promise.resolve().then(() => ({
+			default: (props) => <div>{props.children}</div>
+		}))
+	)
+);
 function PassThrough(props) {
 	const Lazy = lazies(props.id);
 	return <Lazy {...props} />;

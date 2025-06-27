@@ -1,6 +1,6 @@
 if (typeof Symbol !== 'function') {
 	let c = 0;
-	// eslint-disable-next-line
+	// oxlint-disable-next-line no-global-assign
 	Symbol = function (s) {
 		return `@@${s}${++c}`;
 	};
