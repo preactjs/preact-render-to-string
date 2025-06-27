@@ -265,6 +265,7 @@ function _renderToString(
 				rendered = rendered + childRender;
 			} else {
 				if (!renderArray) {
+					// oxlint-disable-next-line no-new-array
 					renderArray = new Array(vnodeLength);
 				}
 
@@ -542,7 +543,7 @@ function _renderToString(
 						: result;
 				} catch (e) {
 					if (!e || typeof e.then != 'function') throw e;
-					
+
 					return e.then(renderNestedChildren);
 				}
 			};

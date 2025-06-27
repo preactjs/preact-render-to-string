@@ -35,6 +35,7 @@ export default class Suite {
 			prev = now;
 		const times = [];
 		do {
+			// oxlint-disable-next-line no-unused-vars
 			for (let i = iterations; i--; ) executor(++count);
 			prev = now;
 			now = performance.now();

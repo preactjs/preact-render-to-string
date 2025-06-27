@@ -47,7 +47,7 @@ describe('renderToReadableStream', () => {
 		let streams;
 		try {
 			streams = await import('node:stream/web');
-		} catch (e) {
+		} catch {
 			streams = await import('web-streams-polyfill/ponyfill');
 		}
 		const { ReadableStream, WritableStream, CountQueuingStrategy } = streams;

@@ -200,6 +200,7 @@ describe('render', () => {
 			expect(() => render(h('div'))).not.to.throw();
 			expect(() => render(h('x-💩'))).not.to.throw();
 			expect(() => render(h('a b'))).to.throw(/<a b>/);
+			// oxlint-disable-next-line no-control-regex
 			expect(() => render(h('a\0b'))).to.throw(/<a\0b>/);
 			expect(() => render(h('a>'))).to.throw(/<a>>/);
 			expect(() => render(h('<'))).to.throw(/<<>/);
@@ -410,7 +411,7 @@ describe('render', () => {
 					constructorSpy(props, context);
 				}
 
-				render({ foo, children }, state) {
+				render({ foo, children }) {
 					return <div foo={foo}>{children}</div>;
 				}
 			}
@@ -447,7 +448,7 @@ describe('render', () => {
 					constructorSpy();
 				}
 
-				render({ foo, children }, state) {
+				render({ foo, children }) {
 					return <div foo={foo}>{children}</div>;
 				}
 			}
@@ -1058,7 +1059,6 @@ describe('render', () => {
 				return <button onClick={() => setter(++v)}>count: {v}</button>;
 			}
 
-			// eslint-disable-next-line prefer-arrow-callback
 			expect(function () {
 				render(<Foo />);
 			}).to.not.throw();
@@ -1077,7 +1077,6 @@ describe('render', () => {
 				return <div />;
 			}
 
-			// eslint-disable-next-line prefer-arrow-callback
 			expect(function () {
 				render(<Foo />);
 			}).to.not.throw();
@@ -1469,7 +1468,7 @@ describe('render', () => {
 				let throwerCatchCalled = false;
 
 				class Thrower extends Component {
-					static getDerivedStateFromProps(props) {
+					static getDerivedStateFromProps() {
 						throw new Error('fail');
 					}
 
@@ -1523,7 +1522,7 @@ describe('render', () => {
 					componentWillUpdate() {
 						calledWillUpdate = true;
 					}
-					componentDidCatch(error, info) {
+					componentDidCatch(error) {
 						this.setState({ error });
 					}
 
@@ -1574,7 +1573,7 @@ describe('render', () => {
 						return { foo: 1 };
 					}
 
-					componentDidCatch(error, info) {
+					componentDidCatch(error) {
 						calls.push(['cDC', error.message]);
 						cDCState = this.state;
 						this.setState({ bar: 2 });

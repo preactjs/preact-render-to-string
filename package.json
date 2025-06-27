@@ -47,7 +47,7 @@
 		"transpile:stream-node": "microbundle src/stream-node.js -o dist/stream/node/index.js -f es,cjs,umd --target node",
 		"transpile:jsx": "microbundle src/jsx.js -o dist/jsx/index.js -f es,cjs,umd && microbundle dist/jsx/index.js -o dist/jsx/index.js -f cjs",
 		"copy-typescript-definition": "copyfiles -f src/*.d.ts dist",
-		"test": "eslint src/**/* test/**/* && tsc && npm run test:vitest:run && npm run bench",
+		"test": "oxlint && tsc && npm run test:vitest:run && npm run bench",
 		"test:vitest": "vitest",
 		"test:vitest:run": "vitest run",
 		"format": "prettier src/**/*.{d.ts,js} test/**/*.js --write",
@@ -67,25 +67,6 @@
 		"jsx.d.ts",
 		"typings.json"
 	],
-	"eslintConfig": {
-		"extends": "developit",
-		"rules": {
-			"react/prefer-stateless-function": 0,
-			"react/jsx-no-bind": 0,
-			"react/no-danger": 0,
-			"jest/valid-expect": 0,
-			"new-cap": 0,
-			"curly": "off",
-			"brace-style": "off",
-			"indent": "off",
-			"lines-around-comment": "off"
-		},
-		"settings": {
-			"react": {
-				"version": "16.8"
-			}
-		}
-	},
 	"babel": {
 		"env": {
 			"test": {
@@ -136,14 +117,14 @@
 		"benchmarkjs-pretty": "^2.0.1",
 		"check-export-map": "^1.3.1",
 		"copyfiles": "^2.4.1",
-		"eslint": "^7.16.0",
-		"eslint-config-developit": "^1.2.0",
 		"husky": "^4.3.6",
 		"lint-staged": "^10.5.3",
 		"microbundle": "^0.15.1",
+		"oxlint": "^1.3.0",
 		"preact": "^10.24.0",
 		"prettier": "^2.2.1",
 		"pretty-format": "^3.8.0",
+		"rollup": "^4.44.1",
 		"typescript": "^5.0.0",
 		"vitest": "^3.2.4",
 		"web-streams-polyfill": "^3.2.1"
