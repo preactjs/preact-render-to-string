@@ -1,3 +1,5 @@
+import { Fragment } from 'preact';
+
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 // oxlint-disable-next-line no-control-regex
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
@@ -179,4 +181,21 @@ export class Deferred {
 			this.reject = reject;
 		});
 	}
+}
+
+/**
+ * When a component returns a Fragment node we flatten it in core, so we
+ * need to mirror that logic here too
+ *
+ * @param {any} rendered
+ * @returns {any}
+ */
+export function flattenTopLevelFragments(rendered) {
+	const isTopLevelFragment =
+		rendered != null &&
+		rendered.type === Fragment &&
+		rendered.key == null &&
+		rendered.props.tpl == null &&
+		rendered.props.dangerouslySetInnerHTML == null;
+	return isTopLevelFragment ? rendered.props.children : rendered;
 }

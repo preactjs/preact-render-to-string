@@ -6,7 +6,8 @@ import {
 	HTML_LOWER_CASE,
 	HTML_ENUMERATED,
 	SVG_CAMEL_CASE,
-	createComponent
+	createComponent,
+	flattenTopLevelFragments
 } from './lib/util.js';
 import { options, h, Fragment } from 'preact';
 import {
@@ -343,6 +344,8 @@ function _renderToString(
 				// Fragments are the least used components of core that's why
 				// branching here for comments has the least effect on perf.
 				return '<!--' + encodeEntities(props.UNSTABLE_comment) + '-->';
+			} else if ('dangerouslySetInnerHTML' in props) {
+				return props.dangerouslySetInnerHTML.__html;
 			}
 
 			rendered = props.children;
@@ -396,14 +399,7 @@ function _renderToString(
 				options.errorBoundaries &&
 				(type.getDerivedStateFromError || component.componentDidCatch)
 			) {
-				// When a component returns a Fragment node we flatten it in core, so we
-				// need to mirror that logic here too
-				let isTopLevelFragment =
-					rendered != null &&
-					rendered.type === Fragment &&
-					rendered.key == null &&
-					rendered.props.tpl == null;
-				rendered = isTopLevelFragment ? rendered.props.children : rendered;
+				rendered = flattenTopLevelFragments(rendered);
 
 				try {
 					return _renderToString(
@@ -433,12 +429,7 @@ function _renderToString(
 							context = assign({}, context, component.getChildContext());
 						}
 
-						let isTopLevelFragment =
-							rendered != null &&
-							rendered.type === Fragment &&
-							rendered.key == null &&
-							rendered.props.tpl == null;
-						rendered = isTopLevelFragment ? rendered.props.children : rendered;
+						rendered = flattenTopLevelFragments(rendered);
 
 						return _renderToString(
 							rendered,
@@ -460,14 +451,7 @@ function _renderToString(
 			}
 		}
 
-		// When a component returns a Fragment node we flatten it in core, so we
-		// need to mirror that logic here too
-		let isTopLevelFragment =
-			rendered != null &&
-			rendered.type === Fragment &&
-			rendered.key == null &&
-			rendered.props.tpl == null;
-		rendered = isTopLevelFragment ? rendered.props.children : rendered;
+		rendered = flattenTopLevelFragments(rendered);
 
 		try {
 			// Recurse into children before invoking the after-diff hook
