@@ -10,7 +10,10 @@ import {
 	NAMESPACE_REPLACE_REGEX,
 	SVG_CAMEL_CASE,
 	HTML_LOWER_CASE,
-	getContext
+	getContext,
+	setDirty,
+	isDirty,
+	unsetDirty
 } from './lib/util.js';
 import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './lib/constants.js';
 import { options, Fragment } from 'preact';
@@ -139,8 +142,8 @@ function _renderToStringPretty(
 				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
 				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
 				let count = 0;
-				while (c.__d && count++ < 25) {
-					c.__d = false;
+				while (isDirty(c) && count++ < 25) {
+					unsetDirty(c);
 
 					if (renderHook) renderHook(vnode);
 
@@ -154,7 +157,7 @@ function _renderToStringPretty(
 				c = vnode.__c = new nodeName(props, cctx);
 				c.__v = vnode;
 				// turn off stateful re-rendering:
-				c._dirty = c.__d = true;
+				setDirty(c);
 				c.props = props;
 				if (c.state == null) c.state = {};
 

@@ -15,5 +15,6 @@ export const MASK = '__m';
 // Component properties
 export const VNODE = '__v';
 export const DIRTY = '__d';
+export const BITS = '__g';
 export const NEXT_STATE = '__s';
 export const CHILD_DID_SUSPEND = '__c';

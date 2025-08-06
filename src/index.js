@@ -6,7 +6,10 @@ import {
 	HTML_LOWER_CASE,
 	HTML_ENUMERATED,
 	SVG_CAMEL_CASE,
-	createComponent
+	createComponent,
+	setDirty,
+	unsetDirty,
+	isDirty
 } from './lib/util.js';
 import { options, h, Fragment } from 'preact';
 import {
@@ -15,7 +18,6 @@ import {
 	COMPONENT,
 	DIFF,
 	DIFFED,
-	DIRTY,
 	NEXT_STATE,
 	PARENT,
 	RENDER,
@@ -174,8 +176,9 @@ function renderClassComponent(vnode, context) {
 
 	c.props = vnode.props;
 	c.context = context;
-	// turn off stateful re-rendering:
-	c[DIRTY] = true;
+
+	// Turn off stateful rendering
+	setDirty(c);
 
 	if (c.state == null) c.state = EMPTY_OBJ;
 
@@ -370,8 +373,8 @@ function _renderToString(
 				//   This will need to be updated for Preact 11 to use internal.flags rather than component._dirty:
 				//   https://github.com/preactjs/preact/blob/d4ca6fdb19bc715e49fd144e69f7296b2f4daa40/src/diff/component.js#L35-L44
 				let count = 0;
-				while (component[DIRTY] && count++ < 25) {
-					component[DIRTY] = false;
+				while (isDirty(component) && count++ < 25) {
+					unsetDirty(component);
 
 					if (renderHook) renderHook(vnode);
 
@@ -384,7 +387,8 @@ function _renderToString(
 						throw e;
 					}
 				}
-				component[DIRTY] = true;
+
+				setDirty(component);
 			}
 
 			if (component.getChildContext != null) {
@@ -425,7 +429,7 @@ function _renderToString(
 						component.componentDidCatch(err, EMPTY_OBJ);
 					}
 
-					if (component[DIRTY]) {
+					if (isDirty(component)) {
 						rendered = renderClassComponent(vnode, context);
 						component = vnode[COMPONENT];
 
