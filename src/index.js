@@ -8,6 +8,7 @@ import {
 	SVG_CAMEL_CASE,
 	createComponent
 } from './lib/util.js';
+import { Signal } from '@preact/signals-core';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
@@ -559,6 +560,7 @@ function _renderToString(
 
 	for (let name in props) {
 		let v = props[name];
+		v = isSignal(v) ? v.value : v;
 
 		if (typeof v == 'function' && name !== 'class' && name !== 'className') {
 			continue;
@@ -740,3 +742,7 @@ const SELF_CLOSING = new Set([
 export default renderToString;
 export const render = renderToString;
 export const renderToStaticMarkup = renderToString;
+
+function isSignal(x) {
+	return x instanceof Signal;
+}

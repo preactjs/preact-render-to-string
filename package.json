@@ -147,5 +147,8 @@
 	},
 	"publishConfig": {
 		"provenance": true
+	},
+	"dependencies": {
+		"@preact/signals-core": "^1.11.0"
 	}
 }
