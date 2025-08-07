@@ -19,6 +19,7 @@ import {
 } from 'preact/hooks';
 import { expect, vi, describe, it } from 'vitest';
 import { svgAttributes, htmlAttributes } from './utils.jsx';
+import { COMPONENT_DIRTY_BIT } from '../src/lib/util.js';
 
 function shallowRender(vnode) {
 	const context = {};
@@ -942,8 +943,11 @@ describe('render', () => {
 
 			expect(render(<Foo />)).to.equal('<div></div>');
 
-			// expect(inst).to.have.property('_dirty', true);
-			expect(inst).to.have.property('__d', true);
+			if (inst.__g) {
+				expect(!!(inst.__g & COMPONENT_DIRTY_BIT)).to.be.true;
+			} else {
+				expect(inst).to.have.property('__d', true);
+			}
 		});
 
 		it('should prevent re-rendering', () => {

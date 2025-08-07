@@ -1,3 +1,5 @@
+import { DIRTY, BITS } from './constants';
+
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 // oxlint-disable-next-line no-control-regex
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
@@ -7,6 +9,30 @@ export const SVG_CAMEL_CASE = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|col
 
 // Boolean DOM properties that translate to enumerated ('true'/'false') attributes
 export const HTML_ENUMERATED = new Set(['draggable', 'spellcheck']);
+
+export const COMPONENT_DIRTY_BIT = 1 << 3;
+export function setDirty(component) {
+	if (component[BITS] !== undefined) {
+		component[BITS] |= COMPONENT_DIRTY_BIT;
+	} else {
+		component[DIRTY] = true;
+	}
+}
+
+export function unsetDirty(component) {
+	if (component.__g !== undefined) {
+		component.__g &= ~COMPONENT_DIRTY_BIT;
+	} else {
+		component[DIRTY] = false;
+	}
+}
+
+export function isDirty(component) {
+	if (component.__g !== undefined) {
+		return (component.__g & COMPONENT_DIRTY_BIT) !== 0;
+	}
+	return component[DIRTY] === true;
+}
 
 // DOM properties that should NOT have "px" added when numeric
 const ENCODED_ENTITIES = /["&<]/;
