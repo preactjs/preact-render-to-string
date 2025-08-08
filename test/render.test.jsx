@@ -144,6 +144,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should include boolean disabled attribute', () => {
+			let rendered = render(<input disabled={false} />),
+				expected = `<input/>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should support false aria-* attributes', () => {
 			let rendered = render(<div aria-checked={false} />);
 			expect(rendered).to.equal(`<div aria-checked="false"></div>`);
