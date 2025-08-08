@@ -744,5 +744,10 @@ export const render = renderToString;
 export const renderToStaticMarkup = renderToString;
 
 function isSignal(x) {
-	return x instanceof Signal;
+	return (
+		x !== null &&
+		typeof x === 'object' &&
+		typeof x.peek === 'function' &&
+		'value' in x
+	);
 }
