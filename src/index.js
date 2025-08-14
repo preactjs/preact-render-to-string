@@ -11,7 +11,6 @@ import {
 	unsetDirty,
 	isDirty
 } from './lib/util.js';
-import { Signal } from '@preact/signals-core';
 import { options, h, Fragment } from 'preact';
 import {
 	CHILDREN,
