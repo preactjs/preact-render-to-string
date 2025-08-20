@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.1
+
+### Patch Changes
+
+- [#427](https://github.com/preactjs/preact-render-to-string/pull/427) [`f3f7aab`](https://github.com/preactjs/preact-render-to-string/commit/f3f7aab4805b4fb50be5c4ca7214e1b3c4adb105) Thanks [@rschristian](https://github.com/rschristian)! - Correct semver range to support _beta_ releases of Preact v11
+
 ## 6.6.0
 
 ### Minor Changes
