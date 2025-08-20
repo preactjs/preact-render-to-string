@@ -105,7 +105,7 @@
 	"bugs": "https://github.com/preactjs/preact-render-to-string/issues",
 	"homepage": "https://github.com/preactjs/preact-render-to-string",
 	"peerDependencies": {
-		"preact": ">=10 || >= 11"
+		"preact": ">=10 || >= 11.0.0-0"
 	},
 	"devDependencies": {
 		"@babel/plugin-transform-react-jsx": "^7.12.12",
