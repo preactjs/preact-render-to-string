@@ -9,6 +9,7 @@ import {
 	VOID_ELEMENTS,
 	NAMESPACE_REPLACE_REGEX,
 	SVG_CAMEL_CASE,
+	HTML_ENUMERATED,
 	HTML_LOWER_CASE,
 	getContext,
 	setDirty,
@@ -22,7 +23,7 @@ import { options, Fragment } from 'preact';
 const UNNAMED = [];
 
 const EMPTY_ARR = [];
-
+const EMPTY_STR = '';
 /**
  * Render Preact JSX + Components to a pretty-printed HTML-like string.
  * @param {VNode} vnode	JSX Element / VNode to render
@@ -254,6 +255,11 @@ function _renderToStringPretty(
 				name = 'http-equiv';
 			} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
 				name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
+			} else if (
+				(name.at(4) === '-' || HTML_ENUMERATED.has(name)) &&
+				v != null
+			) {
+				v = v + EMPTY_STR;
 			} else if (isSvgMode) {
 				if (SVG_CAMEL_CASE.test(name)) {
 					name =

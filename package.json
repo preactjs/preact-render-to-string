@@ -50,7 +50,7 @@
 		"test": "oxlint && tsc && npm run test:vitest:run && npm run bench",
 		"test:vitest": "vitest",
 		"test:vitest:run": "vitest run",
-		"format": "prettier src/**/*.{d.ts,js} test/**/*.js --write",
+		"format": "prettier src/**/*.{d.ts,js} test/**/*.{js,jsx} --write",
 		"prepublishOnly": "npm run build",
 		"release": "npm run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
 	},

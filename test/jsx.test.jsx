@@ -171,4 +171,13 @@ describe('jsx', () => {
 	it('should not render function children', () => {
 		expect(renderJsx(<div>{() => {}}</div>)).to.equal('<div></div>');
 	});
+
+	it('should render enumerated attributes', () => {
+		expect(renderJsx(<div draggable={true} />)).to.equal(
+			'<div draggable="true"></div>'
+		);
+		expect(renderJsx(<div draggable={false} />)).to.equal(
+			'<div draggable="false"></div>'
+		);
+	});
 });
