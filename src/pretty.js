@@ -24,6 +24,7 @@ const UNNAMED = [];
 
 const EMPTY_ARR = [];
 const EMPTY_STR = '';
+
 /**
  * Render Preact JSX + Components to a pretty-printed HTML-like string.
  * @param {VNode} vnode	JSX Element / VNode to render
