@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.2
+
+### Patch Changes
+
+- [#430](https://github.com/preactjs/preact-render-to-string/pull/430) [`f2455d8`](https://github.com/preactjs/preact-render-to-string/commit/f2455d840e198dab4df0f38e55b399b931e152a4) Thanks [@reteps](https://github.com/reteps)! - Fix JSX renderer to correctly render enumerated properties
+
 ## 6.6.1
 
 ### Patch Changes
