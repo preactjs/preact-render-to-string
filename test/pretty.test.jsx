@@ -215,6 +215,25 @@ describe('pretty', () => {
 		);
 	});
 
+	it('should not add whitespace to pre tag children', () => {
+		let rendered = prettyRender(
+			<pre>
+				<code>hello</code>
+			</pre>,
+			{ jsx: false }
+		);
+
+		expect(rendered).to.equal(`<pre><code>hello</code></pre>`);
+	});
+
+	it('should maintain whitespace in textarea tag', () => {
+		let rendered = prettyRender(<textarea>{'  hello\nworld  '}</textarea>, {
+			jsx: false
+		});
+
+		expect(rendered).to.equal(`<textarea>  hello\nworld  </textarea>`);
+	});
+
 	describe('Attribute casing', () => {
 		it('should have correct SVG casing', () => {
 			for (let name in svgAttributes) {

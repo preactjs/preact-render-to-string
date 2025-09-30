@@ -24,6 +24,7 @@ const UNNAMED = [];
 
 const EMPTY_ARR = [];
 const EMPTY_STR = '';
+const PRESERVE_WHITESPACE_TAGS = new Set(['pre', 'textarea']);
 
 /**
  * Render Preact JSX + Components to a pretty-printed HTML-like string.
@@ -216,6 +217,11 @@ function _renderToStringPretty(
 		propChildren,
 		html;
 
+	const shouldPreserveWhitespace =
+		pretty &&
+		typeof nodeName === 'string' &&
+		PRESERVE_WHITESPACE_TAGS.has(nodeName);
+
 	if (props) {
 		let attrs = Object.keys(props);
 
@@ -349,7 +355,7 @@ function _renderToStringPretty(
 	let children;
 	if (html) {
 		// if multiline, indent.
-		if (pretty && isLargeString(html)) {
+		if (pretty && !shouldPreserveWhitespace && isLargeString(html)) {
 			html = '\n' + indentChar + indent(html, indentChar);
 		}
 		s = s + html;
@@ -357,7 +363,9 @@ function _renderToStringPretty(
 		propChildren != null &&
 		getChildren((children = []), propChildren).length
 	) {
-		let hasLarge = pretty && ~s.indexOf('\n');
+		const shouldPrettyFormatChildren =
+			pretty && !shouldPreserveWhitespace && typeof nodeName === 'string';
+		let hasLarge = shouldPrettyFormatChildren && ~s.indexOf('\n');
 		let lastWasText = false;
 
 		for (let i = 0; i < children.length; i++) {
@@ -379,11 +387,12 @@ function _renderToStringPretty(
 						selectValue
 					);
 
-				if (pretty && !hasLarge && isLargeString(ret)) hasLarge = true;
+				if (shouldPrettyFormatChildren && !hasLarge && isLargeString(ret))
+					hasLarge = true;
 
 				// Skip if we received an empty string
 				if (ret) {
-					if (pretty) {
+					if (shouldPrettyFormatChildren) {
 						let isText = ret.length > 0 && ret[0] != '<';
 
 						// We merge adjacent text nodes, otherwise each piece would be printed
@@ -401,7 +410,7 @@ function _renderToStringPretty(
 				}
 			}
 		}
-		if (pretty && hasLarge) {
+		if (shouldPrettyFormatChildren && hasLarge) {
 			for (let i = pieces.length; i--; ) {
 				pieces[i] = '\n' + indentChar + indent(pieces[i], indentChar);
 			}
@@ -419,7 +428,7 @@ function _renderToStringPretty(
 	if (isVoid && !children && !html) {
 		s = s.replace(/>$/, ' />');
 	} else {
-		if (pretty && ~s.indexOf('\n')) s = s + '\n';
+		if (pretty && !shouldPreserveWhitespace && ~s.indexOf('\n')) s = s + '\n';
 		s = s + `</${nodeName}>`;
 	}
 
