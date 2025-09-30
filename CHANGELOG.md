@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.3
+
+### Patch Changes
+
+- [#432](https://github.com/preactjs/preact-render-to-string/pull/432) [`62c87e4`](https://github.com/preactjs/preact-render-to-string/commit/62c87e4204e16e615c04377e254e7ead5a93e3a2) Thanks [@nwalters512](https://github.com/nwalters512)! - Preserve whitespace in `<pre>`/`<textarea>` when using `pretty: true`
+
 ## 6.6.2
 
 ### Patch Changes
