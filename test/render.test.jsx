@@ -243,6 +243,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should serialize textarea value with leading/trailing whitespace', () => {
+			let rendered = render(<textarea value={`  a\nb  `} />),
+				expected = `<textarea>  a\nb  </textarea>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should escape textarea value', () => {
 			let rendered = render(<textarea value={`a&b"c`} />),
 				expected = `<textarea>a&amp;b&quot;c</textarea>`;
