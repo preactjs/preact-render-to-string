@@ -380,11 +380,12 @@ function _renderToString(
 
 					try {
 						rendered = type.call(component, props, cctx);
-					} catch (e) {
-						if (asyncMode) {
+					} catch (error) {
+						if (asyncMode && error && typeof error.then == 'function') {
 							vnode._suspended = true;
 						}
-						throw e;
+
+						throw error;
 					}
 				}
 
@@ -508,17 +509,24 @@ function _renderToString(
 			return str;
 		} catch (error) {
 			if (!asyncMode && renderer && renderer.onError) {
-				let res = renderer.onError(error, vnode, (child, parent) =>
-					_renderToString(
-						child,
-						context,
-						isSvgMode,
-						selectValue,
-						parent,
-						asyncMode,
-						renderer
-					)
-				);
+				const onError = (error) => {
+					return renderer.onError(error, vnode, (child, parent) => {
+						try {
+							return _renderToString(
+								child,
+								context,
+								isSvgMode,
+								selectValue,
+								parent,
+								asyncMode,
+								renderer
+							);
+						} catch (e) {
+							return onError(e);
+						}
+					});
+				};
+				let res = onError(error);
 
 				if (res !== undefined) return res;
 

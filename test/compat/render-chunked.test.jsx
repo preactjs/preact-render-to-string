@@ -190,4 +190,38 @@ describe('renderToChunks', () => {
 			'</div>'
 		]);
 	});
+
+	it('should support a component that suspends multiple times', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const { Suspender: Suspender2, suspended: suspended2 } = createSuspender();
+
+		function MultiSuspender() {
+			return (
+				<Suspense fallback="loading part 1...">
+					<Suspender />
+					<Suspender2 />
+				</Suspense>
+			);
+		}
+
+		const result = [];
+		const promise = renderToChunks(
+			<div>
+				<MultiSuspender />
+			</div>,
+			{ onWrite: (s) => result.push(s) }
+		);
+
+		suspended.resolve();
+		suspended2.resolve();
+		await promise;
+
+		expect(result).to.deep.equal([
+			'<div><!--preact-island:49-->loading part 1...<!--/preact-island:49--></div>',
+			'<div hidden>',
+			createInitScript(1),
+			createSubtree('49', '<p>it works</p><p>it works</p>'),
+			'</div>'
+		]);
+	});
 });
