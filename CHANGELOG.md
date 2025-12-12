@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.4
+
+### Patch Changes
+
+- [#436](https://github.com/preactjs/preact-render-to-string/pull/436) [`6bce3dd`](https://github.com/preactjs/preact-render-to-string/commit/6bce3dda733777ab8c791c49a0a3210ebf4d83e0) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Ensure that in streaming mode throwing a suspension multiple times from the same component works
+
 ## 6.6.3
 
 ### Patch Changes
