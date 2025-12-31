@@ -1,6 +1,7 @@
 import basicRender from '../src/index.js';
 import { render } from '../src/jsx.js';
 import { h, Fragment } from 'preact';
+import { useId } from 'preact/hooks';
 import { expect, describe, it } from 'vitest';
 import { dedent, svgAttributes, htmlAttributes } from './utils.jsx';
 
@@ -265,6 +266,62 @@ describe('pretty', () => {
 					expect(rendered).to.equal(`<div ${value}="foo"></div>`);
 				}
 			}
+		});
+	});
+
+	describe('useId', () => {
+		it('should produce unique IDs for sibling components', () => {
+			function Foo() {
+				const id = useId();
+				return <div id={id} />;
+			}
+
+			const App = () => {
+				return (
+					<>
+						<Foo />
+						<Foo />
+					</>
+				);
+			};
+
+			const html = render(<App />);
+			// Each Foo component should have a unique ID
+			expect(html).to.contain('id="P0-0"');
+			expect(html).to.contain('id="P0-1"');
+		});
+
+		it('should produce unique IDs in nested components', () => {
+			function Child() {
+				const id = useId();
+				return <span id={id} />;
+			}
+
+			function Parent() {
+				const id = useId();
+				return (
+					<div id={id}>
+						<Child />
+					</div>
+				);
+			}
+
+			const App = () => {
+				return (
+					<>
+						<Parent />
+						<Parent />
+					</>
+				);
+			};
+
+			const html = render(<App />);
+			// Should have 4 unique IDs total (2 Parents + 2 Children)
+			const idMatches = html.match(/id="P0-\d+"/g);
+			expect(idMatches).to.have.length(4);
+			// All IDs should be unique
+			const uniqueIds = new Set(idMatches);
+			expect(uniqueIds.size).to.equal(4);
 		});
 	});
 });
