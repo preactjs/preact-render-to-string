@@ -16,8 +16,16 @@ import {
 	isDirty,
 	unsetDirty
 } from './lib/util.js';
-import { COMMIT, DIFF, DIFFED, RENDER, SKIP_EFFECTS } from './lib/constants.js';
-import { options, Fragment } from 'preact';
+import {
+	COMMIT,
+	DIFF,
+	DIFFED,
+	RENDER,
+	SKIP_EFFECTS,
+	PARENT,
+	CHILDREN
+} from './lib/constants.js';
+import { options, Fragment, h } from 'preact';
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
@@ -47,8 +55,19 @@ export default function renderToStringPretty(vnode, context, opts, _inner) {
 	const previousSkipEffects = options[SKIP_EFFECTS];
 	options[SKIP_EFFECTS] = true;
 
+	const parent = h(Fragment, null);
+	parent[CHILDREN] = [vnode];
+
 	try {
-		return _renderToStringPretty(vnode, context || {}, opts, _inner);
+		return _renderToStringPretty(
+			vnode,
+			context || {},
+			opts,
+			_inner,
+			false,
+			undefined,
+			parent
+		);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -64,7 +83,8 @@ function _renderToStringPretty(
 	opts,
 	inner,
 	isSvgMode,
-	selectValue
+	selectValue,
+	parent
 ) {
 	if (vnode == null || typeof vnode === 'boolean') {
 		return '';
@@ -81,6 +101,7 @@ function _renderToStringPretty(
 
 	if (Array.isArray(vnode)) {
 		let rendered = '';
+		parent[CHILDREN] = vnode;
 		for (let i = 0; i < vnode.length; i++) {
 			if (pretty && i > 0) rendered = rendered + '\n';
 			rendered =
@@ -91,7 +112,8 @@ function _renderToStringPretty(
 					opts,
 					inner,
 					isSvgMode,
-					selectValue
+					selectValue,
+					parent
 				);
 		}
 		return rendered;
@@ -100,6 +122,7 @@ function _renderToStringPretty(
 	// VNodes have {constructor:undefined} to prevent JSON injection:
 	if (vnode.constructor !== undefined) return '';
 
+	vnode[PARENT] = parent;
 	if (options[DIFF]) options[DIFF](vnode);
 
 	let nodeName = vnode.type,
@@ -124,7 +147,8 @@ function _renderToStringPretty(
 				opts,
 				opts.shallowHighOrder !== false,
 				isSvgMode,
-				selectValue
+				selectValue,
+				vnode
 			);
 		} else {
 			let rendered;
@@ -203,7 +227,8 @@ function _renderToStringPretty(
 				opts,
 				opts.shallowHighOrder !== false,
 				isSvgMode,
-				selectValue
+				selectValue,
+				vnode
 			);
 
 			if (options[DIFFED]) options[DIFFED](vnode);
@@ -384,7 +409,8 @@ function _renderToStringPretty(
 						opts,
 						true,
 						childSvgMode,
-						selectValue
+						selectValue,
+						vnode
 					);
 
 				if (shouldPrettyFormatChildren && !hasLarge && isLargeString(ret))
