@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.5
+
+### Patch Changes
+
+- [#439](https://github.com/preactjs/preact-render-to-string/pull/439) [`d9ecbf1`](https://github.com/preactjs/preact-render-to-string/commit/d9ecbf1770debaa20f882acf0b19f1481a7cf2ed) Thanks [@nwalters512](https://github.com/nwalters512)! - Ensure `useId()` produces unique IDs when using the JSX renderer
+
 ## 6.6.4
 
 ### Patch Changes
