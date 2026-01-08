@@ -1,4 +1,4 @@
-import { DIRTY, BITS } from './constants';
+import { DIRTY, BITS } from './constants.js';
 
 export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 // oxlint-disable-next-line no-control-regex

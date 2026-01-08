@@ -2,8 +2,7 @@ import { h } from 'preact';
 import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { useId } from 'preact/hooks';
-import { renderToChunks } from '../../src/lib/chunked';
-import { createSubtree, createInitScript } from '../../src/lib/client';
+import { createSubtree, renderToChunks } from '../../src/lib/chunked';
 import { createSuspender } from '../utils';
 import { VNODE, PARENT } from '../../src/lib/constants';
 
@@ -34,11 +33,8 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:5-->loading...<!--/preact-island:5--></div>',
-			'<div hidden>',
-			createInitScript(),
-			createSubtree('5', '<p>it works</p>'),
-			'</div>'
+			'<div><template shadowrootmode="open"><slot name="preact-island-5">loading...</slot></template></div>',
+			createSubtree('5', '<p>it works</p>')
 		]);
 	});
 
@@ -62,10 +58,7 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:10-->loading...<!--/preact-island:10--></div>',
-			'<div hidden>',
-			createInitScript(1),
-			'</div>'
+			'<div><template shadowrootmode="open"><slot name="preact-island-10">loading...</slot></template></div>'
 		]);
 	});
 
@@ -109,11 +102,8 @@ describe('renderToChunks', () => {
 		}
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:16-->loading...<!--/preact-island:16--></div>',
-			'<div hidden>',
-			createInitScript(1),
-			createSubtree('16', '<p>it works</p>'),
-			'</div>'
+			'<div><template shadowrootmode="open"><slot name="preact-island-16">loading...</slot></template></div>',
+			createSubtree('16', '<p>it works</p>')
 		]);
 	});
 
@@ -142,11 +132,8 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><p>id: P0-0</p><!--preact-island:24-->loading...<!--/preact-island:24--></div>',
-			'<div hidden>',
-			createInitScript(1),
-			createSubtree('24', '<p>id: P0-1</p>'),
-			'</div>'
+			'<div><p>id: P0-0</p><template shadowrootmode="open"><slot name="preact-island-24">loading...</slot></template></div>',
+			createSubtree('24', '<p>id: P0-1</p>')
 		]);
 	});
 
@@ -182,12 +169,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).toEqual([
-			'<div><p>id: P0-0</p><!--preact-island:33-->loading...<!--/preact-island:33--><!--preact-island:36-->loading...<!--/preact-island:36--></div>',
-			'<div hidden>',
-			createInitScript(1),
+			'<div><p>id: P0-0</p><template shadowrootmode="open"><slot name="preact-island-33">loading...</slot></template><template shadowrootmode="open"><slot name="preact-island-36">loading...</slot></template></div>',
 			createSubtree('33', '<p>id: P0-1</p>'),
-			createSubtree('36', '<p>id: P0-2</p>'),
-			'</div>'
+			createSubtree('36', '<p>id: P0-2</p>')
 		]);
 	});
 
@@ -217,11 +201,8 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:49-->loading part 1...<!--/preact-island:49--></div>',
-			'<div hidden>',
-			createInitScript(1),
-			createSubtree('49', '<p>it works</p><p>it works</p>'),
-			'</div>'
+			'<div><template shadowrootmode="open"><slot name="preact-island-49">loading part 1...</slot></template></div>',
+			createSubtree('49', '<p>it works</p><p>it works</p>')
 		]);
 	});
 });

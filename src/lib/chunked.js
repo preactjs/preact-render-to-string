@@ -1,7 +1,15 @@
 import { renderToString } from '../index.js';
 import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
 import { Deferred } from './util.js';
-import { createInitScript, createSubtree } from './client.js';
+
+/**
+ * @param {string} id
+ * @param {string} content
+ * @returns {string}
+ */
+export function createSubtree(id, content) {
+	return `<template shadowrootmode="open" slot="preact-island-${id}">${content}</template>`;
+}
 
 /**
  * @param {VNode} vnode
@@ -28,11 +36,8 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	// Wait for any suspended sub-trees if there are any
 	const len = renderer.suspended.length;
 	if (len > 0) {
-		onWrite('<div hidden>');
-		onWrite(createInitScript(len));
 		// We should keep checking all promises
 		await forkPromises(renderer);
-		onWrite('</div>');
 	}
 }
 
@@ -93,5 +98,5 @@ function handleError(error, vnode, renderChild) {
 
 	return found
 		? ''
-		: `<!--preact-island:${id}-->${fallback}<!--/preact-island:${id}-->`;
+		: `<template shadowrootmode="open"><slot name="preact-island-${id}">${fallback}</slot></template>`;
 }

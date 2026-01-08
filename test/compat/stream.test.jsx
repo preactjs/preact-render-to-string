@@ -2,7 +2,7 @@
 import { h } from 'preact';
 import { expect, beforeAll, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
-import { createSubtree, createInitScript } from '../../src/lib/client';
+import { createSubtree } from '../../src/lib/chunked';
 import { renderToReadableStream } from '../../src/stream';
 import { Deferred } from '../../src/lib/util';
 import { createSuspender } from '../utils';
@@ -82,11 +82,8 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).toEqual([
-			'<div><!--preact-island:5-->loading...<!--/preact-island:5--></div>',
-			'<div hidden>',
-			createInitScript(),
-			createSubtree('5', '<p>it works</p>'),
-			'</div>'
+			'<div><template shadowrootmode="open"><slot name="preact-island-5">loading...</slot></template></div>',
+			createSubtree('5', '<p>it works</p>')
 		]);
 	});
 });
