@@ -303,6 +303,13 @@ function _renderToString(
 
 	// Invoke rendering on Components
 	if (typeof type == 'function') {
+		// Portals: createPortal() sets `containerInfo` on the vnode.
+		// In SSR there is no DOM to portal into, so we just render an
+		// empty placeholder and skip the component entirely.
+		if ('containerInfo' in vnode) {
+			return '';
+		}
+
 		let cctx = context,
 			contextType,
 			rendered,
