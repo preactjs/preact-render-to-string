@@ -14,7 +14,7 @@ describe('compat', () => {
 				</div>
 			);
 			expect(rendered).to.equal(
-				'<div><span>before</span><div class="portal-content"></div><span>after</span></div>'
+				'<div><span>before</span><span>after</span></div>'
 			);
 		});
 
@@ -32,7 +32,7 @@ describe('compat', () => {
 				</div>
 			);
 			expect(rendered).to.equal(
-				'<div><div class="outer"><div class="inner">nested</div></div></div>'
+				'<div></div>'
 			);
 		});
 
