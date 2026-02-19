@@ -32,7 +32,11 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 		// and causes browsers to reject the content. Instead, we inject the deferred
 		// content before the closing tags, then emit them last.
 		const docSuffixIndex = getDocumentClosingTagsIndex(shell);
-		onWrite(docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell);
+		const hasHtmlTag = shell.trimStart().startsWith('<html');
+		const initialWrite =
+			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
+		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
+		onWrite(prefix + initialWrite);
 		onWrite('<div hidden>');
 		onWrite(createInitScript(len));
 		// We should keep checking all promises
@@ -51,7 +55,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
  * @returns {number}
  */
 function getDocumentClosingTagsIndex(html) {
-	return html.indexOf('</body>');
+	return html.lastIndexOf('</body>');
 }
 
 async function forkPromises(renderer) {

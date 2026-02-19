@@ -228,6 +228,57 @@ describe('renderToChunks', () => {
 		expect(result[result.length - 1]).toBe('</body></html>');
 	});
 
+	it('should prepend <!DOCTYPE html> when rendering a full document with suspended content', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const result = [];
+		const promise = renderToChunks(
+			<html>
+				<head>
+					<title>Test</title>
+				</head>
+				<body>
+					<Suspense fallback="loading...">
+						<Suspender />
+					</Suspense>
+				</body>
+			</html>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+		await promise;
+
+		// The first chunk must be prefixed with <!DOCTYPE html>
+		expect(result[0].startsWith('<!DOCTYPE html>')).toBe(true);
+
+		// The full output must start with the doctype
+		const fullHtml = result.join('');
+		expect(fullHtml.startsWith('<!DOCTYPE html>')).toBe(true);
+
+		// The doctype should appear exactly once
+		const doctypeCount = (fullHtml.match(/<!DOCTYPE html>/gi) || []).length;
+		expect(doctypeCount).toBe(1);
+	});
+
+	it('should not prepend <!DOCTYPE html> when rendering a non-document fragment with suspended content', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const result = [];
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+		await promise;
+
+		const fullHtml = result.join('');
+		expect(fullHtml.includes('<!DOCTYPE html>')).toBe(false);
+	});
+
 	it('should support a component that suspends multiple times', async () => {
 		const { Suspender, suspended } = createSuspender();
 		const { Suspender: Suspender2, suspended: suspended2 } = createSuspender();
@@ -254,10 +305,10 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:57-->loading part 1...<!--/preact-island:57--></div>',
+			'<div><!--preact-island:70-->loading part 1...<!--/preact-island:70--></div>',
 			'<div hidden>',
 			createInitScript(1),
-			createSubtree('57', '<p>it works</p><p>it works</p>'),
+			createSubtree('70', '<p>it works</p><p>it works</p>'),
 			'</div>'
 		]);
 	});
