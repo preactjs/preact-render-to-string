@@ -51,7 +51,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
  * @returns {number}
  */
 function getDocumentClosingTagsIndex(html) {
-	return html.indexOf('</html>');
+	return html.indexOf('</body>');
 }
 
 async function forkPromises(renderer) {
