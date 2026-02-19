@@ -191,6 +191,43 @@ describe('renderToChunks', () => {
 		]);
 	});
 
+	it('should inject deferred content before </body></html> for full document rendering', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const result = [];
+		const promise = renderToChunks(
+			<html>
+				<head>
+					<title>Test</title>
+				</head>
+				<body>
+					<Suspense fallback="loading...">
+						<Suspender />
+					</Suspense>
+				</body>
+			</html>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+		await promise;
+
+		const fullHtml = result.join('');
+
+		// Deferred wrapper must appear before </body></html>, not after
+		const deferredPos = fullHtml.indexOf('<div hidden>');
+		const bodyClosePos = fullHtml.indexOf('</body>');
+		const htmlClosePos = fullHtml.indexOf('</html>');
+
+		expect(deferredPos).toBeGreaterThan(-1);
+		expect(deferredPos).toBeLessThan(bodyClosePos);
+		expect(bodyClosePos).toBeLessThan(htmlClosePos);
+
+		// The document must end with </html>
+		expect(fullHtml.endsWith('</html>')).toBe(true);
+		// No content after </html>
+		expect(result[result.length - 1]).toBe('</body></html>');
+	});
+
 	it('should support a component that suspends multiple times', async () => {
 		const { Suspender, suspended } = createSuspender();
 		const { Suspender: Suspender2, suspended: suspended2 } = createSuspender();
@@ -217,10 +254,10 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:49-->loading part 1...<!--/preact-island:49--></div>',
+			'<div><!--preact-island:57-->loading part 1...<!--/preact-island:57--></div>',
 			'<div hidden>',
 			createInitScript(1),
-			createSubtree('49', '<p>it works</p><p>it works</p>'),
+			createSubtree('57', '<p>it works</p><p>it works</p>'),
 			'</div>'
 		]);
 	});
