@@ -151,7 +151,7 @@ main().catch((error) => {
 
 Preact supports streaming HTML to the client incrementally, flushing `<Suspense>` fallbacks immediately and replacing them with the resolved content as data arrives. This reduces Time to First Byte and allows the browser to start parsing earlier.
 
-#### `renderToReadableStream` — Web Streams (Edge / Deno / Bun / Cloudflare Workers)
+#### `renderToReadableStream` — Web Streams
 
 ```jsx
 import { renderToReadableStream } from 'preact-render-to-string/stream';
