@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.6
+
+### Patch Changes
+
+- [#446](https://github.com/preactjs/preact-render-to-string/pull/446) [`b7b288c`](https://github.com/preactjs/preact-render-to-string/commit/b7b288c68ed8c97ed8eb6c26929111debdc03435) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix issues regarding streaming full HTML documents
+
 ## 6.6.5
 
 ### Patch Changes
