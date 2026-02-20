@@ -144,6 +144,104 @@ main().catch((error) => {
 
 ---
 
+### Streaming
+
+> [!NOTE]
+> This is an early version of our streaming implementation.
+
+Preact supports streaming HTML to the client incrementally, flushing `<Suspense>` fallbacks immediately and replacing them with the resolved content as data arrives. This reduces Time to First Byte and allows the browser to start parsing earlier.
+
+#### `renderToReadableStream` — Web Streams
+
+```jsx
+import { renderToReadableStream } from 'preact-render-to-string/stream';
+import { Suspense, lazy } from 'preact/compat';
+
+const Profile = lazy(() => import('./Profile'));
+
+const App = () => (
+	<html>
+		<head><title>My App</title></head>
+		<body>
+			<Suspense fallback={<p>Loading profile…</p>}>
+				<Profile />
+			</Suspense>
+		</body>
+	</html>
+);
+
+// Works in any Web Streams environment (Deno, Bun, Cloudflare Workers, …)
+export default {
+	fetch() {
+		const stream = renderToReadableStream(<App />);
+
+		// stream.allReady resolves once all suspended content has been flushed
+		return new Response(stream, {
+			headers: { 'Content-Type': 'text/html' }
+		});
+	}
+};
+```
+
+The returned `ReadableStream` has an extra `allReady: Promise<void>` property that resolves once every suspended subtree has been written. Await it before sending the response if you need the complete document before anything is flushed (e.g. for static export). At which point you might be better off using `renderToStringAsync` though.
+
+```js
+const stream = renderToReadableStream(<App />);
+await stream.allReady; // wait for full render
+```
+
+#### `renderToPipeableStream` — Node.js Streams
+
+```jsx
+import { createServer } from 'node:http';
+import { renderToPipeableStream } from 'preact-render-to-string/stream-node';
+import { Suspense, lazy } from 'preact/compat';
+
+const Profile = lazy(() => import('./Profile'));
+
+const App = () => (
+	<html>
+		<head><title>My App</title></head>
+		<body>
+			<Suspense fallback={<p>Loading profile…</p>}>
+				<Profile />
+			</Suspense>
+		</body>
+	</html>
+);
+
+createServer((req, res) => {
+	res.setHeader('Content-Type', 'text/html');
+
+	const { pipe, abort } = renderToPipeableStream(<App />, {
+		onShellReady() {
+			// Called once the synchronous shell is ready to stream.
+			pipe(res);
+		},
+		onAllReady() {
+			// Called once every suspended subtree has been flushed.
+		},
+		onError(error) {
+			console.error(error);
+			res.statusCode = 500;
+		}
+	});
+
+	// Optional: abort the render after a timeout
+	setTimeout(abort, 10_000);
+}).listen(8080);
+```
+
+| Option | Description |
+|---|---|
+| `onShellReady()` | Called synchronously once the initial shell has been rendered and streaming is about to start. Pipe here for fastest TTFB. |
+| `onAllReady()` | Called after all `<Suspense>` boundaries have resolved and the stream is complete. |
+| `onError(error)` | Called for render errors inside suspended subtrees. |
+
+Calling `abort()` stops the render and destroys the stream; any pending suspended subtrees are dropped.
+
+---
+
 ### License
 
 [MIT](http://choosealicense.com/licenses/mit/)
