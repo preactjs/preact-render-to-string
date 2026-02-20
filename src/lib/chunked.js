@@ -23,17 +23,39 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	// Synchronously render the shell
 	// @ts-ignore - using third internal RendererState argument
 	const shell = renderToString(vnode, context, renderer);
-	onWrite(shell);
 
 	// Wait for any suspended sub-trees if there are any
 	const len = renderer.suspended.length;
 	if (len > 0) {
+		// When rendering a full HTML document, the shell ends with </body></html>.
+		// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
+		// and causes browsers to reject the content. Instead, we inject the deferred
+		// content before the closing tags, then emit them last.
+		const docSuffixIndex = getDocumentClosingTagsIndex(shell);
+		const hasHtmlTag = shell.trimStart().startsWith('<html');
+		const initialWrite =
+			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
+		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
+		onWrite(prefix + initialWrite);
 		onWrite('<div hidden>');
 		onWrite(createInitScript(len));
 		// We should keep checking all promises
 		await forkPromises(renderer);
 		onWrite('</div>');
+		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
+	} else {
+		onWrite(shell);
 	}
+}
+
+/**
+ * If the shell ends with </body></html> (full document rendering), return that
+ * suffix so it can be emitted *after* the deferred content, keeping the HTML valid.
+ * @param {string} html
+ * @returns {number}
+ */
+function getDocumentClosingTagsIndex(html) {
+	return html.lastIndexOf('</body>');
 }
 
 async function forkPromises(renderer) {
