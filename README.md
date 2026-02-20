@@ -183,7 +183,7 @@ export default {
 };
 ```
 
-The returned `ReadableStream` has an extra `allReady: Promise<void>` property that resolves once every suspended subtree has been written. Await it before sending the response if you need the complete document before anything is flushed (e.g. for static export).
+The returned `ReadableStream` has an extra `allReady: Promise<void>` property that resolves once every suspended subtree has been written. Await it before sending the response if you need the complete document before anything is flushed (e.g. for static export). At which point you might be better off using `renderToStringAsync` though.
 
 ```js
 const stream = renderToReadableStream(<App />);
