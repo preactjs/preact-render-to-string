@@ -88,4 +88,28 @@ describe('renderToPipeableStream', () => {
 
 		expect(error).to.be.undefined;
 	});
+
+	it('should not call onShellReady if shell rendering throws', async () => {
+		let shellReady = false;
+		let caught;
+
+		function Thrower() {
+			throw new Error('shell failed');
+		}
+
+		renderToPipeableStream(<Thrower />, {
+			onShellReady: () => {
+				shellReady = true;
+			},
+			onError: (error) => {
+				caught = error;
+			}
+		});
+
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(shellReady).toBe(false);
+		expect(caught).toBeInstanceOf(Error);
+		expect(caught.message).toBe('shell failed');
+	});
 });

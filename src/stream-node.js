@@ -26,6 +26,41 @@ export function renderToPipeableStream(vnode, options, context) {
 	const controller = new AbortController();
 	const stream = new PassThrough();
 	let waitingForDrain = null;
+	let shellReadyCalled = false;
+	let allReadyCalled = false;
+	let errored = false;
+	let shellReadyScheduled = false;
+
+	function callOnShellReady() {
+		if (shellReadyCalled || errored) return;
+		shellReadyCalled = true;
+		options.onShellReady && options.onShellReady();
+	}
+
+	function callOnAllReady() {
+		if (allReadyCalled || errored) return;
+		allReadyCalled = true;
+		options.onAllReady && options.onAllReady();
+	}
+
+	function callOnError(error) {
+		if (errored) return;
+		errored = true;
+		if (options.onError) {
+			options.onError(error);
+		} else {
+			throw error;
+		}
+	}
+
+	function scheduleOnShellReady() {
+		if (shellReadyCalled || shellReadyScheduled || errored) return;
+		shellReadyScheduled = true;
+		Promise.resolve().then(() => {
+			shellReadyScheduled = false;
+			callOnShellReady();
+		});
+	}
 
 	/**
 	 * @returns {Promise<void>}
@@ -59,32 +94,28 @@ export function renderToPipeableStream(vnode, options, context) {
 		return waitingForDrain;
 	}
 
-	renderToChunks(vnode, {
-		context,
-		abortSignal: controller.signal,
-		async onWrite(s) {
-			if (stream.destroyed || stream.writableEnded) return;
-			if (!stream.write(encoder.encode(s))) {
-				await waitForDrain();
-			}
-		}
-	})
+	Promise.resolve()
+		.then(() =>
+			renderToChunks(vnode, {
+				context,
+				abortSignal: controller.signal,
+				async onWrite(s) {
+					scheduleOnShellReady();
+					if (stream.destroyed || stream.writableEnded) return;
+					if (!stream.write(encoder.encode(s))) {
+						await waitForDrain();
+					}
+				}
+			})
+		)
 		.then(() => {
-			options.onAllReady && options.onAllReady();
+			callOnAllReady();
 			stream.end();
 		})
 		.catch((error) => {
 			stream.destroy();
-			if (options.onError) {
-				options.onError(error);
-			} else {
-				throw error;
-			}
+			callOnError(error);
 		});
-
-	Promise.resolve().then(() => {
-		options.onShellReady && options.onShellReady();
-	});
 
 	return {
 		/**
