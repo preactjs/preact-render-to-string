@@ -95,10 +95,12 @@ function handleError(error, vnode, renderChild) {
 	const race = new Deferred();
 
 	const abortSignal = this.abortSignal;
+	/** @type {(() => void) | undefined} */
+	let onAbort;
 	if (abortSignal) {
-		// @ts-ignore 2554 - implicit undefined arg
-		if (abortSignal.aborted) race.resolve();
-		else abortSignal.addEventListener('abort', race.resolve);
+		onAbort = () => race.resolve();
+		if (abortSignal.aborted) onAbort();
+		else abortSignal.addEventListener('abort', onAbort, { once: true });
 	}
 
 	const promise = error.then(
@@ -112,10 +114,16 @@ function handleError(error, vnode, renderChild) {
 		this.onError
 	);
 
+	const racedPromise = Promise.race([promise, race.promise]).finally(() => {
+		if (abortSignal && onAbort) {
+			abortSignal.removeEventListener('abort', onAbort);
+		}
+	});
+
 	this.suspended.push({
 		id,
 		vnode,
-		promise: Promise.race([promise, race.promise])
+		promise: racedPromise
 	});
 
 	const fallback = renderChild(vnode.props.fallback);
