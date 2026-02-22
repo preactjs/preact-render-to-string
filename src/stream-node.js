@@ -25,12 +25,48 @@ export function renderToPipeableStream(vnode, options, context) {
 
 	const controller = new AbortController();
 	const stream = new PassThrough();
+	let waitingForDrain = null;
+
+	/**
+	 * @returns {Promise<void>}
+	 */
+	function waitForDrain() {
+		if (waitingForDrain) return waitingForDrain;
+		waitingForDrain = new Promise((resolve, reject) => {
+			const cleanup = () => {
+				stream.off('drain', onDrain);
+				stream.off('close', onClose);
+				stream.off('error', onError);
+				waitingForDrain = null;
+			};
+			const onDrain = () => {
+				cleanup();
+				resolve();
+			};
+			const onClose = () => {
+				cleanup();
+				resolve();
+			};
+			const onError = (error) => {
+				cleanup();
+				reject(error);
+			};
+
+			stream.on('drain', onDrain);
+			stream.on('close', onClose);
+			stream.on('error', onError);
+		});
+		return waitingForDrain;
+	}
 
 	renderToChunks(vnode, {
 		context,
 		abortSignal: controller.signal,
-		onWrite(s) {
-			stream.write(encoder.encode(s));
+		async onWrite(s) {
+			if (stream.destroyed || stream.writableEnded) return;
+			if (!stream.write(encoder.encode(s))) {
+				await waitForDrain();
+			}
 		}
 	})
 		.then(() => {

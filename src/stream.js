@@ -14,6 +14,8 @@ export function renderToReadableStream(vnode, context) {
 	const encoder = new TextEncoder('utf-8');
 	const abortController = new AbortController();
 	let canceled = false;
+	/** @type {Deferred<void> | undefined} */
+	let pullReady;
 
 	/** @type {RenderStream} */
 	const stream = new ReadableStream({
@@ -21,7 +23,16 @@ export function renderToReadableStream(vnode, context) {
 			renderToChunks(vnode, {
 				context,
 				abortSignal: abortController.signal,
-				onWrite(s) {
+				async onWrite(s) {
+					while (
+						!canceled &&
+						controller.desiredSize != null &&
+						controller.desiredSize <= 0
+					) {
+						pullReady = pullReady || new Deferred();
+						await pullReady.promise;
+						pullReady = undefined;
+					}
 					if (canceled) return;
 					controller.enqueue(encoder.encode(s));
 				}
@@ -39,8 +50,12 @@ export function renderToReadableStream(vnode, context) {
 					allReady.reject(error);
 				});
 		},
+		pull() {
+			if (pullReady) pullReady.resolve();
+		},
 		cancel(reason) {
 			canceled = true;
+			if (pullReady) pullReady.resolve();
 			abortController.abort(reason);
 		}
 	});

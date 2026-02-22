@@ -23,12 +23,12 @@ interface RendererState {
 	start: number;
 	suspended: Suspended[];
 	abortSignal?: AbortSignal | undefined;
-	onWrite: (str: string) => void;
+	onWrite: (str: string) => void | Promise<void>;
 	onError?: RendererErrorHandler;
 }
 
 interface RenderToChunksOptions {
 	context?: any;
-	onWrite: (str: string) => void;
+	onWrite: (str: string) => void | Promise<void>;
 	abortSignal?: AbortSignal;
 }
