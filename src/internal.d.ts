@@ -29,7 +29,6 @@ interface RendererState {
 
 interface RenderToChunksOptions {
 	context?: any;
-	onError?: (error: any) => void;
 	onWrite: (str: string) => void;
 	abortSignal?: AbortSignal;
 }

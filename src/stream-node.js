@@ -29,12 +29,6 @@ export function renderToPipeableStream(vnode, options, context) {
 	renderToChunks(vnode, {
 		context,
 		abortSignal: controller.signal,
-		onError: (error) => {
-			if (options.onError) {
-				options.onError(error);
-			}
-			controller.abort(error);
-		},
 		onWrite(s) {
 			stream.write(encoder.encode(s));
 		}
