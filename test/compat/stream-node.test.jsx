@@ -112,4 +112,18 @@ describe('renderToPipeableStream', () => {
 		expect(caught).toBeInstanceOf(Error);
 		expect(caught.message).toBe('shell failed');
 	});
+
+	it('should only call onError once for repeated aborts', async () => {
+		const errors = [];
+		const { abort } = renderToPipeableStream(<div class="foo">bar</div>, {
+			onError: (error) => errors.push(error)
+		});
+
+		const first = new Error('first abort');
+		abort(first);
+		abort(new Error('second abort'));
+
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toBe(first);
+	});
 });

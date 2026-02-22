@@ -26,10 +26,12 @@ export function renderToPipeableStream(vnode, options, context) {
 	const controller = new AbortController();
 	const stream = new PassThrough();
 	let waitingForDrain = null;
+	let aborted = false;
 	let shellReadyCalled = false;
 	let allReadyCalled = false;
 	let errored = false;
 	let shellReadyScheduled = false;
+	stream.on('error', () => {});
 
 	function callOnShellReady() {
 		if (shellReadyCalled || errored) return;
@@ -127,13 +129,19 @@ export function renderToPipeableStream(vnode, options, context) {
 			)
 		) {
 			// Remix/React-Router will always call abort after a timeout, even on success
-			if (stream.closed) return;
-
-			controller.abort();
-			stream.destroy();
-			if (options.onError) {
-				options.onError(reason);
+			if (
+				aborted ||
+				stream.closed ||
+				stream.destroyed ||
+				stream.writableEnded
+			) {
+				return;
 			}
+
+			aborted = true;
+			controller.abort(reason);
+			stream.destroy(reason);
+			callOnError(reason);
 		},
 		/**
 		 * @param {import("stream").Writable} writable
