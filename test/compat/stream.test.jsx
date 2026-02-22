@@ -89,4 +89,31 @@ describe('renderToReadableStream', () => {
 			'</div>'
 		]);
 	});
+
+	it('should abort pending suspense work when the readable stream is canceled', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const decoder = new TextDecoder('utf-8');
+
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>
+		);
+
+		const reader = stream.getReader();
+		const first = await reader.read();
+		expect(first.done).toBe(false);
+		expect(decoder.decode(first.value)).toBe(
+			'<div><!--preact-island:10-->loading...<!--/preact-island:10--></div>'
+		);
+
+		await reader.cancel('client disconnected');
+		suspended.resolve();
+		await stream.allReady;
+
+		const next = await reader.read();
+		expect(next.done).toBe(true);
+	});
 });
