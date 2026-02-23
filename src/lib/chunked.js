@@ -113,7 +113,5 @@ function handleError(error, vnode, renderChild) {
 
 	const fallback = renderChild(vnode.props.fallback);
 
-	return found
-		? ''
-		: `<!--preact-island:${id}-->${fallback}<!--/preact-island:${id}-->`;
+	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
 }

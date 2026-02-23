@@ -82,7 +82,7 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).toEqual([
-			'<div><!--preact-island:5-->loading...<!--/preact-island:5--></div>',
+			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
 			'<div hidden>',
 			createInitScript(),
 			createSubtree('5', '<p>it works</p>'),
