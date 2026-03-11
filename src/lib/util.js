@@ -4,7 +4,50 @@ export const VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|
 // oxlint-disable-next-line no-control-regex
 export const UNSAFE_NAME = /[\s\n\\/='"\0<>]/;
 export const NAMESPACE_REPLACE_REGEX = /^(xlink|xmlns|xml)([A-Z])/;
-export const HTML_LOWER_CASE = /^(?:accessK|auto[A-Z]|cell|ch|col|cont|cross|dateT|encT|form[A-Z]|frame|hrefL|inputM|maxL|minL|noV|playsI|popoverT|readO|rowS|src[A-Z]|tabI|useM|item[A-Z])/;
+export const HTML_LOWER_CASE = new Set([
+	'accessKey',
+	'autoCapitalize',
+	'autoComplete',
+	'autoCorrect',
+	'autoFocus',
+	'autoPlay',
+	'cellPadding',
+	'cellSpacing',
+	'charSet',
+	'colSpan',
+	'contentEditable',
+	'contextMenu',
+	'controlsList',
+	'crossOrigin',
+	'dateTime',
+	'encType',
+	'formAction',
+	'formEncType',
+	'formMethod',
+	'formNoValidate',
+	'formTarget',
+	'frameBorder',
+	'hrefLang',
+	'inputMode',
+	'maxLength',
+	'minLength',
+	'noValidate',
+	'playsInline',
+	'popoverTarget',
+	'popoverTargetAction',
+	'readOnly',
+	'rowSpan',
+	'srcDoc',
+	'srcLang',
+	'srcSet',
+	'tabIndex',
+	'useMap',
+	'itemScope',
+	'itemType',
+	'itemID',
+	'itemRef',
+	'itemProp'
+]);
 export const SVG_CAMEL_CASE = /^ac|^ali|arabic|basel|cap|clipPath$|clipRule$|color|dominant|enable|fill|flood|font|glyph[^R]|horiz|image|letter|lighting|marker[^WUH]|overline|panose|pointe|paint|rendering|shape|stop|strikethrough|stroke|text[^L]|transform|underline|unicode|units|^v[^i]|^w|^xH/;
 
 // Boolean DOM properties that translate to enumerated ('true'/'false') attributes
