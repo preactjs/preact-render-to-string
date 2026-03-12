@@ -6,8 +6,6 @@
 
 - [#446](https://github.com/preactjs/preact-render-to-string/pull/446) [`b7b288c`](https://github.com/preactjs/preact-render-to-string/commit/b7b288c68ed8c97ed8eb6c26929111debdc03435) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix issues regarding streaming full HTML documents
 
-- Replace `HTML_LOWER_CASE` regex with an explicit `Set` for camelCase HTML attribute name lookup. The regex could incorrectly match custom element properties (e.g. `channelId` matching the `ch` prefix, resulting in `channelid`). Using a `Set` ensures only known HTML attributes are lowercased.
-
 ## 6.6.5
 
 ### Patch Changes
