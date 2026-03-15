@@ -11,7 +11,6 @@ import {
 	SVG_CAMEL_CASE,
 	HTML_ENUMERATED,
 	HTML_LOWER_CASE,
-	HTML_ELEMENTS,
 	getContext,
 	setDirty,
 	isDirty,
@@ -129,6 +128,8 @@ function _renderToStringPretty(
 	let nodeName = vnode.type,
 		props = vnode.props,
 		isComponent = false;
+
+	const isCustomElement = nodeName.includes("-");
 
 	// components
 	if (typeof nodeName === 'function') {
@@ -300,7 +301,7 @@ function _renderToStringPretty(
 							? 'panose-1'
 							: name.replace(/([A-Z])/g, '-$1').toLowerCase();
 				}
-			} else if (HTML_ELEMENTS.has(nodeName) && HTML_LOWER_CASE.has(name)) {
+			} else if (!isCustomElement && HTML_LOWER_CASE.has(name)) {
 				name = name.toLowerCase();
 			}
 

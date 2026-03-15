@@ -4,7 +4,6 @@ import {
 	UNSAFE_NAME,
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
-	HTML_ELEMENTS,
 	HTML_ENUMERATED,
 	SVG_CAMEL_CASE,
 	createComponent,
@@ -301,6 +300,8 @@ function _renderToString(
 
 	let type = vnode.type,
 		props = vnode.props;
+	
+	const isCustomElement = type.includes("-");
 
 	// Invoke rendering on Components
 	if (typeof type == 'function') {
@@ -667,7 +668,7 @@ function _renderToString(
 								? 'panose-1'
 								: name.replace(/([A-Z])/g, '-$1').toLowerCase();
 					}
-				} else if (HTML_ELEMENTS.has(type) && HTML_LOWER_CASE.has(name)) {
+				} else if (!isCustomElement && HTML_LOWER_CASE.has(name)) {
 					name = name.toLowerCase();
 				}
 			}
