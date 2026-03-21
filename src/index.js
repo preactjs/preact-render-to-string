@@ -347,9 +347,8 @@ function _renderToString(
 				// branching here for comments has the least effect on perf.
 				return '<!--' + encodeEntities(props.UNSTABLE_comment) + '-->';
 			} else if ('dangerouslySetInnerHTML' in props) {
-				return (
-					'<!--$h-->' + props.dangerouslySetInnerHTML.__html + '<!--/$h-->'
-				);
+				let html = props.dangerouslySetInnerHTML.__html ?? '';
+				return '<!--$h-->' + html + '<!--/$h-->';
 			}
 
 			rendered = props.children;

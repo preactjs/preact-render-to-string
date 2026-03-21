@@ -881,6 +881,19 @@ describe('render', () => {
 			);
 			expect(rendered).to.equal('<div>foo<!--$h-->bar<!--/$h-->baz</div>');
 		});
+
+		it.only('should support falsy dangerouslySetInnerHTML on Fragments', () => {
+			let rendered = render(
+				<div>
+					foo
+					<Fragment dangerouslySetInnerHTML={{ __html: null }}>
+						<p>ignored</p>
+					</Fragment>
+					baz
+				</div>
+			);
+			expect(rendered).to.equal('<div>foo<!--$h--><!--/$h-->baz</div>');
+		});
 	});
 
 	describe('className / class massaging', () => {
