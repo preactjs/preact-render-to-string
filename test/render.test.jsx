@@ -882,7 +882,7 @@ describe('render', () => {
 			expect(rendered).to.equal('<div>foo<!--$h-->bar<!--/$h-->baz</div>');
 		});
 
-		it.only('should support falsy dangerouslySetInnerHTML on Fragments', () => {
+		it('should support falsy dangerouslySetInnerHTML on Fragments', () => {
 			let rendered = render(
 				<div>
 					foo
