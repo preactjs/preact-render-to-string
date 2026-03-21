@@ -208,8 +208,8 @@ function _renderToStringPretty(
 						c._nextState !== c.state
 							? c._nextState
 							: c.__s !== c.state
-							? c.__s
-							: c.state;
+								? c.__s
+								: c.state;
 				}
 
 				if (renderHook) renderHook(vnode);
@@ -401,8 +401,8 @@ function _renderToStringPretty(
 						nodeName === 'svg'
 							? true
 							: nodeName === 'foreignObject'
-							? false
-							: isSvgMode,
+								? false
+								: isSvgMode,
 					ret = _renderToStringPretty(
 						child,
 						context,

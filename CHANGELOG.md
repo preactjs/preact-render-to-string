@@ -297,7 +297,6 @@
 * [#270](https://github.com/preactjs/preact-render-to-string/pull/270) [`5c6877d`](https://github.com/preactjs/preact-render-to-string/commit/5c6877d13d60b4cdd87632ac3052b006207568ff) Thanks [@developit](https://github.com/developit)! - improve unmount option hook call performance
 
 - [#278](https://github.com/preactjs/preact-render-to-string/pull/278) [`8cf7cef`](https://github.com/preactjs/preact-render-to-string/commit/8cf7cef0e96b3e48ffea5fcf4f76db6410de8346) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Improve performance by
-
   - storing the void_elements in a Set
   - hoisting the `x-link` regex
   - remove case-insensitive from regexes and calling `.toLowerCase()` instead

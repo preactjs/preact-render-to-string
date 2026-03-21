@@ -50,7 +50,7 @@
 		"test": "oxlint && tsc && npm run test:vitest:run && npm run bench",
 		"test:vitest": "vitest",
 		"test:vitest:run": "vitest run",
-		"format": "prettier src/**/*.{d.ts,js} test/**/*.{js,jsx} --write",
+		"format": "oxfmt --write .",
 		"prepublishOnly": "npm run build",
 		"release": "npm run build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
 	},
@@ -123,22 +123,16 @@
 		"microbundle": "^0.15.1",
 		"oxlint": "^1.3.0",
 		"preact": "^10.24.0",
-		"prettier": "^2.2.1",
+		"oxfmt": "^0.41.0",
 		"pretty-format": "^3.8.0",
 		"rollup": "^4.44.1",
 		"typescript": "^5.0.0",
 		"vitest": "^3.2.4",
 		"web-streams-polyfill": "^3.2.1"
 	},
-	"prettier": {
-		"singleQuote": true,
-		"trailingComma": "none",
-		"useTabs": true,
-		"tabWidth": 2
-	},
 	"lint-staged": {
 		"**/*.{js,jsx,ts,tsx,yml}": [
-			"prettier --write"
+			"oxfmt --write"
 		]
 	},
 	"husky": {
