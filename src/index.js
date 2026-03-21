@@ -346,6 +346,9 @@ function _renderToString(
 				// Fragments are the least used components of core that's why
 				// branching here for comments has the least effect on perf.
 				return '<!--' + encodeEntities(props.UNSTABLE_comment) + '-->';
+			} else if (props.dangerouslySetInnerHTML) {
+				let html = props.dangerouslySetInnerHTML.__html || '';
+				return '<!--$h-->' + html + '<!--/$h-->';
 			}
 
 			rendered = props.children;
