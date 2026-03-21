@@ -886,9 +886,25 @@ describe('render', () => {
 			let rendered = render(
 				<div>
 					foo
-					<Fragment dangerouslySetInnerHTML={{ __html: null }}>
-						<p>ignored</p>
-					</Fragment>
+					<Fragment dangerouslySetInnerHTML={{ __html: null }} />
+					baz
+				</div>
+			);
+			expect(rendered).to.equal('<div>foo<!--$h--><!--/$h-->baz</div>');
+
+			rendered = render(
+				<div>
+					foo
+					<Fragment dangerouslySetInnerHTML={{ __html: undefined }} />
+					baz
+				</div>
+			);
+			expect(rendered).to.equal('<div>foo<!--$h--><!--/$h-->baz</div>');
+
+			rendered = render(
+				<div>
+					foo
+					<Fragment dangerouslySetInnerHTML={{ __html: false }} />
 					baz
 				</div>
 			);
