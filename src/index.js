@@ -159,7 +159,10 @@ export async function renderToStringAsync(vnode, context) {
  * @param {Record<string, unknown>} context
  */
 function renderClassComponent(vnode, context) {
-	let type = /** @type {import("preact").ComponentClass<typeof vnode.props>} */ (vnode.type);
+	let type =
+		/** @type {import("preact").ComponentClass<typeof vnode.props>} */ (
+			vnode.type
+		);
 
 	let isMounting = true;
 	let c;

@@ -726,16 +726,12 @@ describe('render', () => {
 
 			render(<Outer />);
 
-			expect(
-				Inner.prototype.render
-			).toHaveBeenCalledWith(
+			expect(Inner.prototype.render).toHaveBeenCalledWith(
 				expect.objectContaining({}),
 				expect.objectContaining({}),
 				{ outerContext }
 			);
-			expect(
-				InnerMost.prototype.render
-			).toHaveBeenCalledWith(
+			expect(InnerMost.prototype.render).toHaveBeenCalledWith(
 				expect.objectContaining({}),
 				expect.objectContaining({}),
 				{ outerContext, innerContext }
