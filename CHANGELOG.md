@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.6.7
+
+### Patch Changes
+
+- [#457](https://github.com/preactjs/preact-render-to-string/pull/457) [`ce6ef71`](https://github.com/preactjs/preact-render-to-string/commit/ce6ef7153113af70c32ee952d0fbce01e0115de4) Thanks [@lemonmade](https://github.com/lemonmade)! - fix: renderToStringAsync produces commas for suspended components with complex children
+
 ## 6.6.6
 
 ### Patch Changes
@@ -240,7 +246,7 @@
   This feature is disabled by default and can be enabled by toggling the `errorBoundaries` option:
 
   ```js
-  import { options } from 'preact';
+  import { options } from "preact";
 
   // Enable error boundaries
   options.errorBoundaries = true;
