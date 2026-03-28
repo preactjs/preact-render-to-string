@@ -34,6 +34,25 @@ const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
 
+/**
+ * Wraps a render result with suspense boundary markers, handling all possible
+ * return types from _renderToString: string, Array, or Promise.
+ * @param {string | Array | Promise} result
+ * @returns {string | Array | Promise}
+ */
+function wrapWithSuspenseMarkers(result) {
+	if (typeof result === 'string') {
+		return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
+	} else if (isArray(result)) {
+		result.unshift(BEGIN_SUSPENSE_DENOMINATOR);
+		result.push(END_SUSPENSE_DENOMINATOR);
+		return result;
+	} else if (result && typeof result.then === 'function') {
+		return result.then(wrapWithSuspenseMarkers);
+	}
+	return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
+}
+
 // Global state for the current render pass
 let beforeDiff, afterDiff, renderHook, ummountHook;
 
@@ -498,18 +517,7 @@ function _renderToString(
 			if (options.unmount) options.unmount(vnode);
 
 			if (vnode._suspended) {
-				if (typeof str === 'string') {
-					return BEGIN_SUSPENSE_DENOMINATOR + str + END_SUSPENSE_DENOMINATOR;
-				} else if (isArray(str)) {
-					str.unshift(BEGIN_SUSPENSE_DENOMINATOR);
-					str.push(END_SUSPENSE_DENOMINATOR);
-					return str;
-				}
-
-				return str.then(
-					(resolved) =>
-						BEGIN_SUSPENSE_DENOMINATOR + resolved + END_SUSPENSE_DENOMINATOR
-				);
+				return wrapWithSuspenseMarkers(str);
 			}
 
 			return str;
@@ -556,9 +564,7 @@ function _renderToString(
 						asyncMode,
 						renderer
 					);
-					return vnode._suspended
-						? BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR
-						: result;
+					return vnode._suspended ? wrapWithSuspenseMarkers(result) : result;
 				} catch (e) {
 					if (!e || typeof e.then != 'function') throw e;
 
