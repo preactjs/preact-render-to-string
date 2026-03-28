@@ -34,7 +34,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:5-->loading...<!--/preact-island:5--></div>',
+			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
 			'<div hidden>',
 			createInitScript(),
 			createSubtree('5', '<p>it works</p>'),
@@ -62,7 +62,7 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:10-->loading...<!--/preact-island:10--></div>',
+			'<div><!--$s:10-->loading...<!--/$s:10--></div>',
 			'<div hidden>',
 			createInitScript(1),
 			'</div>'
@@ -109,7 +109,7 @@ describe('renderToChunks', () => {
 		}
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:16-->loading...<!--/preact-island:16--></div>',
+			'<div><!--$s:16-->loading...<!--/$s:16--></div>',
 			'<div hidden>',
 			createInitScript(1),
 			createSubtree('16', '<p>it works</p>'),
@@ -142,7 +142,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><p>id: P0-0</p><!--preact-island:24-->loading...<!--/preact-island:24--></div>',
+			'<div><p>id: P0-0</p><!--$s:24-->loading...<!--/$s:24--></div>',
 			'<div hidden>',
 			createInitScript(1),
 			createSubtree('24', '<p>id: P0-1</p>'),
@@ -182,7 +182,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).toEqual([
-			'<div><p>id: P0-0</p><!--preact-island:33-->loading...<!--/preact-island:33--><!--preact-island:36-->loading...<!--/preact-island:36--></div>',
+			'<div><p>id: P0-0</p><!--$s:33-->loading...<!--/$s:33--><!--$s:36-->loading...<!--/$s:36--></div>',
 			'<div hidden>',
 			createInitScript(1),
 			createSubtree('33', '<p>id: P0-1</p>'),
@@ -305,7 +305,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--preact-island:70-->loading part 1...<!--/preact-island:70--></div>',
+			'<div><!--$s:70-->loading part 1...<!--/$s:70--></div>',
 			'<div hidden>',
 			createInitScript(1),
 			createSubtree('70', '<p>it works</p><p>it works</p>'),
