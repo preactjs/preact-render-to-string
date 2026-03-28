@@ -360,6 +360,82 @@ describe('Async renderToString', () => {
 		);
 	});
 
+	it('should not produce commas or [object Promise] when cascading suspensions produce array results', async () => {
+		// Regression: when component A suspends then re-renders with children
+		// that also suspend at multiple levels (B→C→D), the .then() handler
+		// wrapping suspended output receives an Array instead of a string.
+		// String concatenation with an Array calls Array.toString(), injecting
+		// commas into the HTML.
+		let aResolved = false;
+		const aPromise = new Promise((r) =>
+			setTimeout(() => {
+				aResolved = true;
+				r();
+			}, 5)
+		);
+
+		let cResolved = false;
+		const cPromise = new Promise((r) =>
+			setTimeout(() => {
+				cResolved = true;
+				r();
+			}, 15)
+		);
+
+		let dResolved = false;
+		const dPromise = new Promise((r) =>
+			setTimeout(() => {
+				dResolved = true;
+				r();
+			}, 25)
+		);
+
+		function A() {
+			if (!aResolved) throw aPromise;
+			return <B />;
+		}
+
+		function B() {
+			return (
+				<div>
+					<p>b-content</p>
+					<C />
+					<p>b-footer</p>
+				</div>
+			);
+		}
+
+		function C() {
+			if (!cResolved) throw cPromise;
+			return (
+				<Fragment>
+					<span>c-before</span>
+					<D />
+					<span>c-after</span>
+				</Fragment>
+			);
+		}
+
+		function D() {
+			if (!dResolved) throw dPromise;
+			return <em>d-content</em>;
+		}
+
+		const rendered = await renderToStringAsync(
+			<Suspense fallback={null}>
+				<A />
+			</Suspense>
+		);
+
+		expect(rendered).not.to.contain(',');
+		expect(rendered).not.to.contain('[object Promise]');
+		expect(rendered).to.contain('<p>b-content</p>');
+		expect(rendered).to.contain('<span>c-before</span>');
+		expect(rendered).to.contain('<em>d-content</em>');
+		expect(rendered).to.contain('<span>c-after</span>');
+		expect(rendered).to.contain('<p>b-footer</p>');
+	});
+
 	describe('dangerouslySetInnerHTML', () => {
 		it('should support dangerouslySetInnerHTML', async () => {
 			// some invalid HTML to make sure we're being flakey:
