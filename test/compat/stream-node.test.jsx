@@ -88,4 +88,42 @@ describe('renderToPipeableStream', () => {
 
 		expect(error).to.be.undefined;
 	});
+
+	it('should not call onShellReady if shell rendering throws', async () => {
+		let shellReady = false;
+		let caught;
+
+		function Thrower() {
+			throw new Error('shell failed');
+		}
+
+		renderToPipeableStream(<Thrower />, {
+			onShellReady: () => {
+				shellReady = true;
+			},
+			onError: (error) => {
+				caught = error;
+			}
+		});
+
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(shellReady).toBe(false);
+		expect(caught).toBeInstanceOf(Error);
+		expect(caught.message).toBe('shell failed');
+	});
+
+	it('should only call onError once for repeated aborts', async () => {
+		const errors = [];
+		const { abort } = renderToPipeableStream(<div class="foo">bar</div>, {
+			onError: (error) => errors.push(error)
+		});
+
+		const first = new Error('first abort');
+		abort(first);
+		abort(new Error('second abort'));
+
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toBe(first);
+	});
 });

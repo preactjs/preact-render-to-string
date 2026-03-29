@@ -10,12 +10,18 @@ import { createInitScript, createSubtree } from './client.js';
  */
 export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 	context = context || {};
+	const deferredWritesReady = new Deferred();
+	let deferredWriteQueue = Promise.resolve();
 
 	/** @type {RendererState} */
 	const renderer = {
 		start: Date.now(),
 		abortSignal,
-		onWrite,
+		onWrite(str) {
+			return (deferredWriteQueue = deferredWriteQueue
+				.then(() => deferredWritesReady.promise)
+				.then(() => onWrite(str)));
+		},
 		onError: handleError,
 		suspended: []
 	};
@@ -36,15 +42,16 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 		const initialWrite =
 			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
 		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
-		onWrite(prefix + initialWrite);
-		onWrite('<div hidden>');
-		onWrite(createInitScript(len));
+		await onWrite(prefix + initialWrite);
+		await onWrite('<div hidden>');
+		await onWrite(createInitScript(len));
+		deferredWritesReady.resolve();
 		// We should keep checking all promises
 		await forkPromises(renderer);
-		onWrite('</div>');
-		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
+		await onWrite('</div>');
+		if (docSuffixIndex !== -1) await onWrite(shell.slice(docSuffixIndex));
 	} else {
-		onWrite(shell);
+		await onWrite(shell);
 	}
 }
 
@@ -88,27 +95,35 @@ function handleError(error, vnode, renderChild) {
 	const race = new Deferred();
 
 	const abortSignal = this.abortSignal;
+	/** @type {(() => void) | undefined} */
+	let onAbort;
 	if (abortSignal) {
-		// @ts-ignore 2554 - implicit undefined arg
-		if (abortSignal.aborted) race.resolve();
-		else abortSignal.addEventListener('abort', race.resolve);
+		onAbort = () => race.resolve();
+		if (abortSignal.aborted) onAbort();
+		else abortSignal.addEventListener('abort', onAbort, { once: true });
 	}
 
 	const promise = error.then(
 		() => {
 			if (abortSignal && abortSignal.aborted) return;
 			const child = renderChild(vnode.props.children, vnode);
-			if (child) this.onWrite(createSubtree(id, child));
+			if (child) return this.onWrite(createSubtree(id, child));
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration
 		this.onError
 	);
 
+	const racedPromise = Promise.race([promise, race.promise]).finally(() => {
+		if (abortSignal && onAbort) {
+			abortSignal.removeEventListener('abort', onAbort);
+		}
+	});
+
 	this.suspended.push({
 		id,
 		vnode,
-		promise: Promise.race([promise, race.promise])
+		promise: racedPromise
 	});
 
 	const fallback = renderChild(vnode.props.fallback);

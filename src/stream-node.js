@@ -25,36 +25,99 @@ export function renderToPipeableStream(vnode, options, context) {
 
 	const controller = new AbortController();
 	const stream = new PassThrough();
+	let waitingForDrain = null;
+	let aborted = false;
+	let shellReadyCalled = false;
+	let allReadyCalled = false;
+	let errored = false;
+	let shellReadyScheduled = false;
+	stream.on('error', () => {});
 
-	renderToChunks(vnode, {
-		context,
-		abortSignal: controller.signal,
-		onError: (error) => {
-			if (options.onError) {
-				options.onError(error);
-			}
-			controller.abort(error);
-		},
-		onWrite(s) {
-			stream.write(encoder.encode(s));
+	function callOnShellReady() {
+		if (shellReadyCalled || errored) return;
+		shellReadyCalled = true;
+		options.onShellReady && options.onShellReady();
+	}
+
+	function callOnAllReady() {
+		if (allReadyCalled || errored) return;
+		allReadyCalled = true;
+		options.onAllReady && options.onAllReady();
+	}
+
+	function callOnError(error) {
+		if (errored) return;
+		errored = true;
+		if (options.onError) {
+			options.onError(error);
+		} else {
+			throw error;
 		}
-	})
+	}
+
+	function scheduleOnShellReady() {
+		if (shellReadyCalled || shellReadyScheduled || errored) return;
+		shellReadyScheduled = true;
+		Promise.resolve().then(() => {
+			shellReadyScheduled = false;
+			callOnShellReady();
+		});
+	}
+
+	/**
+	 * @returns {Promise<void>}
+	 */
+	function waitForDrain() {
+		if (waitingForDrain) return waitingForDrain;
+		waitingForDrain = new Promise((resolve, reject) => {
+			const cleanup = () => {
+				stream.off('drain', onDrain);
+				stream.off('close', onClose);
+				stream.off('error', onError);
+				waitingForDrain = null;
+			};
+			const onDrain = () => {
+				cleanup();
+				resolve();
+			};
+			const onClose = () => {
+				cleanup();
+				resolve();
+			};
+			const onError = (error) => {
+				cleanup();
+				reject(error);
+			};
+
+			stream.on('drain', onDrain);
+			stream.on('close', onClose);
+			stream.on('error', onError);
+		});
+		return waitingForDrain;
+	}
+
+	Promise.resolve()
+		.then(() =>
+			renderToChunks(vnode, {
+				context,
+				abortSignal: controller.signal,
+				async onWrite(s) {
+					scheduleOnShellReady();
+					if (stream.destroyed || stream.writableEnded) return;
+					if (!stream.write(encoder.encode(s))) {
+						await waitForDrain();
+					}
+				}
+			})
+		)
 		.then(() => {
-			options.onAllReady && options.onAllReady();
+			callOnAllReady();
 			stream.end();
 		})
 		.catch((error) => {
 			stream.destroy();
-			if (options.onError) {
-				options.onError(error);
-			} else {
-				throw error;
-			}
+			callOnError(error);
 		});
-
-	Promise.resolve().then(() => {
-		options.onShellReady && options.onShellReady();
-	});
 
 	return {
 		/**
@@ -66,13 +129,19 @@ export function renderToPipeableStream(vnode, options, context) {
 			)
 		) {
 			// Remix/React-Router will always call abort after a timeout, even on success
-			if (stream.closed) return;
-
-			controller.abort();
-			stream.destroy();
-			if (options.onError) {
-				options.onError(reason);
+			if (
+				aborted ||
+				stream.closed ||
+				stream.destroyed ||
+				stream.writableEnded
+			) {
+				return;
 			}
+
+			aborted = true;
+			controller.abort(reason);
+			stream.destroy(reason);
+			callOnError(reason);
 		},
 		/**
 		 * @param {import("stream").Writable} writable
