@@ -5,38 +5,89 @@ on:
     branches:
       - main
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    outputs:
+      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
+      should_publish: ${{ steps.publish-check.outputs.should_publish }}
     permissions:
       contents: write
-      id-token: write
       issues: read
       pull-requests: write
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
+      - name: Checkout
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
           fetch-depth: 0
 
-      - name: Setup Node.js 22.x
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
           registry-url: "https://registry.npmjs.org"
 
       - name: Update npm
-        run: npm install -g npm@latest
+        run: npm install -g npm@11.11.1
 
-      - name: Install Dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
 
-      - name: Create Release PR or Publish
-        uses: changesets/action@v1.5.3
+      - name: Create Release Pull Request
+        id: changesets
+        uses: changesets/action@e0145edc7d9d8679003495b11f87bd8ef63c0cba # v1.5.3
         with:
-          publish: npx changeset publish
+          version: npm run version
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for unpublished package versions
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        id: publish-check
+        run: node .github/scripts/has-unpublished-packages.mjs
+
+  publish:
+    name: Publish
+    needs: release
+    if: needs.release.outputs.should_publish == 'true'
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/preact-render-to-string
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Update npm
+        run: npm install -g npm@11.11.1
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish packages
+        uses: changesets/action@e0145edc7d9d8679003495b11f87bd8ef63c0cba # v1.5.3
+        with:
+          publish: npm exec -- changeset publish
+          commitMode: github-api
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
