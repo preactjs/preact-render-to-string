@@ -658,10 +658,10 @@ function _renderToString(
 				break;
 
 			default: {
-				if (NAMESPACE_REPLACE_REGEX.test(name)) {
-					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
-				} else if (UNSAFE_NAME.test(name)) {
+				if (UNSAFE_NAME.test(name)) {
 					continue;
+				} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
+					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 				} else if (
 					(name[4] === '-' || HTML_ENUMERATED.has(name)) &&
 					v != null
