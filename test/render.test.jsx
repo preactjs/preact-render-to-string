@@ -193,6 +193,22 @@ describe('render', () => {
 				expect(rendered).to.equal(`<div a="b"></div>`);
 			});
 
+			it('should not render JS in namespaced attributes', () => {
+				let rendered = render(
+					h(
+						'svg',
+						null,
+						h('image', {
+							xlinkHref: '#',
+							'xlinkHref onload': 'alert(1)',
+							'xlinkHref><script>alert(1)</script><image x': '#',
+							'xlink:href onload': 'alert(2)'
+						})
+					)
+				);
+				expect(rendered).to.equal(`<svg><image xlink:href="#"></image></svg>`);
+			});
+
 			it('should allow emoji attribute names', () => {
 				let rendered = render(
 					h('div', {
