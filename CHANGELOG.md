@@ -1,5 +1,15 @@
 # preact-render-to-string
 
+## 6.7.0
+
+### Minor Changes
+
+- [#450](https://github.com/preactjs/preact-render-to-string/pull/450) [`dbc692f`](https://github.com/preactjs/preact-render-to-string/commit/dbc692fd60a9187174491a085d60e635560cb8c6) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Adjust the comment-marker for streaming to be the same as renderToStringAsync where we use \$s
+
+### Patch Changes
+
+- [#461](https://github.com/preactjs/preact-render-to-string/pull/461) [`e32a4cd`](https://github.com/preactjs/preact-render-to-string/commit/e32a4cd8e7cb06d906a8854616d109c2d2a0189f) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Reject unsafe namespaced attribute names before normalizing SVG/XML attribute casing.
+
 ## 6.6.7
 
 ### Patch Changes
