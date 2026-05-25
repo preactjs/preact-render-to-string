@@ -91,5 +91,6 @@ jobs:
         with:
           publish: node .github/scripts/stage-package.mjs
           commitMode: github-api
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
