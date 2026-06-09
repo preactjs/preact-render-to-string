@@ -1415,6 +1415,7 @@ describe('render', () => {
 				expect(render(vnode)).to.equal('<p>P0-0</p>');
 				expect(args[0]).to.equal(vnode);
 				expect(args[1]).to.have.property('_children');
+				expect(args[1]).to.have.property('nodeType', 1);
 			} finally {
 				options.__ = oldRoot;
 			}

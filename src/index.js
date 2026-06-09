@@ -24,9 +24,7 @@ import {
 	ROOT,
 	SKIP_EFFECTS,
 	VNODE,
-	CATCH_ERROR,
-	CHILD_DID_SUSPEND,
-	MASK
+	CATCH_ERROR
 } from './lib/constants.js';
 
 const EMPTY_OBJ = {};
@@ -37,26 +35,8 @@ const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
 
-function getRootMask(vnode) {
-	let mask;
-	while (vnode) {
-		if (vnode[MASK]) mask = vnode[MASK];
-		vnode = vnode[PARENT];
-	}
-	return mask;
-}
-
-function setRootMask(vnode, parentDom) {
+function callRootHook(vnode, parentDom) {
 	if (options[ROOT]) options[ROOT](vnode, parentDom);
-	if (vnode && typeof vnode == 'object') vnode[MASK] = [0, 0];
-}
-
-function setSuspenseMask(vnode) {
-	let mask = getRootMask(vnode);
-	if (mask) {
-		vnode[MASK] = [++mask[0], 0];
-		mask[1]++;
-	}
 }
 
 /**
@@ -105,7 +85,7 @@ export function renderToString(vnode, context, _rendererState) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
-	setRootMask(vnode, { _children: null, nodeType: 1 });
+	callRootHook(vnode, { _children: null, nodeType: 1 });
 
 	try {
 		const rendered = _renderToString(
@@ -160,7 +140,7 @@ export async function renderToStringAsync(vnode, context) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
-	setRootMask(vnode, { _children: null, nodeType: 1 });
+	callRootHook(vnode, { _children: null, nodeType: 1 });
 
 	try {
 		const rendered = await _renderToString(
@@ -407,9 +387,6 @@ function _renderToString(
 
 			let isClassComponent =
 				type.prototype && typeof type.prototype.render == 'function';
-			if (type.prototype && type.prototype[CHILD_DID_SUSPEND]) {
-				setSuspenseMask(vnode);
-			}
 			if (isClassComponent) {
 				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
 				component = vnode[COMPONENT];
