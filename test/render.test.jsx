@@ -1396,6 +1396,29 @@ describe('render', () => {
 
 			expect(render(<App />)).to.equal('<div><p>P0-0</p><p>P0-1</p></div>');
 		});
+
+		it('should invoke options._root for root renders', () => {
+			const oldRoot = options.__;
+			let args;
+
+			function App() {
+				const id = useId();
+				return <p>{id}</p>;
+			}
+
+			const vnode = <App />;
+			options.__ = (rootVNode, parentDom) => {
+				args = [rootVNode, parentDom];
+			};
+
+			try {
+				expect(render(vnode)).to.equal('<p>P0-0</p>');
+				expect(args[0]).to.equal(vnode);
+				expect(args[1]).to.have.property('_children');
+			} finally {
+				options.__ = oldRoot;
+			}
+		});
 	});
 
 	describe('Error Handling', () => {

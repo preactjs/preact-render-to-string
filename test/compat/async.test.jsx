@@ -320,6 +320,58 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<!--$s--><p>ok</p><!--/$s-->');
 	});
 
+	it('should keep useId stable for async Suspense siblings resolving in different orders', async () => {
+		const getIds = (html) =>
+			Object.fromEntries(
+				[...html.matchAll(/<span id="([^"]+)">([AB])<\/span>/g)].map(
+					([, id, name]) => [name, id]
+				)
+			);
+
+		async function renderWithResolveOrder(order) {
+			const loaders = {};
+
+			function Field({ name }) {
+				const id = useId();
+				return <span id={id}>{name}</span>;
+			}
+
+			const createLazy = (name) =>
+				lazy(
+					() =>
+						new Promise((resolve) => {
+							loaders[name] = () =>
+								resolve({ default: () => <Field name={name} /> });
+						})
+				);
+
+			const A = createLazy('A');
+			const B = createLazy('B');
+			const rendered = renderToStringAsync(
+				<div>
+					<Suspense fallback={null}>
+						<A />
+					</Suspense>
+					<Suspense fallback={null}>
+						<B />
+					</Suspense>
+				</div>
+			);
+
+			await Promise.resolve();
+			order.forEach((name) => loaders[name]());
+
+			return getIds(await rendered);
+		}
+
+		const ordered = await renderWithResolveOrder(['A', 'B']);
+		const reversed = await renderWithResolveOrder(['B', 'A']);
+
+		expect(new Set(Object.values(ordered)).size).to.equal(2);
+		expect(new Set(Object.values(reversed)).size).to.equal(2);
+		expect(reversed).to.deep.equal(ordered);
+	});
+
 	it('should work with an in-render suspension', async () => {
 		const Context = createContext();
 
