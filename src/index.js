@@ -35,10 +35,6 @@ const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
 
-function callRootHook(vnode, parentDom) {
-	if (options[ROOT]) options[ROOT](vnode, parentDom);
-}
-
 /**
  * Wraps a render result with suspense boundary markers, handling all possible
  * return types from _renderToString: string, Array, or Promise.
@@ -85,7 +81,7 @@ export function renderToString(vnode, context, _rendererState) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
-	callRootHook(vnode, { _children: null, nodeType: 1 });
+	if (options[ROOT]) options[ROOT](vnode, { [CHILDREN]: parent, nodeType: 1 });
 
 	try {
 		const rendered = _renderToString(
@@ -140,7 +136,7 @@ export async function renderToStringAsync(vnode, context) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
-	callRootHook(vnode, { _children: null, nodeType: 1 });
+	if (options[ROOT]) options[ROOT](vnode, { [CHILDREN]: parent, nodeType: 1 });
 
 	try {
 		const rendered = await _renderToString(
