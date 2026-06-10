@@ -21,6 +21,7 @@ import {
 	NEXT_STATE,
 	PARENT,
 	RENDER,
+	ROOT,
 	SKIP_EFFECTS,
 	VNODE,
 	CATCH_ERROR
@@ -80,6 +81,7 @@ export function renderToString(vnode, context, _rendererState) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
+	if (options[ROOT]) options[ROOT](vnode, { [CHILDREN]: parent, nodeType: 1 });
 
 	try {
 		const rendered = _renderToString(
@@ -134,6 +136,7 @@ export async function renderToStringAsync(vnode, context) {
 
 	const parent = h(Fragment, null);
 	parent[CHILDREN] = [vnode];
+	if (options[ROOT]) options[ROOT](vnode, { [CHILDREN]: parent, nodeType: 1 });
 
 	try {
 		const rendered = await _renderToString(
