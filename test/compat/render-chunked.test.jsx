@@ -145,7 +145,7 @@ describe('renderToChunks', () => {
 			'<div><p>id: P0-0</p><!--$s:24-->loading...<!--/$s:24--></div>',
 			'<div hidden>',
 			createInitScript(1),
-			createSubtree('24', '<p>id: P0-1</p>'),
+			createSubtree('24', '<p>id: P1-0</p>'),
 			'</div>'
 		]);
 	});
@@ -185,8 +185,8 @@ describe('renderToChunks', () => {
 			'<div><p>id: P0-0</p><!--$s:33-->loading...<!--/$s:33--><!--$s:36-->loading...<!--/$s:36--></div>',
 			'<div hidden>',
 			createInitScript(1),
-			createSubtree('33', '<p>id: P0-1</p>'),
-			createSubtree('36', '<p>id: P0-2</p>'),
+			createSubtree('33', '<p>id: P1-0</p>'),
+			createSubtree('36', '<p>id: P2-0</p>'),
 			'</div>'
 		]);
 	});
