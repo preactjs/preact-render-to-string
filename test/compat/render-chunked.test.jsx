@@ -34,11 +34,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
-			'<div hidden>',
+			'<div><!--$s:5--><?start name="5">loading...<?end name="5"><!--/$s:5--></div>',
 			createInitScript(),
 			createSubtree('5', '<p>it works</p>'),
-			'</div>'
 		]);
 	});
 
@@ -62,10 +60,8 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:10-->loading...<!--/$s:10--></div>',
-			'<div hidden>',
+			'<div><!--$s:10--><?start name="10">loading...<?end name="10"><!--/$s:10--></div>',
 			createInitScript(1),
-			'</div>'
 		]);
 	});
 
@@ -109,11 +105,9 @@ describe('renderToChunks', () => {
 		}
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:16-->loading...<!--/$s:16--></div>',
-			'<div hidden>',
+			'<div><!--$s:16--><?start name="16">loading...<?end name="16"><!--/$s:16--></div>',
 			createInitScript(1),
 			createSubtree('16', '<p>it works</p>'),
-			'</div>'
 		]);
 	});
 
@@ -142,11 +136,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><p>id: P0-0</p><!--$s:24-->loading...<!--/$s:24--></div>',
-			'<div hidden>',
+			'<div><p>id: P0-0</p><!--$s:24--><?start name="24">loading...<?end name="24"><!--/$s:24--></div>',
 			createInitScript(1),
 			createSubtree('24', '<p>id: P0-1</p>'),
-			'</div>'
 		]);
 	});
 
@@ -182,12 +174,10 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).toEqual([
-			'<div><p>id: P0-0</p><!--$s:33-->loading...<!--/$s:33--><!--$s:36-->loading...<!--/$s:36--></div>',
-			'<div hidden>',
+			'<div><p>id: P0-0</p><!--$s:33--><?start name="33">loading...<?end name="33"><!--/$s:33--><!--$s:36--><?start name="36">loading...<?end name="36"><!--/$s:36--></div>',
 			createInitScript(1),
 			createSubtree('33', '<p>id: P0-1</p>'),
 			createSubtree('36', '<p>id: P0-2</p>'),
-			'</div>'
 		]);
 	});
 
@@ -213,8 +203,8 @@ describe('renderToChunks', () => {
 
 		const fullHtml = result.join('');
 
-		// Deferred wrapper must appear before </body></html>, not after
-		const deferredPos = fullHtml.indexOf('<div hidden>');
+		// Deferred templates must appear before </body></html>, not after
+		const deferredPos = fullHtml.indexOf('<template for=');
 		const bodyClosePos = fullHtml.indexOf('</body>');
 		const htmlClosePos = fullHtml.indexOf('</html>');
 
@@ -305,11 +295,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:70-->loading part 1...<!--/$s:70--></div>',
-			'<div hidden>',
+			'<div><!--$s:70--><?start name="70">loading part 1...<?end name="70"><!--/$s:70--></div>',
 			createInitScript(1),
 			createSubtree('70', '<p>it works</p><p>it works</p>'),
-			'</div>'
 		]);
 	});
 });

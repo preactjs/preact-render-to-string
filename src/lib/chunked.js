@@ -37,11 +37,9 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
 		const prefix = hasHtmlTag ? "<!DOCTYPE html>" : "";
 		onWrite(prefix + initialWrite);
-		// onWrite('<div hidden>');
 		onWrite(createInitScript(len));
 		// We should keep checking all promises
 		await forkPromises(renderer);
-		// onWrite('</div>');
 		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
 	} else {
 		onWrite(shell);
@@ -113,5 +111,7 @@ function handleError(error, vnode, renderChild) {
 
 	const fallback = renderChild(vnode.props.fallback);
 
-	return found ? "" : `<?start name="${id}">${fallback}<?end name="${id}">`;
+	return found
+		? ""
+		: `<!--$s:${id}--><?start name="${id}">${fallback}<?end name="${id}"><!--/$s:${id}-->`;
 }
