@@ -1,7 +1,7 @@
-import { renderToString } from '../index.js';
-import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
-import { Deferred } from './util.js';
-import { createInitScript, createSubtree } from './client.js';
+import { renderToString } from "../index.js";
+import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from "./constants.js";
+import { Deferred } from "./util.js";
+import { createInitScript, createSubtree } from "./client.js";
 
 /**
  * @param {VNode} vnode
@@ -17,7 +17,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 		abortSignal,
 		onWrite,
 		onError: handleError,
-		suspended: []
+		suspended: [],
 	};
 
 	// Synchronously render the shell
@@ -32,16 +32,16 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 		// and causes browsers to reject the content. Instead, we inject the deferred
 		// content before the closing tags, then emit them last.
 		const docSuffixIndex = getDocumentClosingTagsIndex(shell);
-		const hasHtmlTag = shell.trimStart().startsWith('<html');
+		const hasHtmlTag = shell.trimStart().startsWith("<html");
 		const initialWrite =
 			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
-		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
+		const prefix = hasHtmlTag ? "<!DOCTYPE html>" : "";
 		onWrite(prefix + initialWrite);
-		onWrite('<div hidden>');
+		// onWrite('<div hidden>');
 		onWrite(createInitScript(len));
 		// We should keep checking all promises
 		await forkPromises(renderer);
-		onWrite('</div>');
+		// onWrite('</div>');
 		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
 	} else {
 		onWrite(shell);
@@ -55,7 +55,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
  * @returns {number}
  */
 function getDocumentClosingTagsIndex(html) {
-	return html.lastIndexOf('</body>');
+	return html.lastIndexOf("</body>");
 }
 
 async function forkPromises(renderer) {
@@ -63,7 +63,7 @@ async function forkPromises(renderer) {
 		const suspensions = [...renderer.suspended];
 		await Promise.all(renderer.suspended.map((s) => s.promise));
 		renderer.suspended = renderer.suspended.filter(
-			(s) => !suspensions.includes(s)
+			(s) => !suspensions.includes(s),
 		);
 		await forkPromises(renderer);
 	}
@@ -91,7 +91,7 @@ function handleError(error, vnode, renderChild) {
 	if (abortSignal) {
 		// @ts-ignore 2554 - implicit undefined arg
 		if (abortSignal.aborted) race.resolve();
-		else abortSignal.addEventListener('abort', race.resolve);
+		else abortSignal.addEventListener("abort", race.resolve);
 	}
 
 	const promise = error.then(
@@ -102,16 +102,16 @@ function handleError(error, vnode, renderChild) {
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration
-		this.onError
+		this.onError,
 	);
 
 	this.suspended.push({
 		id,
 		vnode,
-		promise: Promise.race([promise, race.promise])
+		promise: Promise.race([promise, race.promise]),
 	});
 
 	const fallback = renderChild(vnode.props.fallback);
 
-	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+	return found ? "" : `<?start name="${id}">${fallback}<?end name="${id}">`;
 }

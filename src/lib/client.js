@@ -1,52 +1,51 @@
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
 // function initPreactIslandElement() {
-// 	class PreactIslandElement extends HTMLElement {
-// 		connectedCallback() {
-// 			var d = this;
-// 			if (!d.isConnected) return;
+// 	let observer = new MutationObserver((mutations) => {
+// 		for (let mutation of mutations) {
+// 			for (let node of mutation.addedNodes) {
+// 				if (node.nodeName === "TEMPLATE") {
+// 					let id = node.getAttribute("for");
+// 					if (id) {
+// 						var s,
+// 			 				e,
+// 			 				c = document.createNodeIterator(document, 128);
+// 			 			while (c.nextNode()) {
+// 			 				let n = c.referenceNode;
 
-// 			let i = this.getAttribute('data-target');
-// 			if (!i) return;
-
-// 			var s,
-// 				e,
-// 				c = document.createNodeIterator(document, 128);
-// 			while (c.nextNode()) {
-// 				let n = c.referenceNode;
-
-// 				if (n.data == '$s:' + i) s = n;
-// 				else if (n.data == '/$s:' + i) e = n;
-// 				if (s && e) break;
-// 			}
-// 			if (s && e && s.parentNode !== document) {
-// 				requestAnimationFrame(() => {
-// 					var p = e.previousSibling;
-// 					while (p != s) {
-// 						if (!p || p == s) break;
-// 						e.parentNode.removeChild(p);
-// 						p = e.previousSibling;
+// 			 				if (n.data == '?start name="' + id + '"') s = n;
+// 			 				else if (n.data == '?end name="' + id + '"') e = n;
+// 			 				if (s && e) break;
+// 			 			}
+// 						if (s && e) {
+// 							requestAnimationFrame(() => {
+// 								let p = e.previousSibling;
+// 								while (p != s) {
+// 									if (!p || p == s) break;
+// 									e.parentNode.removeChild(p);
+// 									p = e.previousSibling;
+// 								}
+// 								// TODO: flush this out to better polyfill the browser behavior,
+// 								// this is pretty basic but works as a x-browser POC
+// 								let n = document.createElement("template");
+// 								s.replaceWith(n);
+// 								n.insertAdjacentHTML("beforebegin", node.innerHTML);
+// 								n.remove();
+// 							});
+// 						}
 // 					}
-
-// 					c = s;
-// 					while (d.firstChild) {
-// 						s = d.firstChild;
-// 						d.removeChild(s);
-// 						c.after(s);
-// 						c = s;
-// 					}
-
-// 					d.parentNode.removeChild(d);
-// 				});
+// 				}
 // 			}
 // 		}
-// 	}
-
-// 	customElements.define('preact-island', PreactIslandElement);
+// 	});
+// 	observer.observe(document.body, { childList: true, subtree: true });
+// 	addEventListener("DOMContentLoaded", () => {
+// 		observer.disconnect();
+// 	});
 // }
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `class e extends HTMLElement{connectedCallback(){var e=this;if(!e.isConnected)return;let t=this.getAttribute("data-target");if(t){for(var r,a,i=document.createNodeIterator(document,128);i.nextNode();){let e=i.referenceNode;if(e.data=="$s:"+t?r=e:e.data=="/$s:"+t&&(a=e),r&&a)break}r&&a&&r.parentNode!==document&&requestAnimationFrame((()=>{for(var t=a.previousSibling;t!=r&&t&&t!=r;)a.parentNode.removeChild(t),t=a.previousSibling;for(i=r;e.firstChild;)r=e.firstChild,e.removeChild(r),i.after(r),i=r;e.parentNode.removeChild(e)}))}}}customElements.define("preact-island",e);`;
+const INIT_SCRIPT = `let e=new MutationObserver(e=>{for(let n of e)for(let e of n.addedNodes)if("TEMPLATE"===e.nodeName){let n=e.getAttribute("for");if(n){for(var t,r,o=document.createNodeIterator(document,128);o.nextNode();){let e=o.referenceNode;if(e.data=='?start name="'+n+'"'?t=e:e.data=='?end name="'+n+'"'&&(r=e),t&&r)break}t&&r&&requestAnimationFrame(()=>{let o=r.previousSibling;for(;o!=t&&o&&o!=t;)r.parentNode.removeChild(o),o=r.previousSibling;let n=document.createElement("template");t.replaceWith(n),n.insertAdjacentHTML("beforebegin",e.innerHTML),n.remove()})}}});e.observe(document.body,{childList:!0,subtree:!0}),addEventListener("DOMContentLoaded",()=>{e.disconnect()});`;
 
 export function createInitScript() {
 	return `<script>(function(){${INIT_SCRIPT}}())</script>`;
@@ -58,5 +57,5 @@ export function createInitScript() {
  * @returns {string}
  */
 export function createSubtree(id, content) {
-	return `<preact-island hidden data-target="${id}">${content}</preact-island>`;
+	return `<template for="${id}">${content}</template>`;
 }
