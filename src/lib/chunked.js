@@ -59,13 +59,10 @@ function getDocumentClosingTagsIndex(html) {
 }
 
 async function forkPromises(renderer) {
-	if (renderer.suspended.length > 0) {
-		const suspensions = [...renderer.suspended];
+	while (renderer.suspended.length > 0) {
+		const length = renderer.suspended.length;
 		await Promise.all(renderer.suspended.map((s) => s.promise));
-		renderer.suspended = renderer.suspended.filter(
-			(s) => !suspensions.includes(s)
-		);
-		await forkPromises(renderer);
+		renderer.suspended.splice(0, length);
 	}
 }
 
