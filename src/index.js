@@ -2,7 +2,6 @@ import {
 	encodeEntities,
 	styleObjToCss,
 	UNSAFE_NAME,
-	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
 	SVG_CAMEL_CASE,
 	createComponent,
@@ -698,10 +697,17 @@ function _renderToString(
 				break;
 
 			default: {
+				let namespaceLength;
 				if (UNSAFE_NAME.test(name)) {
 					continue;
-				} else if (name[0] === 'x' && NAMESPACE_REPLACE_REGEX.test(name)) {
-					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
+				} else if (
+					name[0] === 'x' &&
+					(namespaceLength = getNamespaceLength(name)) !== 0
+				) {
+					name =
+						name.slice(0, namespaceLength) +
+						':' +
+						name.slice(namespaceLength).toLowerCase();
 				} else if (
 					(name[4] === '-' || name === 'draggable' || name === 'spellcheck') &&
 					v != null
@@ -811,4 +817,18 @@ function isSignal(x) {
 		typeof x.peek === 'function' &&
 		'value' in x
 	);
+}
+
+function getNamespaceLength(name) {
+	let length = name[1] === 'l' || name[3] === 'n' ? 5 : 3;
+	let char = name.charCodeAt(length);
+	return char >= 65 &&
+		char <= 90 &&
+		(length === 3
+			? name.slice(0, 3) === 'xml'
+			: name[1] === 'l'
+				? name.slice(0, 5) === 'xlink'
+				: name.slice(0, 5) === 'xmlns')
+		? length
+		: 0;
 }
