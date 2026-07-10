@@ -82,16 +82,8 @@ function handleError(error, vnode, renderChild) {
 
 	const id = vnode.__v;
 	const found = this.suspended.find((x) => x.id === id);
-	const race = new Deferred();
-
 	const abortSignal = this.abortSignal;
-	if (abortSignal) {
-		// @ts-ignore 2554 - implicit undefined arg
-		if (abortSignal.aborted) race.resolve();
-		else abortSignal.addEventListener('abort', race.resolve);
-	}
-
-	const promise = error.then(
+	let promise = error.then(
 		() => {
 			if (abortSignal && abortSignal.aborted) return;
 			const child = renderChild(vnode.props.children, vnode);
@@ -101,11 +93,18 @@ function handleError(error, vnode, renderChild) {
 		// to attempt to recover during hydration
 		this.onError
 	);
+	if (abortSignal) {
+		const race = new Deferred();
+		// @ts-ignore 2554 - implicit undefined arg
+		if (abortSignal.aborted) race.resolve();
+		else abortSignal.addEventListener('abort', race.resolve);
+		promise = Promise.race([promise, race.promise]);
+	}
 
 	this.suspended.push({
 		id,
 		vnode,
-		promise: Promise.race([promise, race.promise])
+		promise
 	});
 
 	const fallback = renderChild(vnode.props.fallback);
