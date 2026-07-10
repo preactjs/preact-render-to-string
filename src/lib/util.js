@@ -40,16 +40,22 @@ export function isDirty(component) {
 /** @param {string} str */
 export function encodeEntities(str) {
 	// Skip all work for strings with no entities needing encoding:
-	if (
-		str.length === 0 ||
-		(str.indexOf('"') === -1 &&
-			str.indexOf('&') === -1 &&
-			str.indexOf('<') === -1)
-	)
+	let i = 0;
+	if (str.length < 8) {
+		for (; i < str.length; i++) {
+			const char = str.charCodeAt(i);
+			if (char === 34 || char === 38 || char === 60) break;
+		}
+		if (i === str.length) return str;
+	} else if (
+		str.indexOf('"') === -1 &&
+		str.indexOf('&') === -1 &&
+		str.indexOf('<') === -1
+	) {
 		return str;
+	}
 
 	let last = 0,
-		i = 0,
 		out = '',
 		ch = '';
 
