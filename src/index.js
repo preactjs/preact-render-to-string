@@ -411,8 +411,8 @@ function _renderToString(
 				cctx = provider ? provider.props.value : contextType.__;
 			}
 
-			let isClassComponent =
-				type.prototype && typeof type.prototype.render == 'function';
+			let prototype = type.prototype;
+			let isClassComponent = prototype && typeof prototype.render == 'function';
 			if (isClassComponent) {
 				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx, hooks);
 				component = vnode[COMPONENT];
