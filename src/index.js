@@ -151,7 +151,7 @@ export async function renderToStringAsync(vnode, context) {
 	const hooks = captureHooks();
 
 	try {
-		const rendered = await withSkipEffects(() => {
+		let rendered = withSkipEffects(() => {
 			const parent = h(Fragment, null);
 			parent[CHILDREN] = [vnode];
 			if (hooks.rootHook) {
@@ -169,6 +169,10 @@ export async function renderToStringAsync(vnode, context) {
 				hooks
 			);
 		});
+
+		if (typeof rendered !== 'string' && !isArray(rendered)) {
+			rendered = await rendered;
+		}
 
 		if (isArray(rendered)) {
 			let count = 0;
