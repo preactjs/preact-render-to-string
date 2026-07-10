@@ -7,7 +7,6 @@ import {
 	createComponent,
 	UNSAFE_NAME,
 	VOID_ELEMENTS,
-	NAMESPACE_REPLACE_REGEX,
 	SVG_CAMEL_CASE,
 	HTML_ENUMERATED,
 	HTML_LOWER_CASE,
@@ -154,7 +153,6 @@ function _renderToStringPretty(
 			let rendered;
 
 			let c = (vnode.__c = createComponent(vnode, context));
-
 			let renderHook = options[RENDER];
 
 			if (
@@ -255,7 +253,8 @@ function _renderToStringPretty(
 
 		for (let i = 0; i < attrs.length; i++) {
 			let name = attrs[i],
-				v = props[name];
+				v = props[name],
+				namespaceLength;
 			if (name === 'children') {
 				propChildren = v;
 				continue;
@@ -285,8 +284,14 @@ function _renderToStringPretty(
 				name = 'accept-charset';
 			} else if (name === 'httpEquiv') {
 				name = 'http-equiv';
-			} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
-				name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
+			} else if (
+				name[0] === 'x' &&
+				(namespaceLength = getNamespaceLength(name)) !== 0
+			) {
+				name =
+					name.slice(0, namespaceLength) +
+					':' +
+					name.slice(namespaceLength).toLowerCase();
 			} else if (
 				(name.at(4) === '-' || HTML_ENUMERATED.has(name)) &&
 				v != null
@@ -459,6 +464,20 @@ function _renderToStringPretty(
 	}
 
 	return s;
+}
+
+function getNamespaceLength(name) {
+	let length = name[1] === 'l' || name[3] === 'n' ? 5 : 3;
+	let char = name.charCodeAt(length);
+	return char >= 65 &&
+		char <= 90 &&
+		(length === 3
+			? name.slice(0, 3) === 'xml'
+			: name[1] === 'l'
+				? name.slice(0, 5) === 'xlink'
+				: name.slice(0, 5) === 'xmlns')
+		? length
+		: 0;
 }
 
 function getComponentName(component) {
