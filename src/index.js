@@ -754,6 +754,8 @@ function _renderToString(
 	} else if (typeof children === 'string') {
 		// single text child
 		html = encodeEntities(children);
+	} else if (typeof children === 'number') {
+		html = children + EMPTY_STR;
 	} else if (children != null && children !== false && children !== true) {
 		// recurse into this element VNode's children
 		let childSvgMode =
