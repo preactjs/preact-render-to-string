@@ -4,7 +4,6 @@ import {
 	UNSAFE_NAME,
 	NAMESPACE_REPLACE_REGEX,
 	HTML_LOWER_CASE,
-	HTML_ENUMERATED,
 	SVG_CAMEL_CASE,
 	createComponent,
 	setDirty,
@@ -701,10 +700,10 @@ function _renderToString(
 			default: {
 				if (UNSAFE_NAME.test(name)) {
 					continue;
-				} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
+				} else if (name[0] === 'x' && NAMESPACE_REPLACE_REGEX.test(name)) {
 					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
 				} else if (
-					(name[4] === '-' || HTML_ENUMERATED.has(name)) &&
+					(name[4] === '-' || name === 'draggable' || name === 'spellcheck') &&
 					v != null
 				) {
 					// serialize boolean aria-xyz or enumerated attribute values as strings
