@@ -37,13 +37,16 @@ export function isDirty(component) {
 	return component[DIRTY] === true;
 }
 
-// DOM properties that should NOT have "px" added when numeric
-const ENCODED_ENTITIES = /["&<]/;
-
 /** @param {string} str */
 export function encodeEntities(str) {
 	// Skip all work for strings with no entities needing encoding:
-	if (str.length === 0 || ENCODED_ENTITIES.test(str) === false) return str;
+	if (
+		str.length === 0 ||
+		(str.indexOf('"') === -1 &&
+			str.indexOf('&') === -1 &&
+			str.indexOf('<') === -1)
+	)
+		return str;
 
 	let last = 0,
 		i = 0,
