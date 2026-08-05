@@ -58,6 +58,16 @@ function hasPromise(values) {
 	return false;
 }
 
+function flatten(values) {
+	let result = [];
+	for (let i = 0; i < values.length; i++) {
+		let value = values[i];
+		if (isArray(value)) result.push(...value);
+		else result.push(value);
+	}
+	return result;
+}
+
 /**
  * Capture the Preact option hooks used by a render so suspended subtrees don't
  * observe hooks installed by another render before they resume.
@@ -184,7 +194,7 @@ export async function renderToStringAsync(vnode, context) {
 
 			// Resolving nested Promises with a maximum depth of 25
 			while (hasPromise(resolved) && count++ < 25) {
-				resolved = (await Promise.all(resolved)).flat();
+				resolved = flatten(await Promise.all(resolved));
 			}
 
 			return resolved.join(EMPTY_STR);
