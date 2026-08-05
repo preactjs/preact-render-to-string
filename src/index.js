@@ -43,9 +43,7 @@ function wrapWithSuspenseMarkers(result) {
 	if (typeof result === 'string') {
 		return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
 	} else if (isArray(result)) {
-		result.unshift(BEGIN_SUSPENSE_DENOMINATOR);
-		result.push(END_SUSPENSE_DENOMINATOR);
-		return result;
+		return [BEGIN_SUSPENSE_DENOMINATOR, ...result, END_SUSPENSE_DENOMINATOR];
 	} else if (result && typeof result.then === 'function') {
 		return result.then(wrapWithSuspenseMarkers);
 	}
