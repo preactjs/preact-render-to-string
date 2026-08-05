@@ -302,6 +302,7 @@ function _renderToString(
 			if (child == null || typeof child == 'boolean') continue;
 
 			const childType = typeof child;
+			if (childType == 'function') continue;
 			const childRender =
 				childType == 'string'
 					? encodeEntities(child)
