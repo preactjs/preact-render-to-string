@@ -20,7 +20,7 @@ const lazies = new Array(600).fill(600).map(() =>
 	)
 );
 function PassThrough(props) {
-	const Lazy = lazies(props.id);
+	const Lazy = lazies[props.id];
 	return <Lazy {...props} />;
 }
 
