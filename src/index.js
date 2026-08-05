@@ -828,10 +828,14 @@ function getNamespaceLength(name) {
 	return char >= 65 &&
 		char <= 90 &&
 		(length === 3
-			? name.slice(0, 3) === 'xml'
+			? name.charCodeAt(1) === 109 && name.charCodeAt(2) === 108
 			: name[1] === 'l'
-				? name.slice(0, 5) === 'xlink'
-				: name.slice(0, 5) === 'xmlns')
+				? name.charCodeAt(2) === 105 &&
+					name.charCodeAt(3) === 110 &&
+					name.charCodeAt(4) === 107
+				: name.charCodeAt(1) === 109 &&
+					name.charCodeAt(2) === 108 &&
+					name.charCodeAt(4) === 115)
 		? length
 		: 0;
 }
