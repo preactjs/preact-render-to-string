@@ -779,7 +779,7 @@ function _renderToString(
 	if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
-	if (!html && SELF_CLOSING.has(type)) {
+	if (!html && isSelfClosing(type)) {
 		return s + '/>';
 	}
 
@@ -791,24 +791,29 @@ function _renderToString(
 	return startTag + html + endTag;
 }
 
-const SELF_CLOSING = new Set([
-	'area',
-	'base',
-	'br',
-	'col',
-	'command',
-	'embed',
-	'hr',
-	'img',
-	'input',
-	'keygen',
-	'link',
-	'meta',
-	'param',
-	'source',
-	'track',
-	'wbr'
-]);
+function isSelfClosing(type) {
+	switch (type) {
+		case 'area':
+		case 'base':
+		case 'br':
+		case 'col':
+		case 'command':
+		case 'embed':
+		case 'hr':
+		case 'img':
+		case 'input':
+		case 'keygen':
+		case 'link':
+		case 'meta':
+		case 'param':
+		case 'source':
+		case 'track':
+		case 'wbr':
+			return true;
+		default:
+			return false;
+	}
+}
 
 export default renderToString;
 export const render = renderToString;
