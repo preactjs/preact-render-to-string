@@ -280,12 +280,7 @@ function _renderToString(
 	hooks
 ) {
 	// Ignore non-rendered VNodes/values
-	if (
-		vnode == null ||
-		vnode === true ||
-		vnode === false ||
-		vnode === EMPTY_STR
-	) {
+	if (vnode == null || vnode === true || vnode === false) {
 		return EMPTY_STR;
 	}
 
