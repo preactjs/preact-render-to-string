@@ -52,6 +52,14 @@ function wrapWithSuspenseMarkers(result) {
 	return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
 }
 
+function hasPromise(values) {
+	for (let i = 0; i < values.length; i++) {
+		let value = values[i];
+		if (value && typeof value.then === 'function') return true;
+	}
+	return false;
+}
+
 /**
  * Capture the Preact option hooks used by a render so suspended subtrees don't
  * observe hooks installed by another render before they resume.
@@ -177,12 +185,7 @@ export async function renderToStringAsync(vnode, context) {
 			let resolved = rendered;
 
 			// Resolving nested Promises with a maximum depth of 25
-			while (
-				resolved.some(
-					(element) => element && typeof element.then === 'function'
-				) &&
-				count++ < 25
-			) {
+			while (hasPromise(resolved) && count++ < 25) {
 				resolved = (await Promise.all(resolved)).flat();
 			}
 
