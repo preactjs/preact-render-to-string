@@ -306,16 +306,22 @@ function _renderToString(
 			let child = vnode[i];
 			if (child == null || typeof child == 'boolean') continue;
 
-			const childRender = _renderToString(
-				child,
-				context,
-				isSvgMode,
-				selectValue,
-				parent,
-				asyncMode,
-				renderer,
-				hooks
-			);
+			const childType = typeof child;
+			const childRender =
+				childType == 'string'
+					? encodeEntities(child)
+					: childType == 'number'
+						? child + EMPTY_STR
+						: _renderToString(
+								child,
+								context,
+								isSvgMode,
+								selectValue,
+								parent,
+								asyncMode,
+								renderer,
+								hooks
+							);
 
 			if (typeof childRender == 'string') {
 				rendered = rendered + childRender;
