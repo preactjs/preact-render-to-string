@@ -57,9 +57,9 @@ function wrapWithSuspenseMarkers(result) {
 /**
  * Capture the Preact option hooks used by a render so suspended subtrees don't
  * observe hooks installed by another render before they resume.
- * @returns {RenderState}
+ * @returns {CapturedHooks}
  */
-function createRenderState() {
+function captureHooks() {
 	return {
 		beforeDiff: options[DIFF],
 		afterDiff: options[DIFFED],
@@ -99,14 +99,14 @@ function withSkipEffects(render) {
  * @returns {string} serialized HTML
  */
 export function renderToString(vnode, context, _rendererState) {
-	const renderState = createRenderState();
+	const hooks = captureHooks();
 
 	try {
 		const rendered = withSkipEffects(() => {
 			const parent = h(Fragment, null);
 			parent[CHILDREN] = [vnode];
-			if (renderState.rootHook) {
-				renderState.rootHook(vnode, { [CHILDREN]: parent, nodeType: 1 });
+			if (hooks.rootHook) {
+				hooks.rootHook(vnode, { [CHILDREN]: parent, nodeType: 1 });
 			}
 
 			return _renderToString(
@@ -117,7 +117,7 @@ export function renderToString(vnode, context, _rendererState) {
 				parent,
 				false,
 				_rendererState,
-				renderState
+				hooks
 			);
 		});
 
@@ -134,8 +134,8 @@ export function renderToString(vnode, context, _rendererState) {
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
-		if (renderState.commitHook) {
-			withSkipEffects(() => renderState.commitHook(vnode, EMPTY_ARR));
+		if (hooks.commitHook) {
+			withSkipEffects(() => hooks.commitHook(vnode, EMPTY_ARR));
 		}
 		EMPTY_ARR.length = 0;
 	}
@@ -148,14 +148,14 @@ export function renderToString(vnode, context, _rendererState) {
  * @returns {string} serialized HTML
  */
 export async function renderToStringAsync(vnode, context) {
-	const renderState = createRenderState();
+	const hooks = captureHooks();
 
 	try {
 		const rendered = await withSkipEffects(() => {
 			const parent = h(Fragment, null);
 			parent[CHILDREN] = [vnode];
-			if (renderState.rootHook) {
-				renderState.rootHook(vnode, { [CHILDREN]: parent, nodeType: 1 });
+			if (hooks.rootHook) {
+				hooks.rootHook(vnode, { [CHILDREN]: parent, nodeType: 1 });
 			}
 
 			return _renderToString(
@@ -166,7 +166,7 @@ export async function renderToStringAsync(vnode, context) {
 				parent,
 				true,
 				undefined,
-				renderState
+				hooks
 			);
 		});
 
@@ -191,8 +191,8 @@ export async function renderToStringAsync(vnode, context) {
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
-		if (renderState.commitHook) {
-			withSkipEffects(() => renderState.commitHook(vnode, EMPTY_ARR));
+		if (hooks.commitHook) {
+			withSkipEffects(() => hooks.commitHook(vnode, EMPTY_ARR));
 		}
 		EMPTY_ARR.length = 0;
 	}
@@ -201,9 +201,9 @@ export async function renderToStringAsync(vnode, context) {
 /**
  * @param {VNode} vnode
  * @param {Record<string, unknown>} context
- * @param {RenderState} renderState
+ * @param {CapturedHooks} hooks
  */
-function renderClassComponent(vnode, context, renderState) {
+function renderClassComponent(vnode, context, hooks) {
 	let type =
 		/** @type {import("preact").ComponentClass<typeof vnode.props>} */ (
 			vnode.type
@@ -250,7 +250,7 @@ function renderClassComponent(vnode, context, renderState) {
 		c.componentWillUpdate();
 	}
 
-	if (renderState.renderHook) renderState.renderHook(vnode);
+	if (hooks.renderHook) hooks.renderHook(vnode);
 
 	return c.render(c.props, c.state, context);
 }
@@ -264,7 +264,7 @@ function renderClassComponent(vnode, context, renderState) {
  * @param {VNode} parent
  * @param {boolean} asyncMode
  * @param {RendererState | undefined | false} renderer
- * @param {RenderState} renderState
+ * @param {CapturedHooks} hooks
  * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
 function _renderToString(
@@ -275,7 +275,7 @@ function _renderToString(
 	parent,
 	asyncMode,
 	renderer,
-	renderState
+	hooks
 ) {
 	// Ignore non-rendered VNodes/values
 	if (
@@ -312,7 +312,7 @@ function _renderToString(
 				parent,
 				asyncMode,
 				renderer,
-				renderState
+				hooks
 			);
 
 			if (typeof childRender == 'string') {
@@ -347,7 +347,7 @@ function _renderToString(
 	if (vnode.constructor !== undefined) return EMPTY_STR;
 
 	vnode[PARENT] = parent;
-	if (renderState.beforeDiff) renderState.beforeDiff(vnode);
+	if (hooks.beforeDiff) hooks.beforeDiff(vnode);
 
 	let type = vnode.type,
 		props = vnode.props;
@@ -384,7 +384,7 @@ function _renderToString(
 									vnode,
 									asyncMode,
 									renderer,
-									renderState
+									hooks
 								);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -411,11 +411,7 @@ function _renderToString(
 			let isClassComponent =
 				type.prototype && typeof type.prototype.render == 'function';
 			if (isClassComponent) {
-				rendered = /**#__NOINLINE__**/ renderClassComponent(
-					vnode,
-					cctx,
-					renderState
-				);
+				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx, hooks);
 				component = vnode[COMPONENT];
 			} else {
 				vnode[COMPONENT] = component = /**#__NOINLINE__**/ createComponent(
@@ -432,7 +428,7 @@ function _renderToString(
 				while (isDirty(component) && count++ < 25) {
 					unsetDirty(component);
 
-					if (renderState.renderHook) renderState.renderHook(vnode);
+					if (hooks.renderHook) hooks.renderHook(vnode);
 
 					try {
 						rendered = type.call(component, props, cctx);
@@ -454,7 +450,7 @@ function _renderToString(
 
 			if (
 				isClassComponent &&
-				renderState.errorBoundaries &&
+				hooks.errorBoundaries &&
 				(type.getDerivedStateFromError || component.componentDidCatch)
 			) {
 				// When a component returns a Fragment node we flatten it in core, so we
@@ -475,7 +471,7 @@ function _renderToString(
 						vnode,
 						asyncMode,
 						false,
-						renderState
+						hooks
 					);
 				} catch (err) {
 					if (type.getDerivedStateFromError) {
@@ -487,7 +483,7 @@ function _renderToString(
 					}
 
 					if (isDirty(component)) {
-						rendered = renderClassComponent(vnode, context, renderState);
+						rendered = renderClassComponent(vnode, context, hooks);
 						component = vnode[COMPONENT];
 
 						if (component.getChildContext != null) {
@@ -509,15 +505,15 @@ function _renderToString(
 							vnode,
 							asyncMode,
 							renderer,
-							renderState
+							hooks
 						);
 					}
 
 					return EMPTY_STR;
 				} finally {
-					if (renderState.afterDiff) renderState.afterDiff(vnode);
+					if (hooks.afterDiff) hooks.afterDiff(vnode);
 
-					if (renderState.unmountHook) renderState.unmountHook(vnode);
+					if (hooks.unmountHook) hooks.unmountHook(vnode);
 				}
 			}
 		}
@@ -541,13 +537,13 @@ function _renderToString(
 				vnode,
 				asyncMode,
 				renderer,
-				renderState
+				hooks
 			);
 
-			if (renderState.afterDiff) renderState.afterDiff(vnode);
+			if (hooks.afterDiff) hooks.afterDiff(vnode);
 			// when we are dealing with suspense we can't do this...
 
-			if (renderState.unmountHook) renderState.unmountHook(vnode);
+			if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 			if (vnode._suspended) {
 				return wrapWithSuspenseMarkers(str);
@@ -568,7 +564,7 @@ function _renderToString(
 									parent,
 									asyncMode,
 									renderer,
-									renderState
+									hooks
 								)
 							);
 						} catch (e) {
@@ -580,7 +576,7 @@ function _renderToString(
 
 				if (res !== undefined) return res;
 
-				if (renderState.catchError) renderState.catchError(error, vnode);
+				if (hooks.catchError) hooks.catchError(error, vnode);
 				return EMPTY_STR;
 			}
 
@@ -599,7 +595,7 @@ function _renderToString(
 							vnode,
 							asyncMode,
 							renderer,
-							renderState
+							hooks
 						)
 					);
 					return vnode._suspended ? wrapWithSuspenseMarkers(result) : result;
@@ -761,13 +757,13 @@ function _renderToString(
 			vnode,
 			asyncMode,
 			renderer,
-			renderState
+			hooks
 		);
 	}
 
-	if (renderState.afterDiff) renderState.afterDiff(vnode);
+	if (hooks.afterDiff) hooks.afterDiff(vnode);
 
-	if (renderState.unmountHook) renderState.unmountHook(vnode);
+	if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
 	if (!html && SELF_CLOSING.has(type)) {

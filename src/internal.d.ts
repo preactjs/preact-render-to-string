@@ -27,7 +27,7 @@ interface RendererState {
 	onError?: RendererErrorHandler;
 }
 
-interface RenderState {
+interface CapturedHooks {
 	beforeDiff?: (vnode: VNode) => void;
 	afterDiff?: (vnode: VNode) => void;
 	renderHook?: (vnode: VNode) => void;
