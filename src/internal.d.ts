@@ -27,6 +27,17 @@ interface RendererState {
 	onError?: RendererErrorHandler;
 }
 
+interface RenderState {
+	beforeDiff?: (vnode: VNode) => void;
+	afterDiff?: (vnode: VNode) => void;
+	renderHook?: (vnode: VNode) => void;
+	unmountHook?: (vnode: VNode) => void;
+	rootHook?: (vnode: VNode, parentDom: any) => void;
+	commitHook?: (vnode: VNode, commitQueue: any[]) => void;
+	catchError?: (error: any, vnode: VNode) => void;
+	errorBoundaries?: boolean;
+}
+
 interface RenderToChunksOptions {
 	context?: any;
 	onError?: (error: any) => void;
