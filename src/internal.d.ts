@@ -32,4 +32,5 @@ interface RenderToChunksOptions {
 	onError?: (error: any) => void;
 	onWrite: (str: string) => void;
 	abortSignal?: AbortSignal;
+	nonce?: string;
 }

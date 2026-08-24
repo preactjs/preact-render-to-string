@@ -2,6 +2,7 @@ import { VNode } from 'preact';
 import { WritableStream } from 'node:stream';
 
 interface RenderToPipeableStreamOptions {
+	nonce?: string;
 	onShellReady?: () => void;
 	onAllReady?: () => void;
 	onError?: (error: any) => void;

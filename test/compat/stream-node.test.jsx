@@ -88,4 +88,29 @@ describe('renderToPipeableStream', () => {
 
 		expect(error).to.be.undefined;
 	});
+
+	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const sink = createSink();
+		const { pipe } = renderToPipeableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{
+				nonce: 'r4nd0m-nonce',
+				onShellReady: () => {
+					pipe(sink.stream);
+				}
+			}
+		);
+		suspended.resolve();
+
+		const result = await sink.promise;
+
+		expect(result.join('')).to.contain('<script nonce="r4nd0m-nonce">');
+		expect(result.join('')).to.not.contain('<script>');
+	});
 });
