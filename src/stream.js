@@ -14,6 +14,8 @@ export function renderToReadableStream(vnode, options, context) {
 	const allReady = new Deferred();
 	const encoder = new TextEncoder('utf-8');
 
+	let errored = false;
+
 	/** @type {RenderStream} */
 	const stream = new ReadableStream({
 		start(controller) {
@@ -21,14 +23,18 @@ export function renderToReadableStream(vnode, options, context) {
 				context,
 				nonce: options?.nonce,
 				onError: (error) => {
+					errored = true;
 					allReady.reject(error);
-					controller.abort(error);
+					controller.error(error);
 				},
 				onWrite(s) {
 					controller.enqueue(encoder.encode(s));
 				}
 			})
 				.then(() => {
+					// A deferred boundary may already have errored the stream, in
+					// which case closing it would throw.
+					if (errored) return;
 					controller.close();
 					allReady.resolve();
 				})

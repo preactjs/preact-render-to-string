@@ -8,7 +8,10 @@ import { createInitScript, createSubtree } from './client.js';
  * @param {RenderToChunksOptions} options
  * @returns {Promise<void>}
  */
-export async function renderToChunks(vnode, { context, onWrite, abortSignal, nonce }) {
+export async function renderToChunks(
+	vnode,
+	{ context, onWrite, onError, abortSignal, nonce }
+) {
 	context = context || {};
 
 	/** @type {RendererState} */
@@ -17,6 +20,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal, non
 		abortSignal,
 		onWrite,
 		onError: handleError,
+		onSuspenseError: onError,
 		suspended: []
 	};
 
@@ -73,12 +77,17 @@ async function forkPromises(renderer) {
 function handleError(error, vnode, renderChild) {
 	if (!error || !error.then) return;
 
-	// walk up to the Suspense boundary
-	while ((vnode = vnode[PARENT])) {
+	// Walk up to the Suspense boundary, testing the vnode that suspended before
+	// its ancestors. A boundary whose render() returns a single keyless Fragment
+	// is unwrapped by _renderToString, so the throw surfaces in the boundary's
+	// own frame rather than a child's -- starting the walk at the parent skips
+	// straight past it.
+	while (vnode) {
 		let component = vnode[COMPONENT];
 		if (component && component[CHILD_DID_SUSPEND]) {
 			break;
 		}
+		vnode = vnode[PARENT];
 	}
 
 	if (!vnode) return;
@@ -102,7 +111,13 @@ function handleError(error, vnode, renderChild) {
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration
-		this.onError
+		(error) => {
+			// Hand the rejection to the caller. Without this the boundary never
+			// resolves, its fallback stays on screen, and the stream closes as
+			// though the render succeeded.
+			if (this.onSuspenseError) this.onSuspenseError(error);
+			else throw error;
+		}
 	);
 
 	this.suspended.push({

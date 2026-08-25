@@ -1,10 +1,11 @@
-import { h } from 'preact';
+import { h, Component, createElement, Fragment } from 'preact';
 import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { useId } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
 import { createSubtree, createInitScript } from '../../src/lib/client';
 import { createSuspender } from '../utils';
+import { Deferred } from '../../src/lib/util';
 import { VNODE, PARENT } from '../../src/lib/constants';
 
 describe('renderToChunks', () => {
@@ -311,6 +312,97 @@ describe('renderToChunks', () => {
 			createSubtree('70', '<p>it works</p><p>it works</p>'),
 			'</div>'
 		]);
+	});
+
+	it('should forward a rejected suspense promise to onError', async () => {
+		const deferred = new Deferred();
+		let settled = false;
+		deferred.promise.catch(() => (settled = true));
+		function Rejecter() {
+			if (!settled) throw deferred.promise;
+			return <p>unreachable</p>;
+		}
+
+		const errors = [];
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<Rejecter />
+				</Suspense>
+			</div>,
+			{ onWrite: () => {}, onError: (e) => errors.push(e) }
+		);
+		deferred.reject(new Error('upstream failed'));
+
+		await promise;
+
+		expect(errors.map((e) => e.message)).to.deep.equal(['upstream failed']);
+	});
+
+	it('should reject the render when a suspense promise rejects and no onError is given', async () => {
+		const deferred = new Deferred();
+		let settled = false;
+		deferred.promise.catch(() => (settled = true));
+		function Rejecter() {
+			if (!settled) throw deferred.promise;
+			return <p>unreachable</p>;
+		}
+
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<Rejecter />
+				</Suspense>
+			</div>,
+			{ onWrite: () => {} }
+		);
+		deferred.reject(new Error('upstream failed'));
+
+		await expect(promise).rejects.toThrow('upstream failed');
+	});
+
+	it('should find a boundary whose render returns a single keyless Fragment', async () => {
+		// preact/compat's Suspense returns an array, so the throw is caught one
+		// level below the boundary. An implementation returning a bare Fragment
+		// is unwrapped by the renderer, putting the throw in the boundary's own
+		// frame -- it must still be found.
+		class FragmentSuspense extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { suspended: false };
+			}
+
+			__c(promise) {
+				this.setState({ suspended: true });
+				promise.then(() => this.setState({ suspended: false }));
+			}
+
+			render() {
+				const { children, fallback } = this.props;
+				return createElement(
+					Fragment,
+					null,
+					this.state.suspended ? fallback : children
+				);
+			}
+		}
+
+		const { Suspender, suspended } = createSuspender();
+
+		const result = [];
+		const promise = renderToChunks(
+			<div>
+				<FragmentSuspense fallback="loading...">
+					<Suspender />
+				</FragmentSuspense>
+			</div>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+
+		await promise;
+
+		expect(result.join('')).to.contain('<p>it works</p>');
 	});
 
 	it('should include the nonce attribute on the init script when a nonce is provided', async () => {

@@ -33,7 +33,9 @@ function createSink(input) {
 		queuingStrategy
 	);
 
-	input.pipeTo(stream);
+	// The sink reports failures through abort() -> def.reject(); swallow the
+	// pipeTo rejection so an errored stream is not also an unhandled rejection.
+	input.pipeTo(stream).catch(() => {});
 
 	return {
 		promise: def.promise,
@@ -109,5 +111,30 @@ describe('renderToReadableStream', () => {
 
 		expect(result.join('')).to.contain('<script nonce="r4nd0m-nonce">');
 		expect(result.join('')).to.not.contain('<script>');
+	});
+
+	it('should error the stream when a suspense promise rejects', async () => {
+		const deferred = new Deferred();
+		let settled = false;
+		deferred.promise.catch(() => (settled = true));
+		function Rejecter() {
+			if (!settled) throw deferred.promise;
+			return <p>unreachable</p>;
+		}
+
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Rejecter />
+				</Suspense>
+			</div>
+		);
+		const sink = createSink(stream);
+		// Attach before rejecting: allReady settles synchronously with onError.
+		const allReady = stream.allReady.catch((e) => e);
+		deferred.reject(new Error('upstream failed'));
+
+		await expect(sink.promise).rejects.toThrow('upstream failed');
+		expect((await allReady).message).to.equal('upstream failed');
 	});
 });
