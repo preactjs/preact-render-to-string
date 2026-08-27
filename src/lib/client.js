@@ -2,53 +2,39 @@ import { encodeEntities } from "./util.js"
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
-// function initPreactIslandElement() {
-// 	class PreactIslandElement extends HTMLElement {
-// 		connectedCallback() {
-// 			var d = this;
-// 			if (!d.isConnected) return;
-
-// 			let i = this.getAttribute('data-target');
-// 			if (!i) return;
-
-// 			var s,
-// 				e,
-// 				c = document.createNodeIterator(document, 128);
-// 			while (c.nextNode()) {
-// 				let n = c.referenceNode;
-
-// 				if (n.data == '$s:' + i) s = n;
-// 				else if (n.data == '/$s:' + i) e = n;
-// 				if (s && e) break;
-// 			}
-// 			if (s && e && s.parentNode !== document) {
-// 				requestAnimationFrame(() => {
-// 					var p = e.previousSibling;
-// 					while (p != s) {
-// 						if (!p || p == s) break;
-// 						e.parentNode.removeChild(p);
-// 						p = e.previousSibling;
+// (function initPreactPatch(d) {
+// 	if ("htmlFor" in HTMLTemplateElement.prototype) return;
+// 	new MutationObserver(function (records) {
+// 		for (let record of records) {
+// 			for (let node of record.addedNodes) {
+// 				if (node.nodeName == "TEMPLATE" && node.getAttribute("for")) {
+// 					let s,
+// 						e,
+// 						c = d.createNodeIterator(d, 128),
+// 						id = node.getAttribute("for");
+// 					while (c.nextNode()) {
+// 						let n = c.referenceNode;
+// 						if (n.data == "$s:" + id) s = n;
+// 						else if (n.data == "/$s:" + id) e = n;
+// 						if (s && e) break;
 // 					}
-
-// 					c = s;
-// 					while (d.firstChild) {
-// 						s = d.firstChild;
-// 						d.removeChild(s);
-// 						c.after(s);
-// 						c = s;
+// 					if (!s || !e || s.parentNode === d) continue;
+// 					let p = s.nextSibling;
+// 					while (p && p != e) {
+// 						let next = p.nextSibling;
+// 						p.remove();
+// 						p = next;
 // 					}
-
-// 					d.parentNode.removeChild(d);
-// 				});
+// 					s.after(node.content);
+// 					node.remove();
+// 				}
 // 			}
 // 		}
-// 	}
-
-// 	customElements.define('preact-island', PreactIslandElement);
-// }
+// 	}).observe(d, { childList: 1, subtree: 1 });
+// })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `class e extends HTMLElement{connectedCallback(){var e=this;if(!e.isConnected)return;let t=this.getAttribute("data-target");if(t){for(var r,a,i=document.createNodeIterator(document,128);i.nextNode();){let e=i.referenceNode;if(e.data=="$s:"+t?r=e:e.data=="/$s:"+t&&(a=e),r&&a)break}r&&a&&r.parentNode!==document&&requestAnimationFrame((()=>{for(var t=a.previousSibling;t!=r&&t&&t!=r;)a.parentNode.removeChild(t),t=a.previousSibling;for(i=r;e.firstChild;)r=e.firstChild,e.removeChild(r),i.after(r),i=r;e.parentNode.removeChild(e)}))}}}customElements.define("preact-island",e);`;
+const INIT_SCRIPT = `var e;e=document,"htmlFor"in HTMLTemplateElement.prototype||new MutationObserver(function(t){for(let o of t)for(let t of o.addedNodes)if("TEMPLATE"==t.nodeName&&t.getAttribute("for")){let o,r,n=e.createNodeIterator(e,128),i=t.getAttribute("for");for(;n.nextNode();){let e=n.referenceNode;if(e.data=="$s:"+i?o=e:e.data=="/$s:"+i&&(r=e),o&&r)break}if(!o||!r||o.parentNode===e)continue;let a=o.nextSibling;for(;a&&a!=r;){let e=a.nextSibling;a.remove(),a=e}o.after(t.content),t.remove()}}).observe(e,{childList:1,subtree:1});`;
 
 /**
  * @param {string} nonce
@@ -64,5 +50,5 @@ export function createInitScript(nonce) {
  * @returns {string}
  */
 export function createSubtree(id, content) {
-	return `<preact-island hidden data-target="${id}">${content}</preact-island>`;
+	return `<template for="${id}">${content}</template>`;
 }
