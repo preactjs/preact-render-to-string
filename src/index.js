@@ -54,8 +54,42 @@ function wrapWithSuspenseMarkers(result) {
 	return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
 }
 
-// Global state for the current render pass
-let beforeDiff, afterDiff, renderHook, ummountHook;
+/**
+ * Capture the Preact option hooks used by a render so suspended subtrees don't
+ * observe hooks installed by another render before they resume.
+ * @returns {CapturedHooks}
+ */
+function captureHooks() {
+	return {
+		beforeDiff: options[DIFF],
+		afterDiff: options[DIFFED],
+		renderHook: options[RENDER],
+		unmountHook: options.unmount,
+		rootHook: options[ROOT],
+		commitHook: options[COMMIT],
+		catchError: options[CATCH_ERROR],
+		errorBoundaries: options.errorBoundaries
+	};
+}
+
+/**
+ * Effects must only be skipped while a synchronous portion of a render is
+ * running. Keeping this flag set while awaiting Suspense would leak it into
+ * concurrent work and allow overlapping renders to restore a stale value.
+ * @template T
+ * @param {() => T} render
+ * @returns {T}
+ */
+function withSkipEffects(render) {
+	const previousSkipEffects = options[SKIP_EFFECTS];
+	options[SKIP_EFFECTS] = true;
+
+	try {
+		return render();
+	} finally {
+		options[SKIP_EFFECTS] = previousSkipEffects;
+	}
+}
 
 /**
  * Render Preact JSX + Components to an HTML string.
@@ -65,34 +99,27 @@ let beforeDiff, afterDiff, renderHook, ummountHook;
  * @returns {string} serialized HTML
  */
 export function renderToString(vnode, context, _rendererState) {
-	// Performance optimization: `renderToString` is synchronous and we
-	// therefore don't execute any effects. To do that we pass an empty
-	// array to `options._commit` (`__c`). But we can go one step further
-	// and avoid a lot of dirty checks and allocations by setting
-	// `options._skipEffects` (`__s`) too.
-	const previousSkipEffects = options[SKIP_EFFECTS];
-	options[SKIP_EFFECTS] = true;
-
-	// store options hooks once before each synchronous render call
-	beforeDiff = options[DIFF];
-	afterDiff = options[DIFFED];
-	renderHook = options[RENDER];
-	ummountHook = options.unmount;
-
-	const parent = h(Fragment, null);
-	parent[CHILDREN] = [vnode];
-	if (options[ROOT]) options[ROOT](vnode, { [CHILDREN]: parent, nodeType: 1 });
+	const hooks = captureHooks();
 
 	try {
-		const rendered = _renderToString(
-			vnode,
-			context || EMPTY_OBJ,
-			false,
-			undefined,
-			parent,
-			false,
-			_rendererState
-		);
+		const rendered = withSkipEffects(() => {
+			const parent = h(Fragment, null);
+			parent[CHILDREN] = [vnode];
+			if (hooks.rootHook) {
+				hooks.rootHook(vnode, { [CHILDREN]: parent, nodeType: 1 });
+			}
+
+			return _renderToString(
+				vnode,
+				context || EMPTY_OBJ,
+				false,
+				undefined,
+				parent,
+				false,
+				_rendererState,
+				hooks
+			);
+		});
 
 		if (isArray(rendered)) {
 			return rendered.join(EMPTY_STR);
@@ -107,8 +134,9 @@ export function renderToString(vnode, context, _rendererState) {
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
-		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
-		options[SKIP_EFFECTS] = previousSkipEffects;
+		if (hooks.commitHook) {
+			withSkipEffects(() => hooks.commitHook(vnode, EMPTY_ARR));
+		}
 		EMPTY_ARR.length = 0;
 	}
 }
@@ -120,34 +148,27 @@ export function renderToString(vnode, context, _rendererState) {
  * @returns {string} serialized HTML
  */
 export async function renderToStringAsync(vnode, context) {
-	// Performance optimization: `renderToString` is synchronous and we
-	// therefore don't execute any effects. To do that we pass an empty
-	// array to `options._commit` (`__c`). But we can go one step further
-	// and avoid a lot of dirty checks and allocations by setting
-	// `options._skipEffects` (`__s`) too.
-	const previousSkipEffects = options[SKIP_EFFECTS];
-	options[SKIP_EFFECTS] = true;
-
-	// store options hooks once before each synchronous render call
-	beforeDiff = options[DIFF];
-	afterDiff = options[DIFFED];
-	renderHook = options[RENDER];
-	ummountHook = options.unmount;
-
-	const parent = h(Fragment, null);
-	parent[CHILDREN] = [vnode];
-	if (options[ROOT]) options[ROOT](vnode, { [CHILDREN]: parent, nodeType: 1 });
+	const hooks = captureHooks();
 
 	try {
-		const rendered = await _renderToString(
-			vnode,
-			context || EMPTY_OBJ,
-			false,
-			undefined,
-			parent,
-			true,
-			undefined
-		);
+		const rendered = await withSkipEffects(() => {
+			const parent = h(Fragment, null);
+			parent[CHILDREN] = [vnode];
+			if (hooks.rootHook) {
+				hooks.rootHook(vnode, { [CHILDREN]: parent, nodeType: 1 });
+			}
+
+			return _renderToString(
+				vnode,
+				context || EMPTY_OBJ,
+				false,
+				undefined,
+				parent,
+				true,
+				undefined,
+				hooks
+			);
+		});
 
 		if (isArray(rendered)) {
 			let count = 0;
@@ -170,8 +191,9 @@ export async function renderToStringAsync(vnode, context) {
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
-		if (options[COMMIT]) options[COMMIT](vnode, EMPTY_ARR);
-		options[SKIP_EFFECTS] = previousSkipEffects;
+		if (hooks.commitHook) {
+			withSkipEffects(() => hooks.commitHook(vnode, EMPTY_ARR));
+		}
 		EMPTY_ARR.length = 0;
 	}
 }
@@ -179,8 +201,9 @@ export async function renderToStringAsync(vnode, context) {
 /**
  * @param {VNode} vnode
  * @param {Record<string, unknown>} context
+ * @param {CapturedHooks} hooks
  */
-function renderClassComponent(vnode, context) {
+function renderClassComponent(vnode, context, hooks) {
 	let type =
 		/** @type {import("preact").ComponentClass<typeof vnode.props>} */ (
 			vnode.type
@@ -227,7 +250,7 @@ function renderClassComponent(vnode, context) {
 		c.componentWillUpdate();
 	}
 
-	if (renderHook) renderHook(vnode);
+	if (hooks.renderHook) hooks.renderHook(vnode);
 
 	return c.render(c.props, c.state, context);
 }
@@ -240,7 +263,8 @@ function renderClassComponent(vnode, context) {
  * @param {any} selectValue
  * @param {VNode} parent
  * @param {boolean} asyncMode
- * @param {RendererState | undefined} [renderer]
+ * @param {RendererState | undefined | false} renderer
+ * @param {CapturedHooks} hooks
  * @returns {string | Promise<string> | (string | Promise<string>)[]}
  */
 function _renderToString(
@@ -250,7 +274,8 @@ function _renderToString(
 	selectValue,
 	parent,
 	asyncMode,
-	renderer
+	renderer,
+	hooks
 ) {
 	// Ignore non-rendered VNodes/values
 	if (
@@ -286,7 +311,8 @@ function _renderToString(
 				selectValue,
 				parent,
 				asyncMode,
-				renderer
+				renderer,
+				hooks
 			);
 
 			if (typeof childRender == 'string') {
@@ -321,7 +347,7 @@ function _renderToString(
 	if (vnode.constructor !== undefined) return EMPTY_STR;
 
 	vnode[PARENT] = parent;
-	if (beforeDiff) beforeDiff(vnode);
+	if (hooks.beforeDiff) hooks.beforeDiff(vnode);
 
 	let type = vnode.type,
 		props = vnode.props;
@@ -357,7 +383,8 @@ function _renderToString(
 									selectValue,
 									vnode,
 									asyncMode,
-									renderer
+									renderer,
+									hooks
 								);
 						} else {
 							// Values are pre-escaped by the JSX transform
@@ -384,7 +411,7 @@ function _renderToString(
 			let isClassComponent =
 				type.prototype && typeof type.prototype.render == 'function';
 			if (isClassComponent) {
-				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx);
+				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx, hooks);
 				component = vnode[COMPONENT];
 			} else {
 				vnode[COMPONENT] = component = /**#__NOINLINE__**/ createComponent(
@@ -401,7 +428,7 @@ function _renderToString(
 				while (isDirty(component) && count++ < 25) {
 					unsetDirty(component);
 
-					if (renderHook) renderHook(vnode);
+					if (hooks.renderHook) hooks.renderHook(vnode);
 
 					try {
 						rendered = type.call(component, props, cctx);
@@ -423,7 +450,7 @@ function _renderToString(
 
 			if (
 				isClassComponent &&
-				options.errorBoundaries &&
+				hooks.errorBoundaries &&
 				(type.getDerivedStateFromError || component.componentDidCatch)
 			) {
 				// When a component returns a Fragment node we flatten it in core, so we
@@ -444,7 +471,7 @@ function _renderToString(
 						vnode,
 						asyncMode,
 						false,
-						renderer
+						hooks
 					);
 				} catch (err) {
 					if (type.getDerivedStateFromError) {
@@ -456,7 +483,7 @@ function _renderToString(
 					}
 
 					if (isDirty(component)) {
-						rendered = renderClassComponent(vnode, context);
+						rendered = renderClassComponent(vnode, context, hooks);
 						component = vnode[COMPONENT];
 
 						if (component.getChildContext != null) {
@@ -477,15 +504,16 @@ function _renderToString(
 							selectValue,
 							vnode,
 							asyncMode,
-							renderer
+							renderer,
+							hooks
 						);
 					}
 
 					return EMPTY_STR;
 				} finally {
-					if (afterDiff) afterDiff(vnode);
+					if (hooks.afterDiff) hooks.afterDiff(vnode);
 
-					if (ummountHook) ummountHook(vnode);
+					if (hooks.unmountHook) hooks.unmountHook(vnode);
 				}
 			}
 		}
@@ -508,13 +536,14 @@ function _renderToString(
 				selectValue,
 				vnode,
 				asyncMode,
-				renderer
+				renderer,
+				hooks
 			);
 
-			if (afterDiff) afterDiff(vnode);
+			if (hooks.afterDiff) hooks.afterDiff(vnode);
 			// when we are dealing with suspense we can't do this...
 
-			if (options.unmount) options.unmount(vnode);
+			if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 			if (vnode._suspended) {
 				return wrapWithSuspenseMarkers(str);
@@ -526,14 +555,17 @@ function _renderToString(
 				const onError = (error) => {
 					return renderer.onError(error, vnode, (child, parent) => {
 						try {
-							return _renderToString(
-								child,
-								context,
-								isSvgMode,
-								selectValue,
-								parent,
-								asyncMode,
-								renderer
+							return withSkipEffects(() =>
+								_renderToString(
+									child,
+									context,
+									isSvgMode,
+									selectValue,
+									parent,
+									asyncMode,
+									renderer,
+									hooks
+								)
 							);
 						} catch (e) {
 							return onError(e);
@@ -544,8 +576,7 @@ function _renderToString(
 
 				if (res !== undefined) return res;
 
-				let errorHook = options[CATCH_ERROR];
-				if (errorHook) errorHook(error, vnode);
+				if (hooks.catchError) hooks.catchError(error, vnode);
 				return EMPTY_STR;
 			}
 
@@ -555,14 +586,17 @@ function _renderToString(
 
 			const renderNestedChildren = () => {
 				try {
-					const result = _renderToString(
-						rendered,
-						context,
-						isSvgMode,
-						selectValue,
-						vnode,
-						asyncMode,
-						renderer
+					const result = withSkipEffects(() =>
+						_renderToString(
+							rendered,
+							context,
+							isSvgMode,
+							selectValue,
+							vnode,
+							asyncMode,
+							renderer,
+							hooks
+						)
 					);
 					return vnode._suspended ? wrapWithSuspenseMarkers(result) : result;
 				} catch (e) {
@@ -722,13 +756,14 @@ function _renderToString(
 			selectValue,
 			vnode,
 			asyncMode,
-			renderer
+			renderer,
+			hooks
 		);
 	}
 
-	if (afterDiff) afterDiff(vnode);
+	if (hooks.afterDiff) hooks.afterDiff(vnode);
 
-	if (ummountHook) ummountHook(vnode);
+	if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 	// Emit self-closing tag for empty void elements:
 	if (!html && SELF_CLOSING.has(type)) {
