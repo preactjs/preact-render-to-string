@@ -64,7 +64,7 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			'<div><!--$s:10-->loading...<!--/$s:10--></div>',
 			'<div hidden>',
-			createInitScript(1),
+			createInitScript(),
 			'</div>'
 		]);
 	});
@@ -111,7 +111,7 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			'<div><!--$s:16-->loading...<!--/$s:16--></div>',
 			'<div hidden>',
-			createInitScript(1),
+			createInitScript(),
 			createSubtree('16', '<p>it works</p>'),
 			'</div>'
 		]);
@@ -144,7 +144,7 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			'<div><p>id: P0-0</p><!--$s:24-->loading...<!--/$s:24--></div>',
 			'<div hidden>',
-			createInitScript(1),
+			createInitScript(),
 			createSubtree('24', '<p>id: P0-1</p>'),
 			'</div>'
 		]);
@@ -184,7 +184,7 @@ describe('renderToChunks', () => {
 		expect(result).toEqual([
 			'<div><p>id: P0-0</p><!--$s:33-->loading...<!--/$s:33--><!--$s:36-->loading...<!--/$s:36--></div>',
 			'<div hidden>',
-			createInitScript(1),
+			createInitScript(),
 			createSubtree('33', '<p>id: P0-1</p>'),
 			createSubtree('36', '<p>id: P0-2</p>'),
 			'</div>'
@@ -307,9 +307,50 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			'<div><!--$s:70-->loading part 1...<!--/$s:70--></div>',
 			'<div hidden>',
-			createInitScript(1),
+			createInitScript(),
 			createSubtree('70', '<p>it works</p><p>it works</p>'),
 			'</div>'
 		]);
+	});
+
+	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const result = [];
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s), nonce: 'r4nd0m-nonce' }
+		);
+		suspended.resolve();
+		await promise;
+
+		const fullHtml = result.join('');
+		expect(fullHtml).to.contain('<script nonce="r4nd0m-nonce">');
+
+		// The init script should be the only script emitted
+		expect(result[2]).to.equal(createInitScript('r4nd0m-nonce'));
+	});
+});
+
+describe('createInitScript', () => {
+	it('should not include a nonce attribute by default', () => {
+		const script = createInitScript();
+		expect(script.startsWith('<script>')).to.be.true;
+		expect(script).to.not.contain('nonce=');
+	});
+
+	it('should include a nonce attribute when a nonce is provided', () => {
+		const script = createInitScript('r4nd0m-nonce');
+		expect(script.startsWith('<script nonce="r4nd0m-nonce">')).to.be.true;
+	});
+
+	it('should encode HTML entities in the nonce', () => {
+		const script = createInitScript('a"b&c<d');
+		expect(script.startsWith('<script nonce="a&quot;b&amp;c&lt;d">')).to.be
+			.true;
 	});
 });

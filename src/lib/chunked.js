@@ -8,7 +8,7 @@ import { createInitScript, createSubtree } from './client.js';
  * @param {RenderToChunksOptions} options
  * @returns {Promise<void>}
  */
-export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
+export async function renderToChunks(vnode, { context, onWrite, abortSignal, nonce }) {
 	context = context || {};
 
 	/** @type {RendererState} */
@@ -38,7 +38,7 @@ export async function renderToChunks(vnode, { context, onWrite, abortSignal }) {
 		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
 		onWrite(prefix + initialWrite);
 		onWrite('<div hidden>');
-		onWrite(createInitScript(len));
+		onWrite(createInitScript(nonce));
 		// We should keep checking all promises
 		await forkPromises(renderer);
 		onWrite('</div>');

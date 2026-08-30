@@ -5,10 +5,11 @@ import { renderToChunks } from './lib/chunked.js';
 
 /**
  * @param {import('preact').VNode} vnode
+ * @param {any} [options]
  * @param {any} [context]
  * @returns {RenderStream}
  */
-export function renderToReadableStream(vnode, context) {
+export function renderToReadableStream(vnode, options, context) {
 	/** @type {Deferred<void>} */
 	const allReady = new Deferred();
 	const encoder = new TextEncoder('utf-8');
@@ -18,6 +19,7 @@ export function renderToReadableStream(vnode, context) {
 		start(controller) {
 			renderToChunks(vnode, {
 				context,
+				nonce: options?.nonce,
 				onError: (error) => {
 					allReady.reject(error);
 					controller.abort(error);

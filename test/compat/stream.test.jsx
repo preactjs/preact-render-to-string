@@ -74,6 +74,7 @@ describe('renderToReadableStream', () => {
 					<Suspender />
 				</Suspense>
 			</div>,
+			undefined,
 			{ onWrite: (s) => result.push(s) }
 		);
 		const sink = createSink(stream);
@@ -88,5 +89,25 @@ describe('renderToReadableStream', () => {
 			createSubtree('5', '<p>it works</p>'),
 			'</div>'
 		]);
+	});
+
+	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
+		const { Suspender, suspended } = createSuspender();
+
+		const stream = await renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ nonce: 'r4nd0m-nonce' }
+		);
+		const sink = createSink(stream);
+		suspended.resolve();
+
+		const result = await sink.promise;
+
+		expect(result.join('')).to.contain('<script nonce="r4nd0m-nonce">');
+		expect(result.join('')).to.not.contain('<script>');
 	});
 });
