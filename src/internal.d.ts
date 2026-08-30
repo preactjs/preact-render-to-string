@@ -25,7 +25,7 @@ interface RendererState {
 	abortSignal?: AbortSignal | undefined;
 	onWrite: (str: string) => void;
 	onError?: RendererErrorHandler;
-	onSuspenseError?: (error: any) => void;
+	onRenderError?: (error: any) => void;
 }
 
 interface CapturedHooks {

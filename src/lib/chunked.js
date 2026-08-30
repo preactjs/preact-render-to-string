@@ -20,7 +20,7 @@ export async function renderToChunks(
 		abortSignal,
 		onWrite,
 		onError: handleError,
-		onSuspenseError: onError,
+		onRenderError: onError,
 		suspended: []
 	};
 
@@ -75,7 +75,10 @@ async function forkPromises(renderer) {
 
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
-	if (!error || !error.then) return;
+	// Errors thrown while rendering a resumed subtree come back through this
+	// handler too. Surface them through the same caller callback as a rejected
+	// suspension instead of letting the renderer turn them into an empty string.
+	if (!error || !error.then) return propagateError(this, error);
 
 	// Walk up to the Suspense boundary, testing the vnode that suspended before
 	// its ancestors. A boundary whose render() returns a single keyless Fragment
@@ -111,13 +114,7 @@ function handleError(error, vnode, renderChild) {
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration
-		(error) => {
-			// Hand the rejection to the caller. Without this the boundary never
-			// resolves, its fallback stays on screen, and the stream closes as
-			// though the render succeeded.
-			if (this.onSuspenseError) this.onSuspenseError(error);
-			else throw error;
-		}
+		(error) => propagateError(this, error)
 	);
 
 	this.suspended.push({
@@ -129,4 +126,20 @@ function handleError(error, vnode, renderChild) {
 	const fallback = renderChild(vnode.props.fallback);
 
 	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+}
+
+/**
+ * Hand an asynchronous render error to the caller, or reject the render when
+ * no error callback was provided. Returning a string tells the recursive
+ * renderer that the error was handled and prevents it from being swallowed.
+ * @param {RendererState} renderer
+ * @param {any} error
+ * @returns {string}
+ */
+function propagateError(renderer, error) {
+	if (renderer.onRenderError) {
+		renderer.onRenderError(error);
+		return '';
+	}
+	throw error;
 }

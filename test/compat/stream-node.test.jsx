@@ -113,4 +113,33 @@ describe('renderToPipeableStream', () => {
 		expect(result.join('')).to.contain('<script nonce="r4nd0m-nonce">');
 		expect(result.join('')).to.not.contain('<script>');
 	});
+
+	it('should report an error thrown while rendering a resumed subtree', async () => {
+		const deferred = new Deferred();
+		let resumed = false;
+		function FailsOnResume() {
+			if (!resumed) throw deferred.promise;
+			throw new Error('resume failed');
+		}
+
+		const errors = [];
+		const sink = createSink();
+		const { pipe } = renderToPipeableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<FailsOnResume />
+				</Suspense>
+			</div>,
+			{
+				onShellReady: () => pipe(sink.stream),
+				onError: (e) => errors.push(e)
+			}
+		);
+		resumed = true;
+		deferred.resolve();
+
+		await sink.promise;
+
+		expect(errors.map((e) => e.message)).to.deep.equal(['resume failed']);
+	});
 });

@@ -137,4 +137,28 @@ describe('renderToReadableStream', () => {
 		await expect(sink.promise).rejects.toThrow('upstream failed');
 		expect((await allReady).message).to.equal('upstream failed');
 	});
+
+	it('should error the stream when a resumed subtree throws', async () => {
+		const deferred = new Deferred();
+		let resumed = false;
+		function FailsOnResume() {
+			if (!resumed) throw deferred.promise;
+			throw new Error('resume failed');
+		}
+
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<FailsOnResume />
+				</Suspense>
+			</div>
+		);
+		const sink = createSink(stream);
+		const allReady = stream.allReady.catch((e) => e);
+		resumed = true;
+		deferred.resolve();
+
+		await expect(sink.promise).rejects.toThrow('resume failed');
+		expect((await allReady).message).to.equal('resume failed');
+	});
 });

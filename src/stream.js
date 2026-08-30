@@ -28,7 +28,7 @@ export function renderToReadableStream(vnode, options, context) {
 					controller.error(error);
 				},
 				onWrite(s) {
-					controller.enqueue(encoder.encode(s));
+					if (!errored) controller.enqueue(encoder.encode(s));
 				}
 			})
 				.then(() => {
@@ -39,7 +39,7 @@ export function renderToReadableStream(vnode, options, context) {
 					allReady.resolve();
 				})
 				.catch((error) => {
-					controller.error(error);
+					if (!errored) controller.error(error);
 					allReady.reject(error);
 				});
 		}

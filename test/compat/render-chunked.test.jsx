@@ -361,6 +361,53 @@ describe('renderToChunks', () => {
 		await expect(promise).rejects.toThrow('upstream failed');
 	});
 
+	it('should forward an error thrown while rendering a resumed subtree', async () => {
+		const deferred = new Deferred();
+		let resumed = false;
+		function FailsOnResume() {
+			if (!resumed) throw deferred.promise;
+			throw new Error('resume failed');
+		}
+
+		const errors = [];
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<FailsOnResume />
+				</Suspense>
+			</div>,
+			{ onWrite: () => {}, onError: (e) => errors.push(e) }
+		);
+		resumed = true;
+		deferred.resolve();
+
+		await promise;
+
+		expect(errors.map((e) => e.message)).to.deep.equal(['resume failed']);
+	});
+
+	it('should reject when a resumed subtree throws and no onError is given', async () => {
+		const deferred = new Deferred();
+		let resumed = false;
+		function FailsOnResume() {
+			if (!resumed) throw deferred.promise;
+			throw new Error('resume failed');
+		}
+
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<FailsOnResume />
+				</Suspense>
+			</div>,
+			{ onWrite: () => {} }
+		);
+		resumed = true;
+		deferred.resolve();
+
+		await expect(promise).rejects.toThrow('resume failed');
+	});
+
 	it('should find a boundary whose render returns a single keyless Fragment', async () => {
 		// preact/compat's Suspense returns an array, so the throw is caught one
 		// level below the boundary. An implementation returning a bare Fragment
