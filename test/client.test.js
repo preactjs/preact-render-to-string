@@ -35,6 +35,30 @@ function flushMutations() {
 }
 
 /**
+ * @param {Document} document
+ * @param {'loading' | 'interactive' | 'complete'} state
+ */
+function setReadyState(document, state) {
+	Object.defineProperty(document, 'readyState', {
+		configurable: true,
+		get: () => state
+	});
+}
+
+/**
+ * @param {Document} document
+ * @param {string} id
+ * @param {string} html
+ */
+function appendTemplate(document, id, html) {
+	const template = document.createElement('template');
+	template.setAttribute('for', id);
+	if (html) template.innerHTML = html;
+	document.body.appendChild(template);
+	return template;
+}
+
+/**
  * Append several HTML snippets as siblings in a single mutation.
  * @param {Document} document
  * @param {...string} htmlSnippets
@@ -61,8 +85,8 @@ describe('createInitScript', () => {
 		expect(html).toContain('<script>');
 		expect(html).toContain('MutationObserver');
 		expect(html).toContain('HTMLTemplateElement');
-		expect(html).toContain('(function(){');
-		expect(html).toContain('}())');
+		expect(html).toContain('!function(e){');
+		expect(html).toContain('}(document)');
 		expect(html).toContain('</script>');
 	});
 });
@@ -189,5 +213,69 @@ describe('inline init script', () => {
 		expect(document.body.innerHTML).toBe(
 			'<div><!--$s:1-->loading<!--/$s:1--></div><template for="1"><p>resolved</p></template>'
 		);
+	});
+
+	it('should not patch a template that is still streaming while the document is loading', async () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+		);
+
+		setReadyState(document, 'loading');
+		runInitScript(window);
+
+		// Parser can expose <template for> before its children arrive; applying
+		// now would insert empty content and remove the node so it never completes.
+		appendTemplate(document, '1', '');
+		await flushMutations();
+
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1-->loading<!--/$s:1-->'
+		);
+		expect(document.querySelector('template[for="1"]')).not.toBeNull();
+
+		document.querySelector('template[for="1"]').innerHTML = '<p>resolved</p>';
+		setReadyState(document, 'interactive');
+		document.dispatchEvent(new window.Event('DOMContentLoaded'));
+
+		expect(document.body.innerHTML).toBe(
+			'<div><!--$s:1--><p>resolved</p><!--/$s:1--></div>'
+		);
+		expect(document.querySelectorAll('template')).toHaveLength(0);
+	});
+
+	it('should patch a streamed template once a later sibling arrives', async () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->a<!--/$s:1--><!--$s:2-->b<!--/$s:2--></div>'
+		);
+
+		setReadyState(document, 'loading');
+		runInitScript(window);
+
+		appendTemplate(document, '1', '<p>one</p>');
+		await flushMutations();
+
+		expect(document.querySelector('template[for="1"]')).not.toBeNull();
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1-->a<!--/$s:1--><!--$s:2-->b<!--/$s:2-->'
+		);
+
+		appendTemplate(document, '2', '<p>two</p>');
+		await flushMutations();
+
+		// First template now has a nextElementSibling so it is complete; the
+		// trailing one stays deferred until DCL.
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1--><p>one</p><!--/$s:1--><!--$s:2-->b<!--/$s:2-->'
+		);
+		expect(document.querySelector('template[for="1"]')).toBeNull();
+		expect(document.querySelector('template[for="2"]')).not.toBeNull();
+
+		setReadyState(document, 'interactive');
+		document.dispatchEvent(new window.Event('DOMContentLoaded'));
+
+		expect(document.body.innerHTML).toBe(
+			'<div><!--$s:1--><p>one</p><!--/$s:1--><!--$s:2--><p>two</p><!--/$s:2--></div>'
+		);
+		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 });
