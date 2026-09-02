@@ -84,9 +84,13 @@ describe('createInitScript', () => {
 		const html = createInitScript();
 		expect(html).toContain('<script>');
 		expect(html).toContain('MutationObserver');
-		expect(html).toContain('HTMLTemplateElement');
-		expect(html).toContain('!function(e){');
-		expect(html).toContain('}(document)');
+		expect(html).toContain('DOMContentLoaded');
+		expect(html).toContain('template[for]');
+		expect(html).toContain('svg *,math *');
+		expect(html).toContain('disconnect');
+		expect(html).toContain('(e=>{');
+		expect(html).toContain('})(document)');
+		expect(html).not.toContain('HTMLTemplateElement');
 		expect(html).toContain('</script>');
 	});
 });
@@ -189,7 +193,7 @@ describe('inline init script', () => {
 		);
 	});
 
-	it('should not install a MutationObserver when htmlFor is natively supported', async () => {
+	it('should still patch templates when htmlFor is present on HTMLTemplateElement', async () => {
 		const { window, document } = createDom(
 			'<div><!--$s:1-->loading<!--/$s:1--></div>'
 		);
@@ -209,10 +213,10 @@ describe('inline init script', () => {
 		appendTogether(document, createSubtree('1', '<p>resolved</p>'));
 		await flushMutations();
 
-		// Native DPU path: polyfill must no-op and leave the template in place.
 		expect(document.body.innerHTML).toBe(
-			'<div><!--$s:1-->loading<!--/$s:1--></div><template for="1"><p>resolved</p></template>'
+			'<div><!--$s:1--><p>resolved</p><!--/$s:1--></div>'
 		);
+		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
 	it('should not patch a template that is still streaming while the document is loading', async () => {
@@ -277,5 +281,60 @@ describe('inline init script', () => {
 			'<div><!--$s:1--><p>one</p><!--/$s:1--><!--$s:2--><p>two</p><!--/$s:2--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
+	});
+
+	it('should disconnect the MutationObserver after a non-loading pass', async () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->a<!--/$s:1--><!--$s:2-->b<!--/$s:2--></div>'
+		);
+
+		runInitScript(window);
+		appendTemplate(document, '1', '<p>one</p>');
+		await flushMutations();
+
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1--><p>one</p><!--/$s:1--><!--$s:2-->b<!--/$s:2-->'
+		);
+		expect(document.querySelector('template[for="1"]')).toBeNull();
+
+		// First complete-document pass disconnects the observer, so a later
+		// template must stay in place instead of being applied.
+		appendTemplate(document, '2', '<p>two</p>');
+		await flushMutations();
+
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1--><p>one</p><!--/$s:1--><!--$s:2-->b<!--/$s:2-->'
+		);
+		expect(document.querySelector('template[for="2"]')).not.toBeNull();
+	});
+
+	it('should reparse HTML-namespaced children inside svg and math', async () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+		);
+
+		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg.appendChild(document.createElement('path'));
+		const math = document.createElementNS(
+			'http://www.w3.org/1998/Math/MathML',
+			'math'
+		);
+		math.appendChild(document.createElement('mi'));
+		document.body.append(svg, math);
+
+		expect(svg.firstChild.namespaceURI).toBe('http://www.w3.org/1999/xhtml');
+		expect(math.firstChild.namespaceURI).toBe('http://www.w3.org/1999/xhtml');
+
+		runInitScript(window);
+		appendTogether(document, createSubtree('1', '<p>resolved</p>'));
+		await flushMutations();
+
+		expect(svg.firstChild.namespaceURI).toBe('http://www.w3.org/2000/svg');
+		expect(math.firstChild.namespaceURI).toBe(
+			'http://www.w3.org/1998/Math/MathML'
+		);
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1--><p>resolved</p><!--/$s:1-->'
+		);
 	});
 });
