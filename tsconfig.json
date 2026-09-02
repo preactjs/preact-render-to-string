@@ -10,15 +10,20 @@
         "strictFunctionTypes": true,
         "baseUrl": "../",
         "typeRoots": [
-            "../"
+            "../",
+            "./node_modules/@types"
         ],
         "jsx": "react",
         "jsxFactory": "h",
-        "types": [],
+        "types": [
+            "node"
+        ],
         "noEmit": true,
         "forceConsistentCasingInFileNames": true
     },
     "files": [
-        "src/index.d.ts"
+        "src/index.d.ts",
+        "src/stream.d.ts",
+        "src/stream-node.d.ts"
     ]
 }
