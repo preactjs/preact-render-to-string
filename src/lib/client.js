@@ -1,61 +1,54 @@
-import { encodeEntities } from "./util.js"
+import { encodeEntities } from './util.js';
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
-// function initPreactIslandElement() {
-// 	class PreactIslandElement extends HTMLElement {
-// 		connectedCallback() {
-// 			var d = this;
-// 			if (!d.isConnected) return;
-
-// 			let i = this.getAttribute('data-target');
-// 			if (!i) return;
-
-// 			var s,
-// 				e,
-// 				c = document.createNodeIterator(document, 128);
-// 			while (c.nextNode()) {
-// 				let n = c.referenceNode;
-
-// 				if (n.data == '$s:' + i) s = n;
-// 				else if (n.data == '/$s:' + i) e = n;
-// 				if (s && e) break;
-// 			}
-// 			if (s && e && s.parentNode !== document) {
-// 				requestAnimationFrame(() => {
-// 					var p = e.previousSibling;
-// 					while (p != s) {
-// 						if (!p || p == s) break;
-// 						e.parentNode.removeChild(p);
-// 						p = e.previousSibling;
-// 					}
-
-// 					c = s;
-// 					while (d.firstChild) {
-// 						s = d.firstChild;
-// 						d.removeChild(s);
-// 						c.after(s);
-// 						c = s;
-// 					}
-
-// 					d.parentNode.removeChild(d);
-// 				});
-// 			}
+// ((d) => {
+// 	let initPreactPatch = () => {
+// 	  let isNotLoading = d.readyState[0] != "l", qsa = 'querySelectorAll',node;
+//   	  // loop through all <template[for]> and move them
+// 	  for ( node of d[qsa]("template[for]")) {
+// 		// make sure the template is done streaming in
+// 		if (isNotLoading || node.nextElementSibling) {
+// 		  let s, e, n, p, c = d.createNodeIterator(d, 128), id = "$s:" + node.getAttribute("for");
+// 		  // find the start and end markers in content
+// 		  while ((n = c.nextNode()) && !(s && e)) {
+// 			if (n.data == id) s = n;
+// 			else if (n.data == "/" + id) e = n;
+// 		  }
+// 		  // remove the old template and insert the new one
+// 		  if (s && e && s.parentNode !== d) {
+// 			while ((p = s.nextSibling) && p != e) p.remove();
+// 			s.after(node.content);
+// 			node.remove();
+// 		  }
 // 		}
-// 	}
+// 	  }
 
-// 	customElements.define('preact-island', PreactIslandElement);
-// }
+// 	 // re-parse SVG and MathML elements so they will be rendered correctly
+// 	  for ( node of d[qsa]("svg *,math *")) {
+// 		if (node.tagName < "a" && (node = node.closest("svg,math"))) {
+// 		  node.innerHTML += "";
+// 		}
+// 	  }
+
+// 	  // disconnect the mutation observer if the document is not loading (complete or interactive)
+// 	  if (isNotLoading) mo.disconnect();
+// 	};
+  
+// 	let mo = new MutationObserver(initPreactPatch);
+// 	mo.observe(d, { childList: 1, subtree: 1 });
+// 	d.addEventListener("DOMContentLoaded", initPreactPatch);
+// })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `class e extends HTMLElement{connectedCallback(){var e=this;if(!e.isConnected)return;let t=this.getAttribute("data-target");if(t){for(var r,a,i=document.createNodeIterator(document,128);i.nextNode();){let e=i.referenceNode;if(e.data=="$s:"+t?r=e:e.data=="/$s:"+t&&(a=e),r&&a)break}r&&a&&r.parentNode!==document&&requestAnimationFrame((()=>{for(var t=a.previousSibling;t!=r&&t&&t!=r;)a.parentNode.removeChild(t),t=a.previousSibling;for(i=r;e.firstChild;)r=e.firstChild,e.removeChild(r),i.after(r),i=r;e.parentNode.removeChild(e)}))}}}customElements.define("preact-island",e);`;
+const INIT_SCRIPT = `(e=>{let t=()=>{let t,r="l"!=e.readyState[0],n="querySelectorAll";for(t of e[n]("template[for]"))if(r||t.nextElementSibling){let o,r,n,a,d=e.createNodeIterator(e,128),i="$s:"+t.getAttribute("for");for(;(n=d.nextNode())&&(!o||!r);)n.data==i?o=n:n.data=="/"+i&&(r=n);if(o&&r&&o.parentNode!==e){for(;(a=o.nextSibling)&&a!=r;)a.remove();o.after(t.content),t.remove()}}for(t of e[n]("svg *,math *"))t.tagName<"a"&&(t=t.closest("svg,math"))&&(t.innerHTML+="");r&&o.disconnect()},o=new MutationObserver(t);o.observe(e,{childList:1,subtree:1}),e.addEventListener("DOMContentLoaded",t)})(document);`;
 
 /**
  * @param {string} nonce
  * @returns {string}
  */
 export function createInitScript(nonce) {
-	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>(function(){${INIT_SCRIPT}}())</script>`;
+	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>${INIT_SCRIPT}</script>`;
 }
 
 /**
@@ -64,5 +57,5 @@ export function createInitScript(nonce) {
  * @returns {string}
  */
 export function createSubtree(id, content) {
-	return `<preact-island hidden data-target="${id}">${content}</preact-island>`;
+	return `<template for="${id}">${content}</template>`;
 }
