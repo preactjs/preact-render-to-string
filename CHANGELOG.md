@@ -1,5 +1,21 @@
 # preact-render-to-string
 
+## 6.8.0
+
+### Minor Changes
+
+- [#472](https://github.com/preactjs/preact-render-to-string/pull/472) [`2dff53d`](https://github.com/preactjs/preact-render-to-string/commit/2dff53d461c735756d58063d09548f5f2486f65b) Thanks [@jacob-ebey](https://github.com/jacob-ebey)! - Replaces the second `context` argument in our streaming functions with an `options` object, the `context` moves to the third position.
+
+  Streaming is considered alpha so we're making this breaking change deliberately as part of a minor.
+
+### Patch Changes
+
+- [#464](https://github.com/preactjs/preact-render-to-string/pull/464) [`455daf5`](https://github.com/preactjs/preact-render-to-string/commit/455daf5093ebfe9ee577ec738ee5c3a5edc05b29) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Call `options._root` before the render-to-string invocation
+
+* [#444](https://github.com/preactjs/preact-render-to-string/pull/444) [`e5ff19f`](https://github.com/preactjs/preact-render-to-string/commit/e5ff19f53d5941c69e7c6c7d507be77131181928) Thanks [@dsherret](https://github.com/dsherret)! - fix: use cjs types instead of esm for jsx export to fix default export from esm
+
+- [#471](https://github.com/preactjs/preact-render-to-string/pull/471) [`0ce2b84`](https://github.com/preactjs/preact-render-to-string/commit/0ce2b84fa709d0ea958b19b807bbb40bff8b1045) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Keep Preact option hooks isolated for the lifetime of asynchronous renders.
+
 ## 6.7.0
 
 ### Minor Changes
