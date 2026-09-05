@@ -1,4 +1,4 @@
-import { encodeEntities } from "./util.js"
+import { encodeEntities } from './util.js';
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
@@ -23,7 +23,39 @@ import { encodeEntities } from "./util.js"
 // 			}
 // 			if (s && e && s.parentNode !== document) {
 // 				requestAnimationFrame(() => {
-// 					var p = e.previousSibling;
+// 					// Hydration may finish after connectedCallback queues this frame.
+// 					if (!d.isConnected || !s.isConnected || !e.isConnected || s.parentNode !== e.parentNode) {
+// 						d.remove();
+// 						return;
+// 					}
+// 					var nodes = [], p = s.nextSibling, root = s.parentNode;
+// 					while (p && p !== e) {
+// 						nodes.push(p);
+// 						p = p.nextSibling;
+// 					}
+// 					if (!p) { d.remove(); return; }
+// 					// DOM already referenced by a rendered host/text VNode belongs to
+// 					// the client. A suspended component's fallback pointer does not.
+// 					while (root && !root.__k) root = root.parentNode;
+// 					var owned = new Set();
+// 					function visit(vnode) {
+// 						if (vnode) {
+// 							if (typeof vnode.type !== 'function' && vnode.__e && vnode.__e.parentNode === s.parentNode) owned.add(vnode.__e);
+// 							if (vnode.__k) vnode.__k.forEach(visit);
+// 						}
+// 					}
+// 					if (root) visit(root.__k);
+// 					if (nodes.some(node => owned.has(node))) {
+// 						var depth = 0;
+// 						nodes.forEach(node => {
+// 							if (node.nodeType === 8 && node.data.startsWith('$s')) depth++;
+// 							else if (node.nodeType === 8 && node.data.startsWith('/$s')) depth--;
+// 							else if (!depth && !owned.has(node)) node.remove();
+// 						});
+// 						d.remove();
+// 						return;
+// 					}
+// 					p = e.previousSibling;
 // 					while (p != s) {
 // 						if (!p || p == s) break;
 // 						e.parentNode.removeChild(p);
@@ -40,7 +72,7 @@ import { encodeEntities } from "./util.js"
 
 // 					d.parentNode.removeChild(d);
 // 				});
-// 			}
+// 			} else d.remove();
 // 		}
 // 	}
 
@@ -48,7 +80,7 @@ import { encodeEntities } from "./util.js"
 // }
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `class e extends HTMLElement{connectedCallback(){var e=this;if(!e.isConnected)return;let t=this.getAttribute("data-target");if(t){for(var r,a,i=document.createNodeIterator(document,128);i.nextNode();){let e=i.referenceNode;if(e.data=="$s:"+t?r=e:e.data=="/$s:"+t&&(a=e),r&&a)break}r&&a&&r.parentNode!==document&&requestAnimationFrame((()=>{for(var t=a.previousSibling;t!=r&&t&&t!=r;)a.parentNode.removeChild(t),t=a.previousSibling;for(i=r;e.firstChild;)r=e.firstChild,e.removeChild(r),i.after(r),i=r;e.parentNode.removeChild(e)}))}}}customElements.define("preact-island",e);`;
+const INIT_SCRIPT = `class e extends HTMLElement{connectedCallback(){var e=this;if(!e.isConnected)return;let t=this.getAttribute("data-target");if(t){for(var r,o,n=document.createNodeIterator(document,128);n.nextNode();){let e=n.referenceNode;if(e.data=="$s:"+t?r=e:e.data=="/$s:"+t&&(o=e),r&&o)break}r&&o&&r.parentNode!==document?requestAnimationFrame(()=>{if(e.isConnected&&r.isConnected&&o.isConnected&&r.parentNode===o.parentNode){for(var t=[],a=r.nextSibling,i=r.parentNode;a&&a!==o;)t.push(a),a=a.nextSibling;if(a){for(;i&&!i.__k;)i=i.parentNode;var d=new Set;if(i&&function e(t){t&&("function"!=typeof t.type&&t.__e&&t.__e.parentNode===r.parentNode&&d.add(t.__e),t.__k&&t.__k.forEach(e))}(i.__k),t.some(e=>d.has(e))){var s=0;return t.forEach(e=>{8===e.nodeType&&e.data.startsWith("$s")?s++:8===e.nodeType&&e.data.startsWith("/$s")?s--:s||d.has(e)||e.remove()}),void e.remove()}for(a=o.previousSibling;a!=r&&a&&a!=r;)o.parentNode.removeChild(a),a=o.previousSibling;for(n=r;e.firstChild;)r=e.firstChild,e.removeChild(r),n.after(r),n=r;e.parentNode.removeChild(e)}else e.remove()}else e.remove()}):e.remove()}}}customElements.define("preact-island",e);`;
 
 /**
  * @param {string} nonce
