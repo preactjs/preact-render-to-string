@@ -283,6 +283,41 @@ describe('inline init script', () => {
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
+	it('should not patch an incomplete template just because a later sibling exists', async () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->loading<!--/$s:1--><!--$s:2-->b<!--/$s:2--></div>'
+		);
+
+		setReadyState(document, 'loading');
+		runInitScript(window);
+
+		// Microtask interleaving can expose an open <template for> before its
+		// children arrive. A later sibling alone must not count as "complete"
+		// or we stamp empty content and remove the node so it never finishes.
+		const partial = appendTemplate(document, '1', '');
+		appendTemplate(document, '2', '<p>two</p>');
+		await flushMutations();
+
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1-->loading<!--/$s:1--><!--$s:2-->b<!--/$s:2-->'
+		);
+		expect(document.querySelector('template[for="1"]')).not.toBeNull();
+		expect(document.querySelector('template[for="2"]')).not.toBeNull();
+
+		partial.innerHTML = '<p>one</p>';
+		// Content mutations land in template.content (not the document tree),
+		// so nudge the observer with a non-element document mutation that does
+		// not give the trailing template a nextElementSibling.
+		document.body.appendChild(document.createComment('nudge'));
+		await flushMutations();
+
+		expect(document.querySelector('div').innerHTML).toBe(
+			'<!--$s:1--><p>one</p><!--/$s:1--><!--$s:2-->b<!--/$s:2-->'
+		);
+		expect(document.querySelector('template[for="1"]')).toBeNull();
+		expect(document.querySelector('template[for="2"]')).not.toBeNull();
+	});
+
 	it('should disconnect the MutationObserver after a non-loading pass', async () => {
 		const { window, document } = createDom(
 			'<div><!--$s:1-->a<!--/$s:1--><!--$s:2-->b<!--/$s:2--></div>'

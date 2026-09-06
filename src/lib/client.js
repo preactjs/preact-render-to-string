@@ -7,8 +7,10 @@ import { encodeEntities } from './util.js';
 // 	  let isNotLoading = d.readyState[0] != "l", qsa = 'querySelectorAll',node;
 //   	  // loop through all <template[for]> and move them
 // 	  for ( node of d[qsa]("template[for]")) {
-// 		// make sure the template is done streaming in
-// 		if (isNotLoading || node.nextElementSibling) {
+// 		// make sure the template is done streaming in: a later sibling alone is
+// 		// not enough (open templates can gain siblings via microtask interleaving
+// 		// before children arrive). Require content while the document is loading.
+// 		if (isNotLoading || node.nextElementSibling && node.content.childNodes.length) {
 // 		  let s, e, n, p, c = d.createNodeIterator(d, 128), id = "$s:" + node.getAttribute("for");
 // 		  // find the start and end markers in content
 // 		  while ((n = c.nextNode()) && !(s && e)) {
@@ -41,7 +43,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t=()=>{let t,r="l"!=e.readyState[0],n="querySelectorAll";for(t of e[n]("template[for]"))if(r||t.nextElementSibling){let o,r,n,a,d=e.createNodeIterator(e,128),i="$s:"+t.getAttribute("for");for(;(n=d.nextNode())&&(!o||!r);)n.data==i?o=n:n.data=="/"+i&&(r=n);if(o&&r&&o.parentNode!==e){for(;(a=o.nextSibling)&&a!=r;)a.remove();o.after(t.content),t.remove()}}for(t of e[n]("svg *,math *"))t.tagName<"a"&&(t=t.closest("svg,math"))&&(t.innerHTML+="");r&&o.disconnect()},o=new MutationObserver(t);o.observe(e,{childList:1,subtree:1}),e.addEventListener("DOMContentLoaded",t)})(document);`;
+const INIT_SCRIPT = `(e=>{let t=()=>{let t,n="l"!=e.readyState[0],r="querySelectorAll";for(t of e[r]("template[for]"))if(n||t.nextElementSibling&&t.content.childNodes.length){let o,n,r,a,d=e.createNodeIterator(e,128),l="$s:"+t.getAttribute("for");for(;(r=d.nextNode())&&(!o||!n);)r.data==l?o=r:r.data=="/"+l&&(n=r);if(o&&n&&o.parentNode!==e){for(;(a=o.nextSibling)&&a!=n;)a.remove();o.after(t.content),t.remove()}}for(t of e[r]("svg *,math *"))t.tagName<"a"&&(t=t.closest("svg,math"))&&(t.innerHTML+="");n&&o.disconnect()},o=new MutationObserver(t);o.observe(e,{childList:1,subtree:1}),e.addEventListener("DOMContentLoaded",t)})(document);`;
 
 /**
  * @param {string} nonce
