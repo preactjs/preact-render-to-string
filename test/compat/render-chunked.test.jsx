@@ -334,6 +334,68 @@ describe('renderToChunks', () => {
 		// The init script should be the only script emitted
 		expect(result[2]).to.equal(createInitScript('r4nd0m-nonce'));
 	});
+
+	it.each([
+		['null', null],
+		['false', false],
+		['an empty string', ''],
+		['an empty array', []]
+	])(
+		'should replace the fallback when suspended content resolves to %s',
+		async (_, children) => {
+			const { Suspender, suspended } = createSuspender();
+			const result = [];
+			const promise = renderToChunks(
+				<Suspense fallback="loading...">
+					<Suspender>{children}</Suspender>
+				</Suspense>,
+				{ onWrite: (chunk) => result.push(chunk) }
+			);
+
+			suspended.resolve();
+			await promise;
+
+			const id = result[0].match(/\$s:(\d+)/)[1];
+			expect(result).toEqual([
+				`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
+				'<div hidden>',
+				createInitScript(),
+				createSubtree(id, ''),
+				'</div>'
+			]);
+		}
+	);
+
+	it('should wait for every suspension in a boundary before patching it', async () => {
+		const first = createSuspender();
+		const second = createSuspender();
+		const result = [];
+		const promise = renderToChunks(
+			<Suspense fallback="loading...">
+				<first.Suspender>
+					<p>first</p>
+				</first.Suspender>
+				<second.Suspender>
+					<p>second</p>
+				</second.Suspender>
+			</Suspense>,
+			{ onWrite: (chunk) => result.push(chunk) }
+		);
+
+		first.suspended.resolve();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(
+			result.filter((chunk) => chunk.startsWith('<preact-island'))
+		).toEqual([]);
+
+		second.suspended.resolve();
+		await promise;
+		const patches = result.filter((chunk) =>
+			chunk.startsWith('<preact-island')
+		);
+		expect(patches).toHaveLength(1);
+		expect(patches[0]).toContain('<p>first</p><p>second</p>');
+	});
 });
 
 describe('createInitScript', () => {

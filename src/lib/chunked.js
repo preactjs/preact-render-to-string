@@ -8,7 +8,10 @@ import { createInitScript, createSubtree } from './client.js';
  * @param {RenderToChunksOptions} options
  * @returns {Promise<void>}
  */
-export async function renderToChunks(vnode, { context, onWrite, abortSignal, nonce }) {
+export async function renderToChunks(
+	vnode,
+	{ context, onWrite, abortSignal, nonce }
+) {
 	context = context || {};
 
 	/** @type {RendererState} */
@@ -97,8 +100,12 @@ function handleError(error, vnode, renderChild) {
 	const promise = error.then(
 		() => {
 			if (abortSignal && abortSignal.aborted) return;
+			const suspendedCount = this.suspended.length;
 			const child = renderChild(vnode.props.children, vnode);
-			if (child) this.onWrite(createSubtree(id, child));
+			const suspendedAgain = this.suspended
+				.slice(suspendedCount)
+				.some((suspension) => suspension.id === id);
+			if (!suspendedAgain) this.onWrite(createSubtree(id, child));
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration

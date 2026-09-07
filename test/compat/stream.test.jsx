@@ -110,4 +110,25 @@ describe('renderToReadableStream', () => {
 		expect(result.join('')).to.contain('<script nonce="r4nd0m-nonce">');
 		expect(result.join('')).to.not.contain('<script>');
 	});
+
+	it('should replace the fallback when suspended content resolves empty', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const stream = renderToReadableStream(
+			<Suspense fallback="loading...">
+				<Suspender>{null}</Suspender>
+			</Suspense>
+		);
+		const sink = createSink(stream);
+		suspended.resolve();
+
+		const result = await sink.promise;
+		const id = result[0].match(/\$s:(\d+)/)[1];
+		expect(result).toEqual([
+			`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
+			'<div hidden>',
+			createInitScript(),
+			createSubtree(id, ''),
+			'</div>'
+		]);
+	});
 });
