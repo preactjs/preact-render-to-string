@@ -4,13 +4,11 @@ interface Suspended {
 	id: string;
 	promise: Promise<any>;
 	resolve: () => void;
-	cancelled: boolean;
 	vnode: VNode | null;
 	renderer: RendererState | null;
 	renderChild:
 		| ((child: ComponentChildren, parent: ComponentChild) => string)
 		| null;
-	abortSignal: AbortSignal | null | undefined;
 	abort: (() => void) | null;
 }
 

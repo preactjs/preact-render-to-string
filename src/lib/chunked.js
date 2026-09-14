@@ -57,7 +57,8 @@ export async function renderToChunks(
 			onWrite(shell);
 		}
 	} finally {
-		for (const pending of renderer.suspended) cancelPending(pending);
+		for (const pending of renderer.suspended)
+			finishPending(pending, pending.resolve);
 	}
 }
 
@@ -108,7 +109,7 @@ function handleError(error, vnode, renderChild) {
 		for (const pending of this.suspended) {
 			let parent = pending.vnode;
 			while (parent && parent !== vnode) parent = parent[PARENT];
-			if (parent) cancelPending(pending);
+			if (parent) finishPending(pending, pending.resolve);
 		}
 		if (found) {
 			this.onWrite(createClientRenderInstruction(id, this.nonce));
@@ -125,15 +126,19 @@ function handleError(error, vnode, renderChild) {
 		renderChild,
 		promise: completion.promise,
 		resolve: completion.resolve,
-		cancelled: false,
-		abortSignal: this.abortSignal,
 		abort: null
 	};
 	this.suspended.push(pending);
-	if (pending.abortSignal) {
-		pending.abort = cancelPending.bind(null, pending);
-		if (pending.abortSignal.aborted) pending.abort();
-		else pending.abortSignal.addEventListener('abort', pending.abort);
+	if (this.abortSignal) {
+		// Do not resolve the completion promise with the abort event.
+		pending.abort = finishPending.bind(
+			null,
+			pending,
+			pending.resolve,
+			undefined
+		);
+		if (this.abortSignal.aborted) pending.abort();
+		else this.abortSignal.addEventListener('abort', pending.abort);
 	}
 
 	Promise.resolve(error)
@@ -148,21 +153,21 @@ function handleError(error, vnode, renderChild) {
 }
 
 function retryPending(pending) {
-	if (pending.cancelled) return;
 	const renderer = pending.renderer;
+	if (!renderer) return;
 	const vnode = pending.vnode;
 	const suspendedCount = renderer.suspended.length;
 	const child = pending.renderChild(vnode.props.children, vnode);
 	const suspendedAgain = renderer.suspended
 		.slice(suspendedCount)
 		.some((s) => s.id === pending.id);
-	if (!pending.cancelled && !suspendedAgain) {
+	if (pending.renderer && !suspendedAgain) {
 		renderer.onWrite(createSubtree(pending.id, child));
 	}
 }
 
 function rejectPending(pending, error) {
-	if (pending.cancelled) return;
+	if (!pending.renderer) return;
 	if (!isRecoverable(error)) throw error;
 	return handleError.call(
 		pending.renderer,
@@ -173,24 +178,12 @@ function rejectPending(pending, error) {
 }
 
 function finishPending(pending, settle, value) {
-	if (!pending.cancelled) {
-		releasePending(pending);
-		settle(value);
-	}
-}
-
-function cancelPending(pending) {
-	if (pending.cancelled) return;
-	pending.cancelled = true;
-	const resolve = pending.resolve;
-	releasePending(pending);
-	resolve();
-}
-
-function releasePending(pending) {
-	if (pending.abortSignal && pending.abort) {
-		pending.abortSignal.removeEventListener('abort', pending.abort);
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	if (renderer.abortSignal && pending.abort) {
+		renderer.abortSignal.removeEventListener('abort', pending.abort);
 	}
 	pending.vnode = pending.renderer = pending.renderChild = null;
-	pending.abortSignal = pending.abort = null;
+	pending.abort = null;
+	settle(value);
 }

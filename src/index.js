@@ -44,24 +44,16 @@ const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
  * @returns {string | Array | Promise}
  */
 function wrapWithSuspenseMarkers(result, clientOnly = false) {
-	if (typeof result === 'string') {
-		return (
-			(clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR) +
-			result +
-			END_SUSPENSE_DENOMINATOR
-		);
-	} else if (isArray(result)) {
-		result.unshift(clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR);
+	const start = clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR;
+	if (isArray(result)) {
+		result.unshift(start);
 		result.push(END_SUSPENSE_DENOMINATOR);
 		return result;
-	} else if (result && typeof result.then === 'function') {
+	}
+	if (result && typeof result.then === 'function') {
 		return result.then((value) => wrapWithSuspenseMarkers(value, clientOnly));
 	}
-	return (
-		(clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR) +
-		result +
-		END_SUSPENSE_DENOMINATOR
-	);
+	return start + result + END_SUSPENSE_DENOMINATOR;
 }
 
 /**
@@ -161,7 +153,7 @@ export async function renderToStringAsync(vnode, context) {
 	const hooks = captureHooks();
 
 	try {
-		const rendered = await withSkipEffects(() => {
+		const rendered = withSkipEffects(() => {
 			const parent = h(Fragment, null);
 			parent[CHILDREN] = [vnode];
 			if (hooks.rootHook) {
@@ -180,24 +172,7 @@ export async function renderToStringAsync(vnode, context) {
 			);
 		});
 
-		if (isArray(rendered)) {
-			let count = 0;
-			let resolved = rendered;
-
-			// Resolving nested Promises with a maximum depth of 25
-			while (
-				resolved.some(
-					(element) => element && typeof element.then === 'function'
-				) &&
-				count++ < 25
-			) {
-				resolved = (await Promise.all(resolved)).flat();
-			}
-
-			return resolved.join(EMPTY_STR);
-		}
-
-		return rendered;
+		return await resolveRenderResult(rendered);
 	} finally {
 		// options._commit, we don't schedule any effects in this library right now,
 		// so we can pass an empty queue to this hook.
@@ -538,27 +513,29 @@ function _renderToString(
 			rendered.props.tpl == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
-		const recover = (error) => {
-			if (!isRecoverable(error) || !component || !component[CHILD_DID_SUSPEND])
-				throw error;
-			const renderFallback = () =>
-				_renderToString(
-					props.fallback,
-					context,
-					isSvgMode,
-					selectValue,
-					vnode,
-					asyncMode,
-					renderer,
-					hooks
+		const recover =
+			component &&
+			component[CHILD_DID_SUSPEND] &&
+			((error) => {
+				if (!isRecoverable(error)) throw error;
+				const renderFallback = () =>
+					_renderToString(
+						props.fallback,
+						context,
+						isSvgMode,
+						selectValue,
+						vnode,
+						asyncMode,
+						renderer,
+						hooks
+					);
+				return wrapWithSuspenseMarkers(
+					asyncMode
+						? renderAsyncFallback(renderFallback)
+						: withSkipEffects(renderFallback),
+					true
 				);
-			return wrapWithSuspenseMarkers(
-				asyncMode
-					? renderAsyncFallback(renderFallback)
-					: withSkipEffects(renderFallback),
-				true
-			);
-		};
+			});
 
 		try {
 			// Recurse into children before invoking the after-diff hook
@@ -578,12 +555,7 @@ function _renderToString(
 
 			if (hooks.unmountHook) hooks.unmountHook(vnode);
 
-			if (
-				asyncMode &&
-				component &&
-				component[CHILD_DID_SUSPEND] &&
-				typeof str != 'string'
-			) {
+			if (asyncMode && recover && typeof str != 'string') {
 				return resolveRenderResult(str).catch(recover);
 			}
 
@@ -594,7 +566,7 @@ function _renderToString(
 			return str;
 		} catch (error) {
 			if (isRecoverable(error)) {
-				if (!component || !component[CHILD_DID_SUSPEND]) throw error;
+				if (!recover) throw error;
 				if (!renderer || asyncMode) return recover(error);
 			}
 			if (!asyncMode && renderer && renderer.onError) {
@@ -653,9 +625,7 @@ function _renderToString(
 			};
 
 			const retry = error.then(renderNestedChildren);
-			return component && component[CHILD_DID_SUSPEND]
-				? resolveRenderResult(retry).catch(recover)
-				: retry;
+			return recover ? resolveRenderResult(retry).catch(recover) : retry;
 		}
 	}
 
