@@ -1,3 +1,4 @@
+import { isRecoverableError } from './lib/recoverable.js';
 import {
 	encodeEntities,
 	styleObjToCss,
@@ -24,7 +25,8 @@ import {
 	ROOT,
 	SKIP_EFFECTS,
 	VNODE,
-	CATCH_ERROR
+	CATCH_ERROR,
+	CHILD_DID_SUSPEND
 } from './lib/constants.js';
 
 const EMPTY_OBJ = {};
@@ -41,17 +43,25 @@ const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
  * @param {string | Array | Promise} result
  * @returns {string | Array | Promise}
  */
-function wrapWithSuspenseMarkers(result) {
+function wrapWithSuspenseMarkers(result, clientOnly = false) {
 	if (typeof result === 'string') {
-		return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
+		return (
+			(clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR) +
+			result +
+			END_SUSPENSE_DENOMINATOR
+		);
 	} else if (isArray(result)) {
-		result.unshift(BEGIN_SUSPENSE_DENOMINATOR);
+		result.unshift(clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR);
 		result.push(END_SUSPENSE_DENOMINATOR);
 		return result;
 	} else if (result && typeof result.then === 'function') {
-		return result.then(wrapWithSuspenseMarkers);
+		return result.then((value) => wrapWithSuspenseMarkers(value, clientOnly));
 	}
-	return BEGIN_SUSPENSE_DENOMINATOR + result + END_SUSPENSE_DENOMINATOR;
+	return (
+		(clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR) +
+		result +
+		END_SUSPENSE_DENOMINATOR
+	);
 }
 
 /**
@@ -474,6 +484,7 @@ function _renderToString(
 						hooks
 					);
 				} catch (err) {
+					if (isRecoverableError(err)) throw err;
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
 					}
@@ -527,6 +538,32 @@ function _renderToString(
 			rendered.props.tpl == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
+		const recover = (error) => {
+			if (
+				!isRecoverableError(error) ||
+				!component ||
+				!component[CHILD_DID_SUSPEND]
+			)
+				throw error;
+			const renderFallback = () =>
+				_renderToString(
+					props.fallback,
+					context,
+					isSvgMode,
+					selectValue,
+					vnode,
+					asyncMode,
+					renderer,
+					hooks
+				);
+			return wrapWithSuspenseMarkers(
+				asyncMode
+					? renderAsyncFallback(renderFallback)
+					: withSkipEffects(renderFallback),
+				true
+			);
+		};
+
 		try {
 			// Recurse into children before invoking the after-diff hook
 			const str = _renderToString(
@@ -545,12 +582,25 @@ function _renderToString(
 
 			if (hooks.unmountHook) hooks.unmountHook(vnode);
 
+			if (
+				asyncMode &&
+				component &&
+				component[CHILD_DID_SUSPEND] &&
+				typeof str != 'string'
+			) {
+				return resolveRenderResult(str).catch(recover);
+			}
+
 			if (vnode._suspended) {
 				return wrapWithSuspenseMarkers(str);
 			}
 
 			return str;
 		} catch (error) {
+			if (isRecoverableError(error)) {
+				if (!component || !component[CHILD_DID_SUSPEND]) throw error;
+				if (!renderer || asyncMode) return recover(error);
+			}
 			if (!asyncMode && renderer && renderer.onError) {
 				const onError = (error) => {
 					return renderer.onError(error, vnode, (child, parent) => {
@@ -606,7 +656,10 @@ function _renderToString(
 				}
 			};
 
-			return error.then(renderNestedChildren);
+			const retry = error.then(renderNestedChildren);
+			return component && component[CHILD_DID_SUSPEND]
+				? resolveRenderResult(retry).catch(recover)
+				: retry;
 		}
 	}
 
@@ -808,4 +861,24 @@ function isSignal(x) {
 		typeof x.peek === 'function' &&
 		'value' in x
 	);
+}
+
+/** Resolve the mixed result owned by an async Suspense boundary. */
+function resolveRenderResult(result) {
+	return Promise.resolve(result).then((value) =>
+		isArray(value)
+			? Promise.all(value.map(resolveRenderResult)).then((parts) =>
+					parts.join(EMPTY_STR)
+				)
+			: value
+	);
+}
+
+function renderAsyncFallback(render) {
+	try {
+		return withSkipEffects(render);
+	} catch (error) {
+		if (!error || typeof error.then != 'function') throw error;
+		return Promise.resolve(error).then(() => renderAsyncFallback(render));
+	}
 }

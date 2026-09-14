@@ -1,7 +1,12 @@
 import { renderToString } from '../index.js';
 import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
 import { Deferred } from './util.js';
-import { createInitScript, createSubtree } from './client.js';
+import {
+	createInitScript,
+	createSubtree,
+	createClientRenderInstruction
+} from './client.js';
+import { isRecoverableError } from './recoverable.js';
 
 /**
  * @param {VNode} vnode
@@ -20,7 +25,10 @@ export async function renderToChunks(
 		abortSignal,
 		onWrite,
 		onError: handleError,
-		suspended: []
+		suspended: [],
+		clientRendered: new Set(),
+		flushed: false,
+		nonce
 	};
 
 	// Synchronously render the shell
@@ -40,6 +48,7 @@ export async function renderToChunks(
 			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
 		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
 		onWrite(prefix + initialWrite);
+		renderer.flushed = true;
 		onWrite('<div hidden>');
 		onWrite(createInitScript(nonce));
 		// We should keep checking all promises
@@ -74,51 +83,91 @@ async function forkPromises(renderer) {
 
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
-	if (!error || !error.then) return;
+	const recoverable = isRecoverableError(error);
+	if (!recoverable && (!error || !error.then)) throw error;
 
-	// walk up to the Suspense boundary
-	while ((vnode = vnode[PARENT])) {
-		let component = vnode[COMPONENT];
-		if (component && component[CHILD_DID_SUSPEND]) {
-			break;
+	// Recoverables reach this handler at the boundary itself. Promise retries
+	// can reach it from a descendant, just like their initial suspension.
+	if (
+		!recoverable ||
+		!vnode[COMPONENT] ||
+		!vnode[COMPONENT][CHILD_DID_SUSPEND]
+	) {
+		while ((vnode = vnode[PARENT])) {
+			const component = vnode[COMPONENT];
+			if (component && component[CHILD_DID_SUSPEND]) break;
 		}
 	}
-
-	if (!vnode) return;
+	if (!vnode) throw error;
 
 	const id = vnode.__v;
+	if (this.clientRendered.has(id)) return '';
 	const found = this.suspended.find((x) => x.id === id);
-	const race = new Deferred();
 
-	const abortSignal = this.abortSignal;
-	if (abortSignal) {
-		// @ts-ignore 2554 - implicit undefined arg
-		if (abortSignal.aborted) race.resolve();
-		else abortSignal.addEventListener('abort', race.resolve);
+	if (recoverable) {
+		this.clientRendered.add(id);
+		for (const pending of this.suspended) {
+			let parent = pending.vnode;
+			while (parent && parent !== vnode) parent = parent[PARENT];
+			if (parent) {
+				pending.cancelled = true;
+				pending.resolve();
+			}
+		}
+		if (found && this.flushed) {
+			this.onWrite(createClientRenderInstruction(id, this.nonce));
+			return '';
+		}
+		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
 	}
 
-	const promise = error.then(
-		() => {
-			if (abortSignal && abortSignal.aborted) return;
-			const suspendedCount = this.suspended.length;
-			const child = renderChild(vnode.props.children, vnode);
-			const suspendedAgain = this.suspended
-				.slice(suspendedCount)
-				.some((suspension) => suspension.id === id);
-			if (!suspendedAgain) this.onWrite(createSubtree(id, child));
-		},
-		// TODO: Abort and send hydration code snippet to client
-		// to attempt to recover during hydration
-		this.onError
-	);
-
-	this.suspended.push({
+	const completion = new Deferred();
+	const pending = {
 		id,
 		vnode,
-		promise: Promise.race([promise, race.promise])
-	});
+		promise: completion.promise,
+		resolve: completion.resolve,
+		cancelled: false
+	};
+	this.suspended.push(pending);
+	const abortSignal = this.abortSignal;
+	const abort = () => {
+		pending.cancelled = true;
+		completion.resolve();
+	};
+	if (abortSignal) {
+		if (abortSignal.aborted) abort();
+		else abortSignal.addEventListener('abort', abort);
+	}
 
-	const fallback = renderChild(vnode.props.fallback);
+	Promise.resolve(error)
+		.then(
+			() => {
+				if (pending.cancelled) return;
+				const suspendedCount = this.suspended.length;
+				const child = renderChild(vnode.props.children, vnode);
+				const suspendedAgain = this.suspended
+					.slice(suspendedCount)
+					.some((s) => s.id === id);
+				if (
+					!pending.cancelled &&
+					!this.clientRendered.has(id) &&
+					!suspendedAgain
+				) {
+					this.onWrite(createSubtree(id, child));
+				}
+			},
+			(error) => {
+				if (pending.cancelled) return;
+				if (!isRecoverableError(error)) throw error;
+				return handleError.call(this, error, vnode, renderChild);
+			}
+		)
+		.then(completion.resolve, completion.reject)
+		.then(() => {
+			if (abortSignal) abortSignal.removeEventListener('abort', abort);
+		});
 
+	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
 	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
 }
