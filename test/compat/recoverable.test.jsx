@@ -179,6 +179,44 @@ describe('recoverable errors', () => {
 		expect(chunks.join('')).not.to.contain('undefined');
 	});
 
+	for (const outcome of ['resolve', 'reject']) {
+		it(`ignores abandoned descendant ${outcome} after the stream completes`, async () => {
+			const first = new Deferred(),
+				second = new Deferred();
+			const Bail = afterPromise(first.promise);
+			let abandonedRenders = 0;
+			function BailParent() {
+				return <Bail />;
+			}
+			function AbandonedParent() {
+				return <Abandoned />;
+			}
+			function Abandoned() {
+				abandonedRenders++;
+				throw second.promise;
+			}
+			const chunks = [];
+			const result = renderToChunks(
+				boundary(
+					<Fragment>
+						<BailParent />
+						<AbandonedParent />
+					</Fragment>
+				),
+				{ onWrite: (s) => chunks.push(s) }
+			);
+			expect(abandonedRenders).toBe(1);
+			first.resolve();
+			await result;
+			const completed = chunks.slice();
+			second[outcome](new Error('abandoned'));
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(abandonedRenders).toBe(1);
+			expect(chunks).to.deep.equal(completed);
+			expect(chunks.join('')).not.to.contain('<preact-island');
+		});
+	}
+
 	it('keeps unrelated streaming boundaries alive', async () => {
 		const first = new Deferred(),
 			second = new Deferred();

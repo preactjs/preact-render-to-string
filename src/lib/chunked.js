@@ -26,8 +26,6 @@ export async function renderToChunks(
 		onWrite,
 		onError: handleError,
 		suspended: [],
-		clientRendered: new Set(),
-		flushed: false,
 		nonce
 	};
 
@@ -48,7 +46,6 @@ export async function renderToChunks(
 			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
 		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
 		onWrite(prefix + initialWrite);
-		renderer.flushed = true;
 		onWrite('<div hidden>');
 		onWrite(createInitScript(nonce));
 		// We should keep checking all promises
@@ -101,11 +98,9 @@ function handleError(error, vnode, renderChild) {
 	if (!vnode) throw error;
 
 	const id = vnode.__v;
-	if (this.clientRendered.has(id)) return '';
 	const found = this.suspended.find((x) => x.id === id);
 
 	if (recoverable) {
-		this.clientRendered.add(id);
 		for (const pending of this.suspended) {
 			let parent = pending.vnode;
 			while (parent && parent !== vnode) parent = parent[PARENT];
@@ -114,7 +109,7 @@ function handleError(error, vnode, renderChild) {
 				pending.resolve();
 			}
 		}
-		if (found && this.flushed) {
+		if (found) {
 			this.onWrite(createClientRenderInstruction(id, this.nonce));
 			return '';
 		}
@@ -149,11 +144,7 @@ function handleError(error, vnode, renderChild) {
 				const suspendedAgain = this.suspended
 					.slice(suspendedCount)
 					.some((s) => s.id === id);
-				if (
-					!pending.cancelled &&
-					!this.clientRendered.has(id) &&
-					!suspendedAgain
-				) {
+				if (!pending.cancelled && !suspendedAgain) {
 					this.onWrite(createSubtree(id, child));
 				}
 			},

@@ -19,8 +19,6 @@ interface RendererErrorHandler {
 
 interface RendererState {
 	start: number;
-	clientRendered: Set<string>;
-	flushed: boolean;
 	nonce?: string;
 	suspended: Suspended[];
 	abortSignal?: AbortSignal | undefined;
