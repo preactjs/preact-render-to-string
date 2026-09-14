@@ -1,7 +1,12 @@
 import { renderToString } from '../index.js';
 import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
 import { Deferred } from './util.js';
-import { createInitScript, createSubtree } from './client.js';
+import {
+	createInitScript,
+	createSubtree,
+	createClientRenderInstruction
+} from './client.js';
+import { isRecoverable } from './recoverable.js';
 
 /**
  * @param {VNode} vnode
@@ -20,34 +25,40 @@ export async function renderToChunks(
 		abortSignal,
 		onWrite,
 		onError: handleError,
-		suspended: []
+		suspended: [],
+		nonce
 	};
 
-	// Synchronously render the shell
-	// @ts-ignore - using third internal RendererState argument
-	const shell = renderToString(vnode, context, renderer);
+	try {
+		// Synchronously render the shell
+		// @ts-ignore - using third internal RendererState argument
+		const shell = renderToString(vnode, context, renderer);
 
-	// Wait for any suspended sub-trees if there are any
-	const len = renderer.suspended.length;
-	if (len > 0) {
-		// When rendering a full HTML document, the shell ends with </body></html>.
-		// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
-		// and causes browsers to reject the content. Instead, we inject the deferred
-		// content before the closing tags, then emit them last.
-		const docSuffixIndex = getDocumentClosingTagsIndex(shell);
-		const hasHtmlTag = shell.trimStart().startsWith('<html');
-		const initialWrite =
-			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
-		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
-		onWrite(prefix + initialWrite);
-		onWrite('<div hidden>');
-		onWrite(createInitScript(nonce));
-		// We should keep checking all promises
-		await forkPromises(renderer);
-		onWrite('</div>');
-		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
-	} else {
-		onWrite(shell);
+		// Wait for any suspended sub-trees if there are any
+		const len = renderer.suspended.length;
+		if (len > 0) {
+			// When rendering a full HTML document, the shell ends with </body></html>.
+			// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
+			// and causes browsers to reject the content. Instead, we inject the deferred
+			// content before the closing tags, then emit them last.
+			const docSuffixIndex = getDocumentClosingTagsIndex(shell);
+			const hasHtmlTag = shell.trimStart().startsWith('<html');
+			const initialWrite =
+				docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
+			const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
+			onWrite(prefix + initialWrite);
+			onWrite('<div hidden>');
+			onWrite(createInitScript(nonce));
+			// We should keep checking all promises
+			await forkPromises(renderer);
+			onWrite('</div>');
+			if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
+		} else {
+			onWrite(shell);
+		}
+	} finally {
+		for (const pending of renderer.suspended)
+			finishPending(pending, pending.resolve);
 	}
 }
 
@@ -74,51 +85,105 @@ async function forkPromises(renderer) {
 
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
-	if (!error || !error.then) return;
+	const recoverable = isRecoverable(error);
+	if (!recoverable && (!error || !error.then)) throw error;
 
-	// walk up to the Suspense boundary
-	while ((vnode = vnode[PARENT])) {
-		let component = vnode[COMPONENT];
-		if (component && component[CHILD_DID_SUSPEND]) {
-			break;
+	// Recoverables reach this handler at the boundary itself. Promise retries
+	// can reach it from a descendant, just like their initial suspension.
+	if (
+		!recoverable ||
+		!vnode[COMPONENT] ||
+		!vnode[COMPONENT][CHILD_DID_SUSPEND]
+	) {
+		while ((vnode = vnode[PARENT])) {
+			const component = vnode[COMPONENT];
+			if (component && component[CHILD_DID_SUSPEND]) break;
 		}
 	}
-
-	if (!vnode) return;
+	if (!vnode) throw error;
 
 	const id = vnode.__v;
 	const found = this.suspended.find((x) => x.id === id);
-	const race = new Deferred();
 
-	const abortSignal = this.abortSignal;
-	if (abortSignal) {
-		// @ts-ignore 2554 - implicit undefined arg
-		if (abortSignal.aborted) race.resolve();
-		else abortSignal.addEventListener('abort', race.resolve);
+	if (recoverable) {
+		for (const pending of this.suspended) {
+			let parent = pending.vnode;
+			while (parent && parent !== vnode) parent = parent[PARENT];
+			if (parent) finishPending(pending, pending.resolve);
+		}
+		if (found) {
+			this.onWrite(createClientRenderInstruction(id, this.nonce));
+			return '';
+		}
+		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
 	}
 
-	const promise = error.then(
-		() => {
-			if (abortSignal && abortSignal.aborted) return;
-			const suspendedCount = this.suspended.length;
-			const child = renderChild(vnode.props.children, vnode);
-			const suspendedAgain = this.suspended
-				.slice(suspendedCount)
-				.some((suspension) => suspension.id === id);
-			if (!suspendedAgain) this.onWrite(createSubtree(id, child));
-		},
-		// TODO: Abort and send hydration code snippet to client
-		// to attempt to recover during hydration
-		this.onError
-	);
-
-	this.suspended.push({
+	const completion = new Deferred();
+	const pending = {
 		id,
 		vnode,
-		promise: Promise.race([promise, race.promise])
-	});
+		renderer: this,
+		renderChild,
+		promise: completion.promise,
+		resolve: completion.resolve,
+		abort: null
+	};
+	this.suspended.push(pending);
+	if (this.abortSignal) {
+		// Do not resolve the completion promise with the abort event.
+		pending.abort = finishPending.bind(
+			null,
+			pending,
+			pending.resolve,
+			undefined
+		);
+		if (this.abortSignal.aborted) pending.abort();
+		else this.abortSignal.addEventListener('abort', pending.abort);
+	}
 
-	const fallback = renderChild(vnode.props.fallback);
+	Promise.resolve(error)
+		.then(retryPending.bind(null, pending), rejectPending.bind(null, pending))
+		.then(
+			finishPending.bind(null, pending, completion.resolve),
+			finishPending.bind(null, pending, completion.reject)
+		);
 
+	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
 	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+}
+
+function retryPending(pending) {
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	const vnode = pending.vnode;
+	const suspendedCount = renderer.suspended.length;
+	const child = pending.renderChild(vnode.props.children, vnode);
+	const suspendedAgain = renderer.suspended
+		.slice(suspendedCount)
+		.some((s) => s.id === pending.id);
+	if (pending.renderer && !suspendedAgain) {
+		renderer.onWrite(createSubtree(pending.id, child));
+	}
+}
+
+function rejectPending(pending, error) {
+	if (!pending.renderer) return;
+	if (!isRecoverable(error)) throw error;
+	return handleError.call(
+		pending.renderer,
+		error,
+		pending.vnode,
+		pending.renderChild
+	);
+}
+
+function finishPending(pending, settle, value) {
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	if (renderer.abortSignal && pending.abort) {
+		renderer.abortSignal.removeEventListener('abort', pending.abort);
+	}
+	pending.vnode = pending.renderer = pending.renderChild = null;
+	pending.abort = null;
+	settle(value);
 }
