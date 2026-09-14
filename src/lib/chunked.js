@@ -29,31 +29,35 @@ export async function renderToChunks(
 		nonce
 	};
 
-	// Synchronously render the shell
-	// @ts-ignore - using third internal RendererState argument
-	const shell = renderToString(vnode, context, renderer);
+	try {
+		// Synchronously render the shell
+		// @ts-ignore - using third internal RendererState argument
+		const shell = renderToString(vnode, context, renderer);
 
-	// Wait for any suspended sub-trees if there are any
-	const len = renderer.suspended.length;
-	if (len > 0) {
-		// When rendering a full HTML document, the shell ends with </body></html>.
-		// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
-		// and causes browsers to reject the content. Instead, we inject the deferred
-		// content before the closing tags, then emit them last.
-		const docSuffixIndex = getDocumentClosingTagsIndex(shell);
-		const hasHtmlTag = shell.trimStart().startsWith('<html');
-		const initialWrite =
-			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
-		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
-		onWrite(prefix + initialWrite);
-		onWrite('<div hidden>');
-		onWrite(createInitScript(nonce));
-		// We should keep checking all promises
-		await forkPromises(renderer);
-		onWrite('</div>');
-		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
-	} else {
-		onWrite(shell);
+		// Wait for any suspended sub-trees if there are any
+		const len = renderer.suspended.length;
+		if (len > 0) {
+			// When rendering a full HTML document, the shell ends with </body></html>.
+			// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
+			// and causes browsers to reject the content. Instead, we inject the deferred
+			// content before the closing tags, then emit them last.
+			const docSuffixIndex = getDocumentClosingTagsIndex(shell);
+			const hasHtmlTag = shell.trimStart().startsWith('<html');
+			const initialWrite =
+				docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
+			const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
+			onWrite(prefix + initialWrite);
+			onWrite('<div hidden>');
+			onWrite(createInitScript(nonce));
+			// We should keep checking all promises
+			await forkPromises(renderer);
+			onWrite('</div>');
+			if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
+		} else {
+			onWrite(shell);
+		}
+	} finally {
+		for (const pending of renderer.suspended) cancelPending(pending);
 	}
 }
 
@@ -104,10 +108,7 @@ function handleError(error, vnode, renderChild) {
 		for (const pending of this.suspended) {
 			let parent = pending.vnode;
 			while (parent && parent !== vnode) parent = parent[PARENT];
-			if (parent) {
-				pending.cancelled = true;
-				pending.resolve();
-			}
+			if (parent) cancelPending(pending);
 		}
 		if (found) {
 			this.onWrite(createClientRenderInstruction(id, this.nonce));
@@ -120,45 +121,76 @@ function handleError(error, vnode, renderChild) {
 	const pending = {
 		id,
 		vnode,
+		renderer: this,
+		renderChild,
 		promise: completion.promise,
 		resolve: completion.resolve,
-		cancelled: false
+		cancelled: false,
+		abortSignal: this.abortSignal,
+		abort: null
 	};
 	this.suspended.push(pending);
-	const abortSignal = this.abortSignal;
-	const abort = () => {
-		pending.cancelled = true;
-		completion.resolve();
-	};
-	if (abortSignal) {
-		if (abortSignal.aborted) abort();
-		else abortSignal.addEventListener('abort', abort);
+	if (pending.abortSignal) {
+		pending.abort = cancelPending.bind(null, pending);
+		if (pending.abortSignal.aborted) pending.abort();
+		else pending.abortSignal.addEventListener('abort', pending.abort);
 	}
 
 	Promise.resolve(error)
+		.then(retryPending.bind(null, pending), rejectPending.bind(null, pending))
 		.then(
-			() => {
-				if (pending.cancelled) return;
-				const suspendedCount = this.suspended.length;
-				const child = renderChild(vnode.props.children, vnode);
-				const suspendedAgain = this.suspended
-					.slice(suspendedCount)
-					.some((s) => s.id === id);
-				if (!pending.cancelled && !suspendedAgain) {
-					this.onWrite(createSubtree(id, child));
-				}
-			},
-			(error) => {
-				if (pending.cancelled) return;
-				if (!isRecoverable(error)) throw error;
-				return handleError.call(this, error, vnode, renderChild);
-			}
-		)
-		.then(completion.resolve, completion.reject)
-		.then(() => {
-			if (abortSignal) abortSignal.removeEventListener('abort', abort);
-		});
+			finishPending.bind(null, pending, completion.resolve),
+			finishPending.bind(null, pending, completion.reject)
+		);
 
 	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
 	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+}
+
+function retryPending(pending) {
+	if (pending.cancelled) return;
+	const renderer = pending.renderer;
+	const vnode = pending.vnode;
+	const suspendedCount = renderer.suspended.length;
+	const child = pending.renderChild(vnode.props.children, vnode);
+	const suspendedAgain = renderer.suspended
+		.slice(suspendedCount)
+		.some((s) => s.id === pending.id);
+	if (!pending.cancelled && !suspendedAgain) {
+		renderer.onWrite(createSubtree(pending.id, child));
+	}
+}
+
+function rejectPending(pending, error) {
+	if (pending.cancelled) return;
+	if (!isRecoverable(error)) throw error;
+	return handleError.call(
+		pending.renderer,
+		error,
+		pending.vnode,
+		pending.renderChild
+	);
+}
+
+function finishPending(pending, settle, value) {
+	if (!pending.cancelled) {
+		releasePending(pending);
+		settle(value);
+	}
+}
+
+function cancelPending(pending) {
+	if (pending.cancelled) return;
+	pending.cancelled = true;
+	const resolve = pending.resolve;
+	releasePending(pending);
+	resolve();
+}
+
+function releasePending(pending) {
+	if (pending.abortSignal && pending.abort) {
+		pending.abortSignal.removeEventListener('abort', pending.abort);
+	}
+	pending.vnode = pending.renderer = pending.renderChild = null;
+	pending.abortSignal = pending.abort = null;
 }

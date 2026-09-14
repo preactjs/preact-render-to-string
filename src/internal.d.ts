@@ -5,7 +5,13 @@ interface Suspended {
 	promise: Promise<any>;
 	resolve: () => void;
 	cancelled: boolean;
-	vnode: VNode;
+	vnode: VNode | null;
+	renderer: RendererState | null;
+	renderChild:
+		| ((child: ComponentChildren, parent: ComponentChild) => string)
+		| null;
+	abortSignal: AbortSignal | null | undefined;
+	abort: (() => void) | null;
 }
 
 interface RendererErrorHandler {

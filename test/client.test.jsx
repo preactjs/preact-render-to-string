@@ -185,19 +185,6 @@ describe('stream recovery instructions', () => {
 		expect(root.querySelector('i')).toBe(fallback);
 	});
 
-	it('wakes a suspended client boundary after marking its fallback', () => {
-		const { root } = setup();
-		const start = root.firstChild;
-		let calls = 0;
-		start.__r = () => {
-			expect(start.data).toBe('$s!:1');
-			calls++;
-		};
-		recover();
-		recover();
-		expect(calls).toBe(1);
-	});
-
 	it('ignores a boundary removed before recovery arrives', () => {
 		const { root } = setup();
 		root.replaceChildren();

@@ -99,7 +99,7 @@ export function createSubtree(id, content) {
 	return `<preact-island hidden data-target="${id}">${content}</preact-island>`;
 }
 
-/** Mark an already-flushed fallback and resume its client boundary. */
+/** Mark an already-flushed fallback for client rendering. */
 export function createClientRenderInstruction(id, nonce) {
-	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>(function(i){var n,c=document.createNodeIterator(document,128);while(c.nextNode()){n=c.referenceNode;if(n.data==='$s:'+i){n.data='$s!:'+i;n.__r&&n.__r();break}}})(${JSON.stringify(String(id)).replace(/</g, '\\u003c')})</script>`;
+	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>(function(i){var n,c=document.createNodeIterator(document,128);while(c.nextNode()){n=c.referenceNode;if(n.data==='$s:'+i){n.data='$s!:'+i;break}}})(${JSON.stringify(String(id)).replace(/</g, '\\u003c')})</script>`;
 }

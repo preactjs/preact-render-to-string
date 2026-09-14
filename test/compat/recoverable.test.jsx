@@ -179,6 +179,70 @@ describe('recoverable errors', () => {
 		expect(chunks.join('')).not.to.contain('undefined');
 	});
 
+	it('removes abort listeners when pending work is abandoned', async () => {
+		const deferred = new Deferred();
+		const Pending = afterPromise(deferred.promise);
+		const listeners = new Set();
+		const abortSignal = {
+			aborted: false,
+			addEventListener(type, listener) {
+				if (type == 'abort') listeners.add(listener);
+			},
+			removeEventListener(type, listener) {
+				if (type == 'abort') listeners.delete(listener);
+			}
+		};
+		const result = renderToChunks(boundary(<Pending />), {
+			abortSignal,
+			onWrite() {}
+		});
+		expect(listeners.size).to.equal(1);
+		deferred.resolve();
+		await result;
+		expect(listeners.size).to.equal(0);
+	});
+
+	it('releases remaining pending work when streaming fails', async () => {
+		const deferred = new Deferred();
+		const never = new Promise(() => {});
+		const listeners = new Set();
+		const abortSignal = {
+			aborted: false,
+			addEventListener(type, listener) {
+				if (type == 'abort') listeners.add(listener);
+			},
+			removeEventListener(type, listener) {
+				if (type == 'abort') listeners.delete(listener);
+			}
+		};
+		function Never() {
+			throw never;
+		}
+		function Fail() {
+			throw deferred.promise;
+		}
+		function NeverParent() {
+			return <Never />;
+		}
+		function FailParent() {
+			return <Fail />;
+		}
+		const result = renderToChunks(
+			boundary(
+				<Fragment>
+					<NeverParent />
+					<FailParent />
+				</Fragment>
+			),
+			{ abortSignal, onWrite() {} }
+		);
+		expect(listeners.size).to.equal(2);
+		const error = new Error('failure');
+		deferred.reject(error);
+		await expect(result).rejects.to.equal(error);
+		expect(listeners.size).to.equal(0);
+	});
+
 	for (const outcome of ['resolve', 'reject']) {
 		it(`ignores abandoned descendant ${outcome} after the stream completes`, async () => {
 			const first = new Deferred(),
