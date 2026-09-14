@@ -6,7 +6,7 @@ import {
 	createSubtree,
 	createClientRenderInstruction
 } from './client.js';
-import { isRecoverableError } from './recoverable.js';
+import { isRecoverable } from './recoverable.js';
 
 /**
  * @param {VNode} vnode
@@ -83,7 +83,7 @@ async function forkPromises(renderer) {
 
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
-	const recoverable = isRecoverableError(error);
+	const recoverable = isRecoverable(error);
 	if (!recoverable && (!error || !error.then)) throw error;
 
 	// Recoverables reach this handler at the boundary itself. Promise retries
@@ -159,7 +159,7 @@ function handleError(error, vnode, renderChild) {
 			},
 			(error) => {
 				if (pending.cancelled) return;
-				if (!isRecoverableError(error)) throw error;
+				if (!isRecoverable(error)) throw error;
 				return handleError.call(this, error, vnode, renderChild);
 			}
 		)

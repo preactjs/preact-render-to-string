@@ -11,10 +11,9 @@ import { Writable } from 'node:stream';
 
 const RECOVERABLE = Symbol.for('react.recoverable');
 function bailout() {
-	const error = new Error('browser only');
-	Object.defineProperty(error, RECOVERABLE, { value: true });
-	return error;
+	return Object.freeze({ $$typeof: RECOVERABLE, _reason: 'defer rendering' });
 }
+
 function BrowserOnly() {
 	throw bailout();
 }
@@ -56,7 +55,7 @@ describe('recoverable errors', () => {
 		it(`${name}: rejects a recoverable outside Suspense`, async () => {
 			await expect(
 				Promise.resolve().then(() => render(<BrowserOnly />))
-			).rejects.to.have.property(RECOVERABLE, true);
+			).rejects.to.have.property('$$typeof', RECOVERABLE);
 		});
 		it(`${name}: lets a fallback bailout reach an outer boundary`, async () => {
 			const html = await render(
@@ -237,7 +236,7 @@ describe('recoverable errors', () => {
 	it('rejects a streaming bailout with no boundary', async () => {
 		await expect(
 			renderToChunks(<BrowserOnly />, { onWrite() {} })
-		).rejects.to.have.property(RECOVERABLE, true);
+		).rejects.to.have.property('$$typeof', RECOVERABLE);
 	});
 
 	it('completes a readable stream and allReady after bailout', async () => {

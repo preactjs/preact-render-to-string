@@ -1,4 +1,4 @@
-import { isRecoverableError } from './lib/recoverable.js';
+import { isRecoverable } from './lib/recoverable.js';
 import {
 	encodeEntities,
 	styleObjToCss,
@@ -484,7 +484,7 @@ function _renderToString(
 						hooks
 					);
 				} catch (err) {
-					if (isRecoverableError(err)) throw err;
+					if (isRecoverable(err)) throw err;
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
 					}
@@ -539,11 +539,7 @@ function _renderToString(
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
 
 		const recover = (error) => {
-			if (
-				!isRecoverableError(error) ||
-				!component ||
-				!component[CHILD_DID_SUSPEND]
-			)
+			if (!isRecoverable(error) || !component || !component[CHILD_DID_SUSPEND])
 				throw error;
 			const renderFallback = () =>
 				_renderToString(
@@ -597,7 +593,7 @@ function _renderToString(
 
 			return str;
 		} catch (error) {
-			if (isRecoverableError(error)) {
+			if (isRecoverable(error)) {
 				if (!component || !component[CHILD_DID_SUSPEND]) throw error;
 				if (!renderer || asyncMode) return recover(error);
 			}

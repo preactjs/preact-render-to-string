@@ -1,6 +1,6 @@
 const RECOVERABLE_TYPE = Symbol.for('react.recoverable');
 
 /** @param {any} error */
-export function isRecoverableError(error) {
-	return error != null && error[RECOVERABLE_TYPE] === true;
+export function isRecoverable(error) {
+	return error != null && error.$$typeof === RECOVERABLE_TYPE;
 }
