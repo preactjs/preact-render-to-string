@@ -44,37 +44,6 @@ function collectStageIds(value, ids = new Set()) {
 	return ids;
 }
 
-function runGit(args) {
-	const result = spawnSync('git', args, {
-		encoding: 'utf8',
-		stdio: ['ignore', 'pipe', 'pipe']
-	});
-
-	if (result.stdout) process.stdout.write(result.stdout);
-	if (result.stderr) process.stderr.write(result.stderr);
-	if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
-function hasLocalGitTag(tagName) {
-	const result = spawnSync(
-		'git',
-		['rev-parse', '--verify', '--quiet', `refs/tags/${tagName}`],
-		{ stdio: 'ignore' }
-	);
-	return result.status === 0;
-}
-
-function createGitTag(tagName) {
-	if (hasLocalGitTag(tagName)) {
-		console.log(`Git tag ${tagName} already exists locally.`);
-	} else {
-		runGit(['tag', tagName, '-m', tagName]);
-	}
-
-	// changesets/action parses this line, then pushes the tag and creates the GitHub release.
-	console.log(`New tag: ${tagName}`);
-}
-
 async function main() {
 	const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 	const changesetConfig = JSON.parse(
@@ -120,7 +89,10 @@ async function main() {
 		process.exit(result.status ?? 1);
 	}
 
-	createGitTag(`v${pkg.version}`);
+	// changesets/action parses this line, then creates the tag through the GitHub API
+	// (commitMode: github-api) and the GitHub release. No local tag is needed: creating
+	// one would require a git identity, which the action doesn't set up in that mode.
+	console.log(`New tag: v${pkg.version}`);
 
 	let stageIds = [];
 	try {
