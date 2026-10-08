@@ -723,13 +723,7 @@ function _renderToString(
 			if (v === true || v === EMPTY_STR) {
 				s = s + ' ' + name;
 			} else {
-				s =
-					s +
-					' ' +
-					name +
-					'="' +
-					(typeof v == 'string' ? encodeEntities(v) : v + EMPTY_STR) +
-					'"';
+				s = s + ' ' + name + '="' + encodeEntities(v + EMPTY_STR) + '"';
 			}
 		}
 	}
