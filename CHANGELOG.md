@@ -1,5 +1,11 @@
 # preact-render-to-string
 
+## 6.8.1
+
+### Patch Changes
+
+- [#482](https://github.com/preactjs/preact-render-to-string/pull/482) [`a4b9e49`](https://github.com/preactjs/preact-render-to-string/commit/a4b9e49aa2cb1bbd80af9f5a1466b67fd8e83fb3) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Encode attribute values after string coercion so arrays and objects are serialized consistently with string attributes.
+
 ## 6.8.0
 
 ### Minor Changes
