@@ -35,6 +35,24 @@ const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
 
+function setChildVNodes(parent, children) {
+	const childVNodes = [];
+	function append(child) {
+		if (isArray(child)) {
+			for (let i = 0; i < child.length; i++) append(child[i]);
+		} else if (
+			child != null &&
+		typeof child != 'boolean' &&
+			typeof child != 'function' &&
+			!(typeof child == 'object' && child.constructor === String)
+		) {
+			childVNodes.push(child);
+		}
+	}
+	append(children);
+	parent[CHILDREN] = childVNodes;
+}
+
 /**
  * Wraps a render result with suspense boundary markers, handling all possible
  * return types from _renderToString: string, Array, or Promise.
@@ -298,7 +316,6 @@ function _renderToString(
 	if (isArray(vnode)) {
 		let rendered = EMPTY_STR,
 			renderArray;
-		parent[CHILDREN] = vnode;
 		const vnodeLength = vnode.length;
 		for (let i = 0; i < vnodeLength; i++) {
 			let child = vnode[i];
@@ -461,6 +478,7 @@ function _renderToString(
 					rendered.key == null &&
 					rendered.props.tpl == null;
 				rendered = isTopLevelFragment ? rendered.props.children : rendered;
+				if (hooks.afterDiff) setChildVNodes(vnode, rendered);
 
 				try {
 					return _renderToString(
@@ -496,6 +514,7 @@ function _renderToString(
 							rendered.key == null &&
 							rendered.props.tpl == null;
 						rendered = isTopLevelFragment ? rendered.props.children : rendered;
+						if (hooks.afterDiff) setChildVNodes(vnode, rendered);
 
 						return _renderToString(
 							rendered,
@@ -526,6 +545,7 @@ function _renderToString(
 			rendered.key == null &&
 			rendered.props.tpl == null;
 		rendered = isTopLevelFragment ? rendered.props.children : rendered;
+		if (hooks.afterDiff) setChildVNodes(vnode, rendered);
 
 		try {
 			// Recurse into children before invoking the after-diff hook
@@ -555,6 +575,7 @@ function _renderToString(
 				const onError = (error) => {
 					return renderer.onError(error, vnode, (child, parent) => {
 						try {
+							if (hooks.afterDiff) setChildVNodes(parent, child);
 							return withSkipEffects(() =>
 								_renderToString(
 									child,
@@ -586,6 +607,7 @@ function _renderToString(
 
 			const renderNestedChildren = () => {
 				try {
+					if (hooks.afterDiff) setChildVNodes(vnode, rendered);
 					const result = withSkipEffects(() =>
 						_renderToString(
 							rendered,
@@ -741,6 +763,7 @@ function _renderToString(
 		html = encodeEntities(children);
 	} else if (children != null && children !== false && children !== true) {
 		// recurse into this element VNode's children
+		if (hooks.afterDiff) setChildVNodes(vnode, children);
 		let childSvgMode =
 			type === 'svg' || (type !== 'foreignObject' && isSvgMode);
 		html = _renderToString(
