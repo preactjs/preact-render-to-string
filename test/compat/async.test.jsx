@@ -539,6 +539,60 @@ describe('Async renderToString', () => {
 		expect(rendered).to.contain('<p>b-footer</p>');
 	});
 
+	describe('precompiled templates', () => {
+		it('should resolve suspended children inside a template', async () => {
+			const { Suspender, suspended } = createSuspender();
+			const Outer = ({ children }) => (
+				<Fragment tpl={['<div class="wrap">', '</div>']} exprs={[children]} />
+			);
+
+			const pending = renderToStringAsync(
+				<Outer>
+					<i>a</i>
+					<Suspense fallback="loading">
+						<Suspender>
+							<b>lazy</b>
+						</Suspender>
+					</Suspense>
+				</Outer>
+			);
+			suspended.resolve();
+
+			expect(await pending).to.equal(
+				'<div class="wrap"><i>a</i><!--$s--><b>lazy</b><!--/$s--></div>'
+			);
+		});
+
+		it('should keep template parts in order around multiple suspended expressions', async () => {
+			const first = createSuspender();
+			const second = createSuspender();
+
+			const pending = renderToStringAsync(
+				<Fragment
+					tpl={['<ul><li>', '</li><li>', '</li></ul>']}
+					exprs={[
+						<Suspense fallback="x">
+							<first.Suspender>
+								<b>one</b>
+							</first.Suspender>
+						</Suspense>,
+						<Suspense fallback="y">
+							<second.Suspender>
+								<b>two</b>
+							</second.Suspender>
+						</Suspense>
+					]}
+				/>
+			);
+			second.suspended.resolve();
+			first.suspended.resolve();
+
+			expect(await pending).to.equal(
+				'<ul><li><!--$s--><b>one</b><!--/$s--></li><li><!--$s--><b>two</b><!--/$s--></li></ul>'
+			);
+		});
+	});
+
 	describe('dangerouslySetInnerHTML', () => {
 		it('should support dangerouslySetInnerHTML', async () => {
 			// some invalid HTML to make sure we're being flakey:
