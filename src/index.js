@@ -361,7 +361,8 @@ function _renderToString(
 		if (type === Fragment) {
 			// Serialized precompiled JSX.
 			if ('tpl' in props) {
-				let out = EMPTY_STR;
+				let out = EMPTY_STR,
+					outArray;
 				for (let i = 0; i < props.tpl.length; i++) {
 					out = out + props.tpl[i];
 
@@ -374,23 +375,42 @@ function _renderToString(
 							typeof value == 'object' &&
 							(value.constructor === undefined || isArray(value))
 						) {
-							out =
-								out +
-								_renderToString(
-									value,
-									context,
-									isSvgMode,
-									selectValue,
-									vnode,
-									asyncMode,
-									renderer,
-									hooks
-								);
+							const exprRender = _renderToString(
+								value,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode,
+								asyncMode,
+								renderer,
+								hooks
+							);
+
+							if (typeof exprRender == 'string') {
+								out = out + exprRender;
+							} else {
+								// Suspended children in async mode render to an Array or
+								// Promise, keep them in order with the surrounding parts
+								if (!outArray) outArray = [];
+								if (out) outArray.push(out);
+								out = EMPTY_STR;
+
+								if (isArray(exprRender)) {
+									outArray.push(...exprRender);
+								} else {
+									outArray.push(exprRender);
+								}
+							}
 						} else {
 							// Values are pre-escaped by the JSX transform
 							out = out + value;
 						}
 					}
+				}
+
+				if (outArray) {
+					if (out) outArray.push(out);
+					return outArray;
 				}
 
 				return out;
