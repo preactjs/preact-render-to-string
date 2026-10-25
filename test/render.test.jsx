@@ -1714,6 +1714,18 @@ describe('render', () => {
 			}
 		});
 
+		it('should not lowercase custom element attributes (#451)', () => {
+			let rendered = render(<my-fragment channelId="abc123" />);
+			expect(rendered).to.equal(
+				'<my-fragment channelId="abc123"></my-fragment>'
+			);
+		});
+
+		it('should not incorrectly lowercase non-HTML attributes (#451)', () => {
+			let rendered = render(<div channelId="abc123" />);
+			expect(rendered).to.equal('<div channelId="abc123"></div>');
+		});
+
 		// https://github.com/preactjs/preact-render-to-string/issues/390
 		// The DOM API casts any value to a string here.
 		it('should cast "className" and "class" value to string', () => {

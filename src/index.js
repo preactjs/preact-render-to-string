@@ -732,7 +732,7 @@ function _renderToString(
 								? 'panose-1'
 								: name.replace(/([A-Z])/g, '-$1').toLowerCase();
 					}
-				} else if (HTML_LOWER_CASE.test(name)) {
+				} else if (!type.includes('-') && HTML_LOWER_CASE.test(name)) {
 					name = name.toLowerCase();
 				}
 			}

@@ -267,6 +267,18 @@ describe('pretty', () => {
 				}
 			}
 		});
+
+		it('should not lowercase custom element attributes (#451)', () => {
+			let rendered = prettyRender(<my-fragment channelId="abc123" />);
+			expect(rendered).to.equal(
+				'<my-fragment channelId="abc123"></my-fragment>'
+			);
+		});
+
+		it('should not incorrectly lowercase non-HTML attributes (#451)', () => {
+			let rendered = prettyRender(<div channelId="abc123" />);
+			expect(rendered).to.equal('<div channelId="abc123"></div>');
+		});
 	});
 
 	describe('useId', () => {
