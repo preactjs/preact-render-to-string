@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 6.8.2
+
+### Patch Changes
+
+- [#485](https://github.com/preactjs/preact-render-to-string/pull/485) [`2dd9a3a`](https://github.com/preactjs/preact-render-to-string/commit/2dd9a3ada5793e318f85d2a099cb318d06ebde7d) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix `renderToStringAsync` stringifying suspended children inside precompiled JSX templates
+
+- [#489](https://github.com/preactjs/preact-render-to-string/pull/489) [`7be3108`](https://github.com/preactjs/preact-render-to-string/commit/7be31085361b28f08d008590b7722450fd8698ae) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Use Preact's VNode recognition across renderers.
+
 ## 6.8.1
 
 ### Patch Changes
