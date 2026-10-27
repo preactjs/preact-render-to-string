@@ -11,7 +11,7 @@ import {
 	unsetDirty,
 	isDirty
 } from './lib/util.js';
-import { options, h, Fragment } from 'preact';
+import { options, h, Fragment, isValidElement } from 'preact';
 import {
 	CHILDREN,
 	COMMIT,
@@ -343,8 +343,7 @@ function _renderToString(
 		return rendered;
 	}
 
-	// VNodes have {constructor:undefined} to prevent JSON injection:
-	if (vnode.constructor !== undefined) return EMPTY_STR;
+	if (!isValidElement(vnode)) return EMPTY_STR;
 
 	vnode[PARENT] = parent;
 	if (hooks.beforeDiff) hooks.beforeDiff(vnode);
@@ -373,7 +372,7 @@ function _renderToString(
 						// Check if we're dealing with a vnode or an array of nodes
 						if (
 							typeof value == 'object' &&
-							(value.constructor === undefined || isArray(value))
+							(isValidElement(value) || isArray(value))
 						) {
 							const exprRender = _renderToString(
 								value,
