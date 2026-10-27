@@ -25,7 +25,7 @@ import {
 	PARENT,
 	CHILDREN
 } from './lib/constants.js';
-import { options, Fragment, h } from 'preact';
+import { options, Fragment, h, isValidElement } from 'preact';
 
 // components without names, kept as a hash for later comparison to return consistent UnnamedComponentXX names.
 const UNNAMED = [];
@@ -119,8 +119,7 @@ function _renderToStringPretty(
 		return rendered;
 	}
 
-	// VNodes have {constructor:undefined} to prevent JSON injection:
-	if (vnode.constructor !== undefined) return '';
+	if (!isValidElement(vnode)) return '';
 
 	vnode[PARENT] = parent;
 	if (options[DIFF]) options[DIFF](vnode);
