@@ -350,11 +350,9 @@ describe('renderToChunks', () => {
 
 			const id = result[0].match(/\$s:(\d+)/)[1];
 			expect(result).toEqual([
-				`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
-				'<div hidden>',
+				`<!--$s:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 				createInitScript(),
-				createSubtree(id, ''),
-				'</div>'
+				createSubtree(id, '')
 			]);
 		}
 	);
@@ -378,13 +376,13 @@ describe('renderToChunks', () => {
 		first.suspended.resolve();
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(
-			result.filter((chunk) => chunk.startsWith('<preact-island'))
+			result.filter((chunk) => chunk.startsWith('<template for='))
 		).toEqual([]);
 
 		second.suspended.resolve();
 		await promise;
 		const patches = result.filter((chunk) =>
-			chunk.startsWith('<preact-island')
+			chunk.startsWith('<template for=')
 		);
 		expect(patches).toHaveLength(1);
 		expect(patches[0]).toContain('<p>first</p><p>second</p>');
