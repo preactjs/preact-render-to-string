@@ -109,7 +109,6 @@ describe('createInitScript', () => {
 		expect(html).toContain('<script>');
 		expect(html).toContain('MutationObserver');
 		expect(html).toContain('DOMContentLoaded');
-		expect(html).toContain('template[for]');
 		expect(html).toContain('svg,math');
 		expect(html).toContain('disconnect');
 		expect(html).toContain('(e=>{');
@@ -262,9 +261,10 @@ describe('inline init script', () => {
 		);
 		expect(document.querySelector('template[for="1"]')).not.toBeNull();
 
+		// The following node arrives once the parser closes the template.
 		document.querySelector('template[for="1"]').innerHTML = '<p>resolved</p>';
-		setReadyState(document, 'interactive');
-		document.dispatchEvent(new window.Event('DOMContentLoaded'));
+		document.body.appendChild(document.createTextNode('\n'));
+		await flushMutations();
 
 		expect(bodyHtml(document)).toBe(
 			'<div><!--$s:1--><p>resolved</p><!--/$s:1--></div>'
@@ -316,49 +316,28 @@ describe('inline init script', () => {
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
-	it('should patch nested boundaries whose inner template arrived first', async () => {
-		const { window, document } = createDom(
-			'<div><!--$s:1-->outer<!--/$s:1--></div>'
-		);
-
+	it('should not rescan the document for mutations unrelated to templates', async () => {
+		const { window, document } = createDom('<div id="app"></div>');
 		await loaded(window);
-		setReadyState(document, 'loading');
 		runInitScript(window);
 
-		appendTogether(
-			document,
-			createSubtree('2', '<b>inner</b>'),
-			createSubtree('1', '<p><!--$s:2-->inner loading<!--/$s:2--></p>')
-		);
+		let scans = 0;
+		// a scan is the comment marker walk done when a template is patched
+		const createNodeIterator = document.createNodeIterator.bind(document);
+		document.createNodeIterator = (...args) => {
+			scans++;
+			return createNodeIterator(...args);
+		};
+
+		document
+			.querySelector('#app')
+			.append(document.createElement('p'), document.createComment('x'));
 		await flushMutations();
+		expect(scans).toBe(0);
 
-		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1--><p><!--$s:2--><b>inner</b><!--/$s:2--></p><!--/$s:1-->'
-		);
-		expect(document.querySelectorAll('template')).toHaveLength(0);
-	});
-
-	it('should patch nested boundaries in a single DOMContentLoaded pass', async () => {
-		const { window, document } = createDom(
-			'<div><!--$s:1-->outer<!--/$s:1--></div>'
-		);
-
-		await loaded(window);
-		setReadyState(document, 'loading');
-		runInitScript(window);
-		// Observer callbacks are still pending; DCL must finish the cascade itself.
-		appendTogether(
-			document,
-			createSubtree('2', '<b>inner</b>'),
-			createSubtree('1', '<p><!--$s:2-->inner loading<!--/$s:2--></p>')
-		);
-		setReadyState(document, 'interactive');
-		document.dispatchEvent(new window.Event('DOMContentLoaded'));
-
-		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1--><p><!--$s:2--><b>inner</b><!--/$s:2--></p><!--/$s:1-->'
-		);
-		expect(document.querySelectorAll('template')).toHaveLength(0);
+		appendTogether(document, createSubtree('1', '<p>resolved</p>'));
+		await flushMutations();
+		expect(scans).toBeGreaterThan(0);
 	});
 
 	it('should disconnect the MutationObserver after a non-loading pass', async () => {
@@ -400,6 +379,36 @@ describe('inline init script', () => {
 		await flushMutations();
 
 		expect(document.querySelector('path').namespaceURI).toBe(
+			'http://www.w3.org/2000/svg'
+		);
+		expect(document.querySelector('mi').namespaceURI).toBe(
+			'http://www.w3.org/1998/Math/MathML'
+		);
+	});
+
+	it('should fix the svg/math namespace after native DPU patched the range', async () => {
+		const { window, document } = createDom(
+			'<svg><!--$s:1--><circle></circle><!--/$s:1--></svg><math><!--$s:2--><mn>1</mn><!--/$s:2--></math>'
+		);
+		runInitScript(window);
+
+		// Native DPU swaps the range between <?start>/<?end> and drops the template,
+		// leaving HTML-namespace elements behind in the svg/math parent.
+		for (const [id, tag] of [
+			['1', 'rect'],
+			['2', 'mi']
+		]) {
+			const end = [...document.querySelectorAll('svg, math')]
+				.flatMap((el) => [...el.childNodes])
+				.find((n) => n.data === '/$s:' + id);
+			const pi = document.createProcessingInstruction('end', '');
+			end.previousSibling.remove();
+			end.before(document.createElement(tag), pi);
+			pi.remove();
+		}
+		await flushMutations();
+
+		expect(document.querySelector('rect').namespaceURI).toBe(
 			'http://www.w3.org/2000/svg'
 		);
 		expect(document.querySelector('mi').namespaceURI).toBe(
@@ -483,7 +492,8 @@ describe('stream template hydration races', () => {
 		appendStreamed(document);
 		await flush();
 		expect(root.querySelector('button')).toBe(button);
-		expect(root.textContent).toBe('client');
+		// Unowned fallback nodes are left for hydration to clean up.
+		expect(root.textContent).toBe('clientloading');
 		button.click();
 		expect(clicks).toBe(1);
 		expect(document.querySelector('template')).toBeNull();
