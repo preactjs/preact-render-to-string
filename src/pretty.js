@@ -325,6 +325,8 @@ function _renderToStringPretty(
 				continue;
 			}
 
+			if (name[0] === 'o' && name[1] === 'n') continue;
+
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
 			} else if (nodeName === 'textarea' && name === 'value') {
