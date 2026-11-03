@@ -194,6 +194,12 @@ describe('pretty', () => {
 		);
 	});
 
+	it('should omit on* attributes', () => {
+		expect(
+			prettyRender(<div onclick="foo()" onClick="bar()" />, { jsx: false })
+		).to.equal('<div></div>');
+	});
+
 	it('should not render function children', () => {
 		expect(prettyRender(<div>{() => {}}</div>)).to.equal('<div></div>');
 	});

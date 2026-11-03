@@ -714,7 +714,7 @@ function _renderToString(
 				break;
 
 			default: {
-				if (UNSAFE_NAME.test(name)) {
+				if (UNSAFE_NAME.test(name) || (name[0] == 'o' && name[1] == 'n')) {
 					continue;
 				} else if (NAMESPACE_REPLACE_REGEX.test(name)) {
 					name = name.replace(NAMESPACE_REPLACE_REGEX, '$1:$2').toLowerCase();
