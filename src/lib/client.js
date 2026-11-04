@@ -2,99 +2,103 @@ import { encodeEntities } from './util.js';
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
-// function initPreactIslandElement() {
-// 	class PreactIslandElement extends HTMLElement {
-// 		connectedCallback() {
-// 			var d = this;
-// 			if (!d.isConnected) return;
-
-// 			let i = this.getAttribute('data-target');
-// 			if (!i) return;
-
-// 			var s,
-// 				e,
-// 				c = document.createNodeIterator(document, 128);
-// 			while (c.nextNode()) {
-// 				let n = c.referenceNode;
-
-// 				if (n.data == '$s:' + i) s = n;
-// 				else if (n.data == '/$s:' + i) e = n;
-// 				if (s && e) break;
+// ((d) => {
+// 	// Assumptions: the renderer always emits both $s markers as siblings and ids are unique.
+// 	let owned,
+// 		// walk a vnode tree (__k = children) and record each vnode's DOM node (__e) in `owned`
+// 		visit = (v) => {
+// 			if (v) {
+// 				owned.add(v.__e);
+// 				if (v.__k) {
+// 					v.__k.forEach(visit);
+// 				}
 // 			}
-// 			if (s && e && s.parentNode !== document) {
-// 				requestAnimationFrame(() => {
-// 					// Hydration may finish after connectedCallback queues this frame.
-// 					if (!d.isConnected || !s.isConnected || !e.isConnected || s.parentNode !== e.parentNode) {
-// 						d.remove();
-// 						return;
-// 					}
-// 					var nodes = [], p = s.nextSibling, root = s.parentNode;
-// 					while (p && p !== e) {
-// 						nodes.push(p);
-// 						p = p.nextSibling;
-// 					}
-// 					if (!p) { d.remove(); return; }
-// 					// DOM already referenced by a rendered host/text VNode belongs to
-// 					// the client. A suspended component's fallback pointer does not.
-// 					while (root && !root.__k) root = root.parentNode;
-// 					var owned = new Set();
-// 					function visit(vnode) {
-// 						if (vnode) {
-// 							if (typeof vnode.type !== 'function' && vnode.__e && vnode.__e.parentNode === s.parentNode) owned.add(vnode.__e);
-// 							if (vnode.__k) vnode.__k.forEach(visit);
-// 						}
-// 					}
-// 					if (root) visit(root.__k);
-// 					if (nodes.some(node => owned.has(node))) {
-// 						var depth = 0;
-// 						nodes.forEach(node => {
-// 							if (node.nodeType === 8 && node.data.startsWith('$s')) depth++;
-// 							else if (node.nodeType === 8 && node.data.startsWith('/$s')) depth--;
-// 							else if (!depth && !owned.has(node)) node.remove();
-// 						});
-// 						d.remove();
-// 						return;
-// 					}
-// 					p = e.previousSibling;
-// 					while (p != s) {
-// 						if (!p || p == s) break;
-// 						e.parentNode.removeChild(p);
-// 						p = e.previousSibling;
-// 					}
-
-// 					c = s;
-// 					while (d.firstChild) {
-// 						s = d.firstChild;
-// 						d.removeChild(s);
-// 						c.after(s);
-// 						c = s;
-// 					}
-
-// 					d.parentNode.removeChild(d);
-// 				});
-// 			} else d.remove();
+// 		},
+// 		// DPU cannot patch into svg/math namespaces (needed even with native support),
+// 		// so reparse each node between the markers in its parent's namespace.
+// 		fixNamespace = (s, e) => {
+// 			let n, next;
+// 			if (s.parentNode.closest("svg,math")) {
+// 				for (n = s.nextSibling; n != e; n = next) {
+// 					next = n.nextSibling;
+// 					n.outerHTML = n.outerHTML;
+// 				}
+// 			}
+// 		},
+// 		clear = (s, e, n) => {
+// 			while ((n = s.nextSibling) != e) {
+// 				n.remove();
+// 			}
+// 		};
+// 	// Each chunk is <template for="id">..</template><script>$PRS("id")</script>.
+// 	// Native DPU consumes the template while parsing; otherwise $PRS polyfills the patch.
+// 	// When only native DPU is supported, `t` is always null, so the whole `if (t) { .. }` polyfill
+// 	// branch (and the `t` lookup below) can be removed, leaving only the fixups in the else branches.
+// 	window.$PRS = (id) => {
+// 		let t = d.querySelector('template[for="' + id + '"]'),
+// 			s = 0,
+// 			e = 0,
+// 			l,
+// 			n,
+// 			c = d.createNodeIterator(d, 128);
+// 		// find this boundary's markers, stopping as soon as both are found
+// 		while ((l = c.nextNode()) && !(s && e)) {
+// 			if (l.data == "$s:" + id) {
+// 				s = l;
+// 			} else if (l.data == "/$s:" + id) {
+// 				e = l;
+// 			}
 // 		}
-// 	}
-
-// 	customElements.define('preact-island', PreactIslandElement);
-// }
+// 		if (e) {
+// 			// collect the DOM every vnode under the nearest client root points at
+// 			owned = new Set();
+// 			for (n = s.parentNode; n && !n.__k; ) {
+// 				n = n.parentNode;
+// 			}
+// 			visit(n?.__k);
+// 			if (t) {
+// 				// polyfill only (no native DPU): `t` is null when the browser already swapped the range.
+// 				// DOM that a client vnode already owns (hydration got here first)
+// 				// must survive, so leave the boundary alone and only drop the template.
+// 				for (l = s; (l = l.nextSibling) && l != e && !owned.has(l); );
+// 				if (l == e) {
+// 					clear(s, e);
+// 					s.after(t.content);
+// 					fixNamespace(s, e);
+// 				}
+// 				t.remove();
+// 			} else {
+// 				n = [...owned].filter((x) => x && !x.parentNode);
+// 				if (n[0]) {
+// 					// native DPU detached client DOM: put it back and drop the server content
+// 					clear(s, e);
+// 					e.before(...n);
+// 				} else {
+// 					fixNamespace(s, e);
+// 				}
+// 			}
+// 		}
+// 		d.currentScript.remove();
+// 	};
+// })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `class e extends HTMLElement{connectedCallback(){var e=this;if(!e.isConnected)return;let t=this.getAttribute("data-target");if(t){for(var r,o,n=document.createNodeIterator(document,128);n.nextNode();){let e=n.referenceNode;if(e.data=="$s:"+t?r=e:e.data=="/$s:"+t&&(o=e),r&&o)break}r&&o&&r.parentNode!==document?requestAnimationFrame(()=>{if(e.isConnected&&r.isConnected&&o.isConnected&&r.parentNode===o.parentNode){for(var t=[],a=r.nextSibling,i=r.parentNode;a&&a!==o;)t.push(a),a=a.nextSibling;if(a){for(;i&&!i.__k;)i=i.parentNode;var d=new Set;if(i&&function e(t){t&&("function"!=typeof t.type&&t.__e&&t.__e.parentNode===r.parentNode&&d.add(t.__e),t.__k&&t.__k.forEach(e))}(i.__k),t.some(e=>d.has(e))){var s=0;return t.forEach(e=>{8===e.nodeType&&e.data.startsWith("$s")?s++:8===e.nodeType&&e.data.startsWith("/$s")?s--:s||d.has(e)||e.remove()}),void e.remove()}for(a=o.previousSibling;a!=r&&a&&a!=r;)o.parentNode.removeChild(a),a=o.previousSibling;for(n=r;e.firstChild;)r=e.firstChild,e.removeChild(r),n.after(r),n=r;e.parentNode.removeChild(e)}else e.remove()}else e.remove()}):e.remove()}}}customElements.define("preact-island",e);`;
+const INIT_SCRIPT = `(e=>{let r,f=e=>e&&(r.add(e.__e),e.__k&&e.__k.forEach(f)),l=(n,t)=>{let f,L;if(n.parentNode.closest("svg,math"))for(f=n.nextSibling;f!=t;f=L)L=f.nextSibling,f.outerHTML=f.outerHTML},c=(n,t,a)=>{for(;(a=n.nextSibling)!=t;)a.remove()};window.$PRS=d=>{let t=e.querySelector('template[for="'+d+'"]'),s=0,n=0,a,i=e.createNodeIterator(e,128),o;for(;(a=i.nextNode())&&!(s&&n);)a.data=="$s:"+d?s=a:a.data=="/$s:"+d&&(n=a);if(n){for(o=s.parentNode,r=new Set;o&&!o.__k;)o=o.parentNode;if(f(o?.__k),t){for(a=s;(a=a.nextSibling)&&a!=n&&!r.has(a););a==n&&(c(s,n),s.after(t.content),l(s,n)),t.remove()}else(o=[...r].filter(x=>x&&!x.parentNode))[0]?(c(s,n),n.before(...o)):l(s,n)}e.currentScript.remove()}})(document);`;
 
 /**
  * @param {string} nonce
  * @returns {string}
  */
 export function createInitScript(nonce) {
-	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>(function(){${INIT_SCRIPT}}())</script>`;
+	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>${INIT_SCRIPT}</script>`;
 }
 
 /**
  * @param {string} id
  * @param {string} content
+ * @param {string} [nonce]
  * @returns {string}
  */
-export function createSubtree(id, content) {
-	return `<preact-island hidden data-target="${id}">${content}</preact-island>`;
+export function createSubtree(id, content, nonce) {
+	return `<template for="${id}">${content}</template><script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>$PRS("${id}")</script>\n`;
 }

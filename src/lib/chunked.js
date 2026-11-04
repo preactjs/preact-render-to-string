@@ -18,6 +18,7 @@ export async function renderToChunks(
 	const renderer = {
 		start: Date.now(),
 		abortSignal,
+		nonce,
 		onWrite,
 		onError: handleError,
 		suspended: []
@@ -31,7 +32,7 @@ export async function renderToChunks(
 	const len = renderer.suspended.length;
 	if (len > 0) {
 		// When rendering a full HTML document, the shell ends with </body></html>.
-		// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
+		// Inserting deferred <template for> patches after </html> is invalid HTML
 		// and causes browsers to reject the content. Instead, we inject the deferred
 		// content before the closing tags, then emit them last.
 		const docSuffixIndex = getDocumentClosingTagsIndex(shell);
@@ -40,11 +41,9 @@ export async function renderToChunks(
 			docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
 		const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
 		onWrite(prefix + initialWrite);
-		onWrite('<div hidden>');
 		onWrite(createInitScript(nonce));
 		// We should keep checking all promises
 		await forkPromises(renderer);
-		onWrite('</div>');
 		if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
 	} else {
 		onWrite(shell);
@@ -105,7 +104,7 @@ function handleError(error, vnode, renderChild) {
 			const suspendedAgain = this.suspended
 				.slice(suspendedCount)
 				.some((suspension) => suspension.id === id);
-			if (!suspendedAgain) this.onWrite(createSubtree(id, child));
+			if (!suspendedAgain) this.onWrite(createSubtree(id, child, this.nonce));
 		},
 		// TODO: Abort and send hydration code snippet to client
 		// to attempt to recover during hydration
@@ -120,5 +119,7 @@ function handleError(error, vnode, renderChild) {
 
 	const fallback = renderChild(vnode.props.fallback);
 
-	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+	return found
+		? ''
+		: `<!--$s:${id}--><?start name="${id}">${fallback}<?end><!--/$s:${id}-->`;
 }
