@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 6.8.3
+
+### Patch Changes
+
+- [#491](https://github.com/preactjs/preact-render-to-string/pull/491) [`15daddd`](https://github.com/preactjs/preact-render-to-string/commit/15daddd0eb9d97029a916f2fd12137b1beba4d76) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Skip `on*` props instead of serializing them as attributes, matching Preact, which only binds function values as event listeners.
+
+- [#493](https://github.com/preactjs/preact-render-to-string/pull/493) [`aa58c1c`](https://github.com/preactjs/preact-render-to-string/commit/aa58c1ca28013cac9f8cf9c14b49dfc338e38071) Thanks [@saxymofo](https://github.com/saxymofo)! - Set the component's `_globalContext` so `use(Context)` from `preact/compat` (Preact 11) resolves the nearest provider instead of throwing.
+
 ## 6.8.2
 
 ### Patch Changes
