@@ -435,7 +435,8 @@ function _renderToString(
 			} else {
 				vnode[COMPONENT] = component = /**#__NOINLINE__**/ createComponent(
 					vnode,
-					cctx
+					cctx,
+					context
 				);
 
 				// If a hook invokes setState() to invalidate the component during rendering,

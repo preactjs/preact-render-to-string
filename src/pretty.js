@@ -152,7 +152,7 @@ function _renderToStringPretty(
 		} else {
 			let rendered;
 
-			let c = (vnode.__c = createComponent(vnode, context));
+			let c = (vnode.__c = createComponent(vnode, context, context));
 
 			let renderHook = options[RENDER];
 
