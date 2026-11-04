@@ -1,0 +1,6 @@
+{
+	"installCommand": "install:csb",
+	"buildCommand": "build",
+	"node": "20",
+	"sandboxes": ["vanilla", "/demo"]
+}
