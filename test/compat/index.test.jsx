@@ -74,6 +74,25 @@ describe('compat', () => {
 		expect(globalContext[Ctx.__c].props.value).to.equal('provided');
 	});
 
+	it("should expose the provider map as a class component's _globalContext", () => {
+		const Ctx = createContext('default');
+		let globalContext;
+		class Foo extends Component {
+			render() {
+				globalContext = this.__n;
+				return null;
+			}
+		}
+
+		render(
+			<Ctx.Provider value="provided">
+				<Foo />
+			</Ctx.Provider>
+		);
+
+		expect(globalContext[Ctx.__c].props.value).to.equal('provided');
+	});
+
 	// `use` is exported by preact/compat from Preact 11
 	it.skipIf(!compat.use)(
 		'should resolve use(Context) to the nearest provider',

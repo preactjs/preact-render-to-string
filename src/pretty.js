@@ -182,6 +182,7 @@ function _renderToStringPretty(
 				// c = new nodeName(props, context);
 				c = vnode.__c = new nodeName(props, cctx);
 				c.__v = vnode;
+				c.__n = context;
 				// turn off stateful re-rendering:
 				setDirty(c);
 				c.props = props;
