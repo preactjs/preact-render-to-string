@@ -203,7 +203,7 @@ export async function renderToStringAsync(vnode, context) {
  * @param {Record<string, unknown>} context
  * @param {CapturedHooks} hooks
  */
-function renderClassComponent(vnode, context, hooks) {
+function renderClassComponent(vnode, context, hooks, globalContext) {
 	let type =
 		/** @type {import("preact").ComponentClass<typeof vnode.props>} */ (
 			vnode.type
@@ -224,6 +224,8 @@ function renderClassComponent(vnode, context, hooks) {
 
 	c.props = vnode.props;
 	c.context = context;
+	// _globalContext, read by `use(Context)` in preact/compat
+	c.__n = globalContext;
 
 	// Turn off stateful rendering
 	setDirty(c);
@@ -430,12 +432,18 @@ function _renderToString(
 			let isClassComponent =
 				type.prototype && typeof type.prototype.render == 'function';
 			if (isClassComponent) {
-				rendered = /**#__NOINLINE__**/ renderClassComponent(vnode, cctx, hooks);
+				rendered = /**#__NOINLINE__**/ renderClassComponent(
+					vnode,
+					cctx,
+					hooks,
+					context
+				);
 				component = vnode[COMPONENT];
 			} else {
 				vnode[COMPONENT] = component = /**#__NOINLINE__**/ createComponent(
 					vnode,
-					cctx
+					cctx,
+					context
 				);
 
 				// If a hook invokes setState() to invalidate the component during rendering,
