@@ -49,7 +49,8 @@ import { encodeEntities } from './util.js';
 // 				e = l;
 // 			}
 // 		}
-// 		if (e) {
+// 		// both markers are gone when hydration removed them, and a lone end marker is no boundary
+// 		if (s && e) {
 // 			// collect the DOM every vnode under the nearest client root points at
 // 			owned = new Set();
 // 			for (n = s.parentNode; n && !n.__k; ) {
@@ -66,7 +67,6 @@ import { encodeEntities } from './util.js';
 // 					s.after(t.content);
 // 					fixNamespace(s, e);
 // 				}
-// 				t.remove();
 // 			} else {
 // 				n = [...owned].filter((x) => x && !x.parentNode);
 // 				if (n[0]) {
@@ -78,12 +78,14 @@ import { encodeEntities } from './util.js';
 // 				}
 // 			}
 // 		}
+// 		// drop the template even when there was nothing to patch
+// 		t?.remove();
 // 		d.currentScript.remove();
 // 	};
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let r,f=e=>e&&(r.add(e.__e),e.__k&&e.__k.forEach(f)),l=(n,t)=>{let f,L;if(n.parentNode.closest("svg,math"))for(f=n.nextSibling;f!=t;f=L)L=f.nextSibling,f.outerHTML=f.outerHTML},c=(n,t,a)=>{for(;(a=n.nextSibling)!=t;)a.remove()};window.$PRS=d=>{let t=e.querySelector('template[for="'+d+'"]'),s=0,n=0,a,i=e.createNodeIterator(e,128),o;for(;(a=i.nextNode())&&!(s&&n);)a.data=="$s:"+d?s=a:a.data=="/$s:"+d&&(n=a);if(n){for(o=s.parentNode,r=new Set;o&&!o.__k;)o=o.parentNode;if(f(o?.__k),t){for(a=s;(a=a.nextSibling)&&a!=n&&!r.has(a););a==n&&(c(s,n),s.after(t.content),l(s,n)),t.remove()}else(o=[...r].filter(x=>x&&!x.parentNode))[0]?(c(s,n),n.before(...o)):l(s,n)}e.currentScript.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let r,f=e=>e&&(r.add(e.__e),e.__k&&e.__k.forEach(f)),l=(n,t)=>{let f,L;if(n.parentNode.closest("svg,math"))for(f=n.nextSibling;f!=t;f=L)L=f.nextSibling,f.outerHTML=f.outerHTML},c=(n,t,a)=>{for(;(a=n.nextSibling)!=t;)a.remove()};window.$PRS=d=>{let t=e.querySelector('template[for="'+d+'"]'),s=0,n=0,a,i=e.createNodeIterator(e,128),o;for(;(a=i.nextNode())&&!(s&&n);)a.data=="$s:"+d?s=a:a.data=="/$s:"+d&&(n=a);if(s&&n){for(o=s.parentNode,r=new Set;o&&!o.__k;)o=o.parentNode;if(f(o?.__k),t){for(a=s;(a=a.nextSibling)&&a!=n&&!r.has(a););a==n&&(c(s,n),s.after(t.content),l(s,n))}else(o=[...r].filter(x=>x&&!x.parentNode))[0]?(c(s,n),n.before(...o)):l(s,n)}t?.remove(),e.currentScript.remove()}})(document);`;
 
 /**
  * @param {string} nonce

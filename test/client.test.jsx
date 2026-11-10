@@ -174,11 +174,10 @@ describe('inline init script', () => {
 		expect(document.querySelector('div').innerHTML).toBe(
 			'<!--$s:1--><p>resolved</p><!--/$s:1-->'
 		);
-		expect(document.querySelector('template[for="missing"]')).not.toBeNull();
-		expect(document.querySelector('template[for="1"]')).toBeNull();
+		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
-	it('should ignore templates that do not match any suspense markers', () => {
+	it('should drop templates that do not match any suspense markers', () => {
 		const { window, document } = createDom(
 			'<div><!--$s:1-->loading<!--/$s:1--></div>'
 		);
@@ -187,8 +186,25 @@ describe('inline init script', () => {
 		streamChunk(window, '999', '<p>nope</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1-->loading<!--/$s:1--></div><template for="999"><p>nope</p></template>'
+			'<div><!--$s:1-->loading<!--/$s:1--></div>'
 		);
+	});
+
+	it('should leave the boundary alone when its start marker is gone', () => {
+		const { window, document } = createDom(
+			'<div><i>client</i><!--/$s:1--></div>'
+		);
+		const errors = [];
+		window.addEventListener('error', (e) => errors.push(e.error));
+
+		runInitScript(window);
+		streamChunk(window, '1', '<p>resolved</p>');
+		// native DPU: no template left for the script to find
+		callRC(window, '1');
+
+		expect(errors).toEqual([]);
+		expect(bodyHtml(document)).toBe('<div><i>client</i><!--/$s:1--></div>');
+		expect(document.querySelectorAll('template, script')).toHaveLength(0);
 	});
 
 	it('should still patch templates when htmlFor is present on HTMLTemplateElement', () => {
@@ -424,6 +440,24 @@ describe('stream template hydration races', () => {
 		appendStreamed(document);
 		expect(root.firstChild).toBe(button);
 		expect(root.textContent).toBe('client');
+		expect(document.querySelector('template')).toBeNull();
+	});
+
+	it('should drop the template of a nested boundary that never reached the document', async () => {
+		const { document, root } = await setupHydration();
+		// The client rendered the outer boundary first, so the nested markers that came
+		// with the outer chunk were never inserted.
+		renderClient(root, <button>client</button>);
+		appendStreamed(
+			document,
+			'<button>server</button><!--$s:2--><i>nested fallback</i><!--/$s:2-->'
+		);
+		insertChunk(document, '2', '<p>nested</p>');
+		callRC(hydrationDom.window, '2');
+		expect(root.innerHTML).toBe(
+			'<!--$s:1--><button>client</button><!--/$s:1-->'
+		);
+		expect(document.querySelector('template')).toBeNull();
 	});
 
 	it('should not mistake a hydrated sibling outside the boundary for resolved content', async () => {
