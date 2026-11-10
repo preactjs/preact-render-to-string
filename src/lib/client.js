@@ -13,13 +13,10 @@ import { encodeEntities } from './util.js';
 // 		// one live iterator over the document's comments: created on the first call and resumed
 // 		// by every later one, so each comment of the document is only visited once
 // 		comments,
-// 		// index the comments at or below `n`
-// 		index = (n) => {
-// 			if (n.nodeType == 8) {
+// 		// index the comments that the iterator or walker `w` yields, until `end` (or the last one)
+// 		scan = (w, end, n) => {
+// 			while ((n = w.nextNode()) != end) {
 // 				markers[n.data] ||= n;
-// 			}
-// 			for (n = n.firstChild; n; n = n.nextSibling) {
-// 				index(n);
 // 			}
 // 		},
 // 		// walk a vnode tree (__k = children) and record each vnode's DOM node (__e) in `owned`.
@@ -36,8 +33,7 @@ import { encodeEntities } from './util.js';
 // 		},
 // 		// DPU cannot patch into svg/math namespaces (needed even with native support),
 // 		// so reparse each node between the markers in its parent's namespace.
-// 		fixNamespace = (s, e) => {
-// 			let n, next;
+// 		fixNamespace = (n, next) => {
 // 			if (s.parentNode.closest("svg,math")) {
 // 				for (n = s.nextSibling; n != e; n = next) {
 // 					next = n.nextSibling;
@@ -45,7 +41,7 @@ import { encodeEntities } from './util.js';
 // 				}
 // 			}
 // 		},
-// 		clear = (s, e, n) => {
+// 		clear = (n) => {
 // 			while ((n = s.nextSibling) != e) {
 // 				n.remove();
 // 			}
@@ -65,10 +61,7 @@ import { encodeEntities } from './util.js';
 // 			t = null;
 // 		}
 // 		// index the markers parsed since the last call
-// 		comments ||= d.createNodeIterator(d, 128);
-// 		while ((l = comments.nextNode())) {
-// 			index(l);
-// 		}
+// 		scan((comments ||= d.createNodeIterator(d, 128)));
 // 		s = markers["$s:" + id];
 // 		e = markers["/$s:" + id];
 // 		// hydration may have removed the markers (they stay in the index, detached),
@@ -86,25 +79,26 @@ import { encodeEntities } from './util.js';
 // 				// must survive, so leave the boundary alone and only drop the template.
 // 				for (l = s; (l = l.nextSibling) && l != e && !owned.includes(l); );
 // 				if (l == e) {
-// 					clear(s, e);
+// 					clear();
 // 					s.after(t.content);
-// 					fixNamespace(s, e);
+// 					fixNamespace();
 // 				}
 // 			} else {
 // 				n = owned.filter((x) => x && !x.parentNode);
 // 				if (n[0]) {
 // 					// native DPU detached client DOM: put it back and drop the server content
-// 					clear(s, e);
+// 					clear();
 // 					e.before(...n);
 // 				} else {
-// 					fixNamespace(s, e);
+// 					fixNamespace();
 // 				}
 // 			}
 // 			// nested boundaries' markers arrive with this one's content, before the iterator's
-// 			// position, so index what is between the markers now
-// 			for (l = s; (l = l.nextSibling) != e; ) {
-// 				index(l);
-// 			}
+// 			// position, so index what is between the markers now (a TreeWalker, unlike a
+// 			// NodeIterator, isn't tracked by the document for the rest of its life)
+// 			n = d.createTreeWalker(d, 128);
+// 			n.currentNode = s;
+// 			scan(n, e);
 // 		}
 // 		// drop the template even when there was nothing to patch
 // 		t?.remove();
@@ -113,7 +107,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,n,o,r,i={},l=e=>{for(8==e.nodeType&&(i[e.data]||=e),e=e.firstChild;e;e=e.nextSibling)l(e)},a=e=>{e&&(t.push(e.__e),(e.type?.call||e.__e?.contains(n))&&e.__k?.forEach(a))},f=(e,t)=>{let n,o;if(e.parentNode.closest("svg,math"))for(n=e.nextSibling;n!=t;n=o)o=n.nextSibling,n.outerHTML=n.outerHTML},d=(e,t,n)=>{for(;(n=e.nextSibling)!=t;)n.remove()};window.$PRS=s=>{let c,p,_=e.currentScript,S=_.previousElementSibling;for(S?.matches('template[for="'+s+'"]')||(S=null),r||=e.createNodeIterator(e,128);c=r.nextNode();)l(c);if(n=i["$s:"+s],o=i["/$s:"+s],n?.isConnected&&n.parentNode==o?.parentNode){for(t=[],p=n.parentNode;p&&!p.__k;)p=p.parentNode;if(a(p?.__k),S){for(c=n;(c=c.nextSibling)&&c!=o&&!t.includes(c););c==o&&(d(n,o),n.after(S.content),f(n,o))}else p=t.filter(e=>e&&!e.parentNode),p[0]?(d(n,o),o.before(...p)):f(n,o);for(c=n;(c=c.nextSibling)!=o;)l(c)}S?.remove(),_.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,r,o,n,i={},a=(e,t,r)=>{for(;(r=e.nextNode())!=t;)i[r.data]||=r},l=e=>{e&&(t.push(e.__e),(e.type?.call||e.__e?.contains(r))&&e.__k?.forEach(l))},c=(e,t)=>{if(r.parentNode.closest("svg,math"))for(e=r.nextSibling;e!=o;e=t)t=e.nextSibling,e.outerHTML=e.outerHTML},d=e=>{for(;(e=r.nextSibling)!=o;)e.remove()};window.$PRS=f=>{let s,p,_=e.currentScript,u=_.previousElementSibling;if(u?.matches('template[for="'+f+'"]')||(u=null),a(n||=e.createNodeIterator(e,128)),r=i["$s:"+f],o=i["/$s:"+f],r?.isConnected&&r.parentNode==o?.parentNode){for(t=[],p=r.parentNode;p&&!p.__k;)p=p.parentNode;if(l(p?.__k),u){for(s=r;(s=s.nextSibling)&&s!=o&&!t.includes(s););s==o&&(d(),r.after(u.content),c())}else p=t.filter(e=>e&&!e.parentNode),p[0]?(d(),o.before(...p)):c();p=e.createTreeWalker(e,128),p.currentNode=r,a(p,o)}u?.remove(),_.remove()}})(document);`;
 
 /**
  * @param {string} nonce
