@@ -571,6 +571,66 @@ describe('stream template hydration races', () => {
 		expect(root.querySelector('button').textContent).toBe('outside');
 	});
 
+	it('should only walk the client vnodes that can render into the boundary parent', async () => {
+		const { document, root } = await setupHydration();
+		root.replaceChildren();
+		render(
+			<main>
+				<ul>
+					<li>one</li>
+					<li>two</li>
+				</ul>
+				<section />
+			</main>,
+			root
+		);
+		const section = root.querySelector('section');
+		section.innerHTML = '<!--$s:1--><i>loading</i><!--/$s:1-->';
+		const find = (v, dom) =>
+			v &&
+			(v.__e === dom && typeof v.type == 'string'
+				? v
+				: (v.__k || []).reduce((r, c) => r || find(c, dom), null));
+		const ul = find(root.__k, root.querySelector('ul'));
+		let reads = 0;
+		const children = ul.__k;
+		Object.defineProperty(ul, '__k', {
+			configurable: true,
+			get() {
+				reads++;
+				return children;
+			}
+		});
+
+		appendStreamed(document);
+
+		expect(reads).toBe(0);
+		expect(section.textContent).toBe('server');
+	});
+
+	it('should not pull detached client DOM from elsewhere into the boundary', async () => {
+		const { root } = await setupHydration();
+		root.replaceChildren();
+		render(
+			<main>
+				<div>
+					<p>parked</p>
+				</div>
+				<section />
+			</main>,
+			root
+		);
+		const section = root.querySelector('section');
+		section.innerHTML = '<!--$s:1--><b>server</b><!--/$s:1-->';
+		// e.g. a suspended client subtree that is parked outside the document
+		const parked = root.querySelector('p');
+		parked.remove();
+		// native DPU already patched the range, so there is no template
+		callRC(hydrationDom.window, '1');
+		expect(section.innerHTML).toBe('<!--$s:1--><b>server</b><!--/$s:1-->');
+		expect(parked.parentNode).toBeNull();
+	});
+
 	it('should preserve input state even when the element has no DOM mutations', async () => {
 		const { document, root } = await setupHydration();
 		renderClient(root, <input defaultValue="initial" />);

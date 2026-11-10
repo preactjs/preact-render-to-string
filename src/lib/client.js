@@ -5,6 +5,8 @@ import { encodeEntities } from './util.js';
 // ((d) => {
 // 	// Assumptions: the renderer always emits both $s markers as siblings and ids are unique.
 // 	let owned,
+// 		s,
+// 		e,
 // 		// comments by their data ("$s:id" / "/$s:id" for the markers), so each call is a lookup.
 // 		// The first one seen wins, which also keeps keys like "__proto__" from being assigned.
 // 		markers = {},
@@ -20,12 +22,15 @@ import { encodeEntities } from './util.js';
 // 				index(n);
 // 			}
 // 		},
-// 		// walk a vnode tree (__k = children) and record each vnode's DOM node (__e) in `owned`
+// 		// walk a vnode tree (__k = children) and record each vnode's DOM node (__e) in `owned`.
+// 		// Only the boundary's siblings are looked up, so an element vnode is only entered when it is
+// 		// an ancestor of the boundary: nothing below another element renders into its parent.
+// 		// Components and Fragments (function types) render into their parent's DOM.
 // 		visit = (v) => {
 // 			if (v) {
-// 				owned.add(v.__e);
-// 				if (v.__k) {
-// 					v.__k.forEach(visit);
+// 				owned.push(v.__e);
+// 				if (v.type?.call || v.__e?.contains(s)) {
+// 					v.__k?.forEach(visit);
 // 				}
 // 			}
 // 		},
@@ -54,8 +59,6 @@ import { encodeEntities } from './util.js';
 // 			// the template is emitted right before its script (a document-wide query would rescan
 // 			// everything that was streamed so far on every call)
 // 			t = c.previousElementSibling,
-// 			s,
-// 			e,
 // 			l,
 // 			n;
 // 		if (!t?.matches('template[for="' + id + '"]')) {
@@ -72,7 +75,7 @@ import { encodeEntities } from './util.js';
 // 		// and a lone end marker is no boundary
 // 		if (s?.isConnected && s.parentNode == e?.parentNode) {
 // 			// collect the DOM every vnode under the nearest client root points at
-// 			owned = new Set();
+// 			owned = [];
 // 			for (n = s.parentNode; n && !n.__k; ) {
 // 				n = n.parentNode;
 // 			}
@@ -81,14 +84,14 @@ import { encodeEntities } from './util.js';
 // 				// polyfill only (no native DPU): `t` is null when the browser already swapped the range.
 // 				// DOM that a client vnode already owns (hydration got here first)
 // 				// must survive, so leave the boundary alone and only drop the template.
-// 				for (l = s; (l = l.nextSibling) && l != e && !owned.has(l); );
+// 				for (l = s; (l = l.nextSibling) && l != e && !owned.includes(l); );
 // 				if (l == e) {
 // 					clear(s, e);
 // 					s.after(t.content);
 // 					fixNamespace(s, e);
 // 				}
 // 			} else {
-// 				n = [...owned].filter((x) => x && !x.parentNode);
+// 				n = owned.filter((x) => x && !x.parentNode);
 // 				if (n[0]) {
 // 					// native DPU detached client DOM: put it back and drop the server content
 // 					clear(s, e);
@@ -110,7 +113,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,n,o={},r=e=>{for(8==e.nodeType&&(o[e.data]||=e),e=e.firstChild;e;e=e.nextSibling)r(e)},i=e=>{e&&(t.add(e.__e),e.__k&&e.__k.forEach(i))},l=(e,t)=>{let n,o;if(e.parentNode.closest("svg,math"))for(n=e.nextSibling;n!=t;n=o)o=n.nextSibling,n.outerHTML=n.outerHTML},a=(e,t,n)=>{for(;(n=e.nextSibling)!=t;)n.remove()};window.$PRS=d=>{let f,s,p,S,_=e.currentScript,c=_.previousElementSibling;for(c?.matches('template[for="'+d+'"]')||(c=null),n||=e.createNodeIterator(e,128);p=n.nextNode();)r(p);if(f=o["$s:"+d],s=o["/$s:"+d],f?.isConnected&&f.parentNode==s?.parentNode){for(t=new Set,S=f.parentNode;S&&!S.__k;)S=S.parentNode;if(i(S?.__k),c){for(p=f;(p=p.nextSibling)&&p!=s&&!t.has(p););p==s&&(a(f,s),f.after(c.content),l(f,s))}else S=[...t].filter(e=>e&&!e.parentNode),S[0]?(a(f,s),s.before(...S)):l(f,s);for(p=f;(p=p.nextSibling)!=s;)r(p)}c?.remove(),_.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,n,o,r,i={},l=e=>{for(8==e.nodeType&&(i[e.data]||=e),e=e.firstChild;e;e=e.nextSibling)l(e)},a=e=>{e&&(t.push(e.__e),(e.type?.call||e.__e?.contains(n))&&e.__k?.forEach(a))},f=(e,t)=>{let n,o;if(e.parentNode.closest("svg,math"))for(n=e.nextSibling;n!=t;n=o)o=n.nextSibling,n.outerHTML=n.outerHTML},d=(e,t,n)=>{for(;(n=e.nextSibling)!=t;)n.remove()};window.$PRS=s=>{let c,p,_=e.currentScript,S=_.previousElementSibling;for(S?.matches('template[for="'+s+'"]')||(S=null),r||=e.createNodeIterator(e,128);c=r.nextNode();)l(c);if(n=i["$s:"+s],o=i["/$s:"+s],n?.isConnected&&n.parentNode==o?.parentNode){for(t=[],p=n.parentNode;p&&!p.__k;)p=p.parentNode;if(a(p?.__k),S){for(c=n;(c=c.nextSibling)&&c!=o&&!t.includes(c););c==o&&(d(n,o),n.after(S.content),f(n,o))}else p=t.filter(e=>e&&!e.parentNode),p[0]?(d(n,o),o.before(...p)):f(n,o);for(c=n;(c=c.nextSibling)!=o;)l(c)}S?.remove(),_.remove()}})(document);`;
 
 /**
  * @param {string} nonce
