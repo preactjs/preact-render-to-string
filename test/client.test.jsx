@@ -267,6 +267,100 @@ describe('inline init script', () => {
 		expect(scans).toBeGreaterThan(0);
 	});
 
+	it('should find the markers of all boundaries with a single document scan', () => {
+		const n = 20;
+		let shell = '';
+		for (let i = 0; i < n; i++) shell += `<!--$s:${i}-->loading<!--/$s:${i}-->`;
+		const { window, document } = createDom(`<div>${shell}</div>`);
+		runInitScript(window);
+
+		let iterators = 0;
+		let queries = 0;
+		const createNodeIterator = document.createNodeIterator.bind(document);
+		document.createNodeIterator = (...args) => {
+			iterators++;
+			return createNodeIterator(...args);
+		};
+		for (const name of ['querySelector', 'querySelectorAll']) {
+			const fn = document[name].bind(document);
+			document[name] = (...args) => {
+				queries++;
+				return fn(...args);
+			};
+		}
+
+		for (let i = n - 1; i >= 0; i--)
+			streamChunk(window, String(i), `<p>${i}</p>`);
+
+		// one live iterator, resumed by every call, and no document-wide template query
+		expect(iterators).toBe(1);
+		expect(queries).toBe(0);
+		expect(document.querySelectorAll('p')).toHaveLength(n);
+		expect(document.querySelectorAll('template')).toHaveLength(0);
+	});
+
+	it('should find markers added to the document after an earlier chunk', () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->a<!--/$s:1--></div>'
+		);
+		runInitScript(window);
+		streamChunk(window, '1', '<p>one</p>');
+
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<section><!--$s:2-->b<!--/$s:2--></section>'
+		);
+		streamChunk(window, '2', '<p>two</p>');
+
+		expect(document.querySelector('section').innerHTML).toBe(
+			'<!--$s:2--><p>two</p><!--/$s:2-->'
+		);
+	});
+
+	it('should patch a nested boundary whose markers came with the outer chunk', () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->outer fallback<!--/$s:1--></div>'
+		);
+		runInitScript(window);
+
+		streamChunk(
+			window,
+			'1',
+			'<section><!--$s:2-->inner fallback<!--/$s:2--></section>'
+		);
+		streamChunk(window, '2', '<p>inner</p>');
+
+		expect(bodyHtml(document)).toBe(
+			'<div><!--$s:1--><section><!--$s:2--><p>inner</p><!--/$s:2--></section><!--/$s:1--></div>'
+		);
+		expect(document.querySelectorAll('template')).toHaveLength(0);
+	});
+
+	it('should find nested markers that native DPU patched in', () => {
+		const { window, document } = createDom(
+			'<div><!--$s:1-->outer fallback<!--/$s:1--></div>'
+		);
+		runInitScript(window);
+		// let the iterator pass the outer markers before native DPU patches the range
+		callRC(window, 'none');
+
+		const end = document.querySelector('div').lastChild;
+		end.previousSibling.remove();
+		const tmp = document.createElement('div');
+		tmp.innerHTML = '<svg><!--$s:2--><rect></rect><!--/$s:2--></svg>';
+		end.before(tmp.firstChild);
+		callRC(window, '1');
+		// native DPU leaves the nested svg children in the HTML namespace
+		const svg = document.querySelector('svg');
+		svg.lastChild.before(document.createElement('circle'));
+		svg.querySelector('rect').remove();
+		callRC(window, '2');
+
+		expect(document.querySelector('circle').namespaceURI).toBe(
+			'http://www.w3.org/2000/svg'
+		);
+	});
+
 	it('should parse patched children in the svg/math namespace of their parent', () => {
 		const { window, document } = createDom(
 			'<svg><!--$s:1--><!--/$s:1--></svg><math><!--$s:2--><!--/$s:2--></math>'
