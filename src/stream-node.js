@@ -25,23 +25,24 @@ export function renderToPipeableStream(vnode, options, context) {
 
 	const controller = new AbortController();
 	const stream = new PassThrough();
+	let shellReady = false;
 
 	renderToChunks(vnode, {
 		context,
 		abortSignal: controller.signal,
 		nonce: options.nonce,
-		onError: (error) => {
-			if (options.onError) {
-				options.onError(error);
-			}
-			controller.abort(error);
+		onError: options.onError,
+		onShellReady() {
+			shellReady = true;
 		},
 		onWrite(s) {
 			stream.write(encoder.encode(s));
 		}
 	})
 		.then(() => {
-			options.onAllReady && options.onAllReady();
+			if (!controller.signal.aborted && options.onAllReady) {
+				options.onAllReady();
+			}
 			stream.end();
 		})
 		.catch((error) => {
@@ -54,7 +55,7 @@ export function renderToPipeableStream(vnode, options, context) {
 		});
 
 	Promise.resolve().then(() => {
-		options.onShellReady && options.onShellReady();
+		if (shellReady && options.onShellReady) options.onShellReady();
 	});
 
 	return {
@@ -67,19 +68,22 @@ export function renderToPipeableStream(vnode, options, context) {
 			)
 		) {
 			// Remix/React-Router will always call abort after a timeout, even on success
-			if (stream.closed) return;
+			if (stream.closed || controller.signal.aborted) return;
 
-			controller.abort();
-			stream.destroy();
 			if (options.onError) {
 				options.onError(reason);
 			}
+			// Pending boundaries are handed to the client and the response ends.
+			controller.abort(reason);
 		},
 		/**
 		 * @param {import("stream").Writable} writable
 		 */
 		pipe(writable) {
 			stream.pipe(writable, { end: true });
+			stream.once('close', () => {
+				if (!stream.readableEnded) writable.destroy();
+			});
 		}
 	};
 }

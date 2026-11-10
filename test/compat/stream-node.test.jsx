@@ -89,6 +89,53 @@ describe('renderToPipeableStream', () => {
 		expect(error).to.be.undefined;
 	});
 
+	it('should end the response and leave pending boundaries to the client on abort', async () => {
+		const { Suspender } = createSuspender();
+		const errors = [];
+		let allReady = false;
+		const sink = createSink();
+		const { pipe, abort } = renderToPipeableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{
+				onShellReady: () => pipe(sink.stream),
+				onAllReady: () => (allReady = true),
+				onError: (e) => errors.push(e)
+			}
+		);
+		await new Promise((r) => setTimeout(r));
+		const reason = new Error('timeout');
+		abort(reason);
+		abort(reason);
+
+		const html = (await sink.promise).join('');
+		expect(errors).to.deep.equal([reason]);
+		expect(allReady).to.equal(false);
+		expect(html).to.contain('loading...');
+		expect(html).to.contain('$s!:');
+		expect(html.endsWith('</div>')).to.equal(true);
+	});
+
+	it('should not call onShellReady when the shell throws', async () => {
+		const error = new Error('shell failed');
+		function Thrower() {
+			throw error;
+		}
+		const errors = [];
+		let shellReady = false;
+		renderToPipeableStream(<Thrower />, {
+			onShellReady: () => (shellReady = true),
+			onError: (e) => errors.push(e)
+		});
+		await new Promise((r) => setTimeout(r));
+
+		expect(shellReady).to.equal(false);
+		expect(errors).to.deep.equal([error]);
+	});
+
 	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
 		const { Suspender, suspended } = createSuspender();
 

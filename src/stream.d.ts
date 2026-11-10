@@ -6,6 +6,10 @@ interface RenderStream extends ReadableStream<Uint8Array> {
 
 interface RenderToReadableStreamOptions {
 	nonce?: string;
+	/** Called for render errors inside suspended subtrees and when aborted. */
+	onError?: (error: any) => void;
+	/** Aborting hands the pending boundaries to the client and ends the stream. */
+	signal?: AbortSignal;
 }
 
 export function renderToReadableStream<P = {}>(
