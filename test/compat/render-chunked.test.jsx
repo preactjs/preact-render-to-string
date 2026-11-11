@@ -58,7 +58,11 @@ describe('renderToChunks', () => {
 					<Suspender />
 				</Suspense>
 			</div>,
-			{ onWrite: (s) => result.push(s), abortSignal: controller.signal }
+			{
+				onWrite: (s) => result.push(s),
+				onError: () => {},
+				abortSignal: controller.signal
+			}
 		);
 
 		controller.abort();

@@ -30,6 +30,9 @@ export async function renderToChunks(
 		nonce
 	};
 
+	// Aborted before the shell could render, like a shell error.
+	if (abortSignal && abortSignal.aborted) throw abortSignal.reason;
+
 	try {
 		// Synchronously render the shell
 		// @ts-ignore - using third internal RendererState argument
@@ -88,7 +91,7 @@ async function forkPromises(renderer) {
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
 	const recoverable = isRecoverable(error);
-	if (!recoverable && (!error || !error.then)) throw error;
+	const suspended = !recoverable && error && error.then;
 
 	// Recoverables reach this handler at the boundary itself. Promise retries
 	// can reach it from a descendant, just like their initial suspension.
@@ -107,20 +110,17 @@ function handleError(error, vnode, renderChild) {
 	const id = vnode.__v;
 	const found = this.suspended.find((x) => x.id === id);
 
-	if (recoverable) {
+	// An error below a boundary is reported and the boundary is left to the
+	// client, the same goes for anything that suspends after an abort.
+	const aborted = this.abortSignal && this.abortSignal.aborted;
+	if (!suspended || aborted) {
+		if (!recoverable && !suspended) this.reportError(error);
 		abandon(this, vnode);
 		if (found) {
-			this.onWrite(createClientRenderInstruction(id, this.nonce));
+			if (!aborted) this.onWrite(createClientRenderInstruction(id, this.nonce));
 			return '';
 		}
 		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
-	}
-
-	// Nothing will be streamed anymore, the client renders this boundary.
-	if (this.abortSignal && this.abortSignal.aborted) {
-		return found
-			? ''
-			: `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
 	}
 
 	const completion = new Deferred();
@@ -135,7 +135,7 @@ function handleError(error, vnode, renderChild) {
 	};
 	this.suspended.push(pending);
 	if (this.abortSignal) {
-		pending.abort = clientRender.bind(null, pending);
+		pending.abort = abortPending.bind(null, pending);
 		this.abortSignal.addEventListener('abort', pending.abort);
 	}
 
@@ -184,6 +184,13 @@ function failPending(pending, error) {
 	const renderer = pending.renderer;
 	if (!renderer) return;
 	renderer.reportError(error);
+	clientRender(pending);
+}
+
+function abortPending(pending) {
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	renderer.reportError(renderer.abortSignal.reason);
 	clientRender(pending);
 }
 

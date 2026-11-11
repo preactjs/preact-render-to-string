@@ -99,6 +99,9 @@ describe('renderToPipeableStream', () => {
 				<Suspense fallback="loading...">
 					<Suspender />
 				</Suspense>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
 			</div>,
 			{
 				onShellReady: () => pipe(sink.stream),
@@ -112,8 +115,9 @@ describe('renderToPipeableStream', () => {
 		abort(reason);
 
 		const html = (await sink.promise).join('');
-		expect(errors).to.deep.equal([reason]);
-		expect(allReady).to.equal(false);
+		// Once per boundary that is left to the client
+		expect(errors).to.deep.equal([reason, reason]);
+		expect(allReady).to.equal(true);
 		expect(html).to.contain('loading...');
 		expect(html).to.contain('$s!:');
 		expect(html.endsWith('</div>')).to.equal(true);
@@ -125,15 +129,72 @@ describe('renderToPipeableStream', () => {
 			throw error;
 		}
 		const errors = [];
+		const shellErrors = [];
 		let shellReady = false;
 		renderToPipeableStream(<Thrower />, {
 			onShellReady: () => (shellReady = true),
+			onShellError: (e) => shellErrors.push(e),
 			onError: (e) => errors.push(e)
 		});
 		await new Promise((r) => setTimeout(r));
 
 		expect(shellReady).to.equal(false);
 		expect(errors).to.deep.equal([error]);
+		expect(shellErrors).to.deep.equal([error]);
+	});
+
+	it('should leave a boundary that throws in the shell to the client', async () => {
+		const error = new Error('render failed');
+		function Thrower() {
+			throw error;
+		}
+		const calls = [];
+		const sink = createSink();
+		const { pipe } = renderToPipeableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Thrower />
+				</Suspense>
+			</div>,
+			{
+				onShellReady: () => {
+					calls.push('shell');
+					pipe(sink.stream);
+				},
+				onAllReady: () => calls.push('all'),
+				onError: (e) => calls.push(e)
+			}
+		);
+
+		const html = (await sink.promise).join('');
+		expect(calls).to.deep.equal([error, 'shell', 'all']);
+		expect(html).to.match(
+			/^<div><!--\$s!:\d+-->loading...<!--\/\$s:\d+--><\/div>$/
+		);
+	});
+
+	it('should abort the render when the destination closes early', async () => {
+		const { Suspender } = createSuspender();
+		const errors = [];
+		const allReady = new Deferred();
+		const sink = createSink();
+		const { pipe } = renderToPipeableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{
+				onShellReady: () => pipe(sink.stream),
+				onAllReady: allReady.resolve,
+				onError: (e) => errors.push(e.message)
+			}
+		);
+		await new Promise((r) => setTimeout(r));
+		sink.stream.destroy();
+
+		await allReady.promise;
+		expect(errors).to.deep.equal(['The destination stream closed early.']);
 	});
 
 	it('should include the nonce attribute on the init script when a nonce is provided', async () => {

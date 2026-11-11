@@ -19,12 +19,7 @@ export function renderToReadableStream(vnode, options, context) {
 	const signal = options && options.signal;
 	let closed = false;
 
-	const onAbort = () => {
-		if (!abort.signal.aborted && options.onError) {
-			options.onError(signal.reason);
-		}
-		abort.abort();
-	};
+	const onAbort = () => abort.abort(signal.reason);
 	if (signal) {
 		if (signal.aborted) onAbort();
 		else signal.addEventListener('abort', onAbort);
@@ -47,6 +42,7 @@ export function renderToReadableStream(vnode, options, context) {
 					allReady.resolve();
 				})
 				.catch((error) => {
+					(options?.onError || console.error)(error);
 					if (!closed) controller.error(error);
 					allReady.reject(error);
 				})
@@ -56,9 +52,13 @@ export function renderToReadableStream(vnode, options, context) {
 				});
 		},
 		// The consumer went away, stop rendering for it.
-		cancel() {
+		cancel(
+			reason = new Error(
+				'The render was aborted by the server without a reason.'
+			)
+		) {
 			closed = true;
-			abort.abort();
+			abort.abort(reason);
 		}
 	});
 
