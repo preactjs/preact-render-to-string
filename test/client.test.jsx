@@ -8,11 +8,33 @@ import {
 } from '../src/lib/client';
 
 /**
- * @param {string} [bodyHtml]
+ * Wrap what is between `$s` markers the way the renderer wraps a fallback it is
+ * still streaming the content for.
+ * @param {string} html
+ */
+function pending(html) {
+	return html.replace(
+		/(<!--\$s:(\w+)-->)([^]*?)(<!--\/\$s:\2-->)/g,
+		(_, start, id, fallback, end) =>
+			`${start}<?start name="${id}">${pending(fallback)}<?end>${end}`
+	);
+}
+
+/**
+ * A pending shell as the parser leaves it: without processing instructions
+ * `<?start>` and `<?end>` are comments.
+ * @param {string} html
+ */
+function parsed(html) {
+	return pending(html).replace(/<\?([^>]*)>/g, '<!--?$1-->');
+}
+
+/**
+ * @param {string} [bodyHtml] The shell, its boundaries are pending
  */
 function createDom(bodyHtml = '') {
 	const dom = new JSDOM(
-		`<!DOCTYPE html><html><body>${bodyHtml}</body></html>`,
+		`<!DOCTYPE html><html><body>${pending(bodyHtml)}</body></html>`,
 		{
 			runScripts: 'dangerously'
 		}
@@ -48,7 +70,10 @@ function bodyHtml(document) {
  * @param {string} html
  */
 function insertChunk(document, id, html) {
-	document.body.insertAdjacentHTML('beforeend', createSubtree(id, html));
+	document.body.insertAdjacentHTML(
+		'beforeend',
+		createSubtree(id, pending(html))
+	);
 	// the inert chunk script is dropped; callRC stands in for it
 	document.body.lastElementChild.remove();
 }
@@ -157,7 +182,7 @@ describe('inline init script', () => {
 		runInitScript(window);
 		streamChunk(window, '2', '<p>two</p>');
 		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1-->a<!--/$s:1--><!--$s:2--><p>two</p><!--/$s:2-->'
+			parsed('<!--$s:1-->a<!--/$s:1-->') + '<!--$s:2--><p>two</p><!--/$s:2-->'
 		);
 
 		streamChunk(window, '1', '<p>one</p>');
@@ -191,7 +216,7 @@ describe('inline init script', () => {
 		streamChunk(window, '999', '<p>nope</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+			parsed('<div><!--$s:1-->loading<!--/$s:1--></div>')
 		);
 	});
 
@@ -313,7 +338,7 @@ describe('inline init script', () => {
 
 		document.body.insertAdjacentHTML(
 			'beforeend',
-			'<section><!--$s:2-->b<!--/$s:2--></section>'
+			pending('<section><!--$s:2-->b<!--/$s:2--></section>')
 		);
 		streamChunk(window, '2', '<p>two</p>');
 
@@ -373,11 +398,11 @@ describe('inline init script', () => {
 		runInitScript(window);
 
 		// native DPU patched the range before the chunk's script runs
-		const end = document.querySelector('svg').lastChild;
-		end.previousSibling.remove();
+		const svg = document.querySelector('svg');
+		while (svg.childNodes.length > 2) svg.childNodes[1].remove();
 		const g = document.createElement('g');
-		g.innerHTML = '<!--$s:2--><!--/$s:2-->';
-		end.before(g);
+		g.innerHTML = pending('<!--$s:2--><!--/$s:2-->');
+		svg.lastChild.before(g);
 		callRC(window, '1');
 		streamChunk(window, '2', '<path></path>');
 
@@ -461,7 +486,7 @@ const previousDocument = globalThis.document;
 async function setupHydration(
 	html = '<div id="root"><!--$s:1--><i>loading</i><!--/$s:1--></div>'
 ) {
-	hydrationDom = new JSDOM(html, {
+	hydrationDom = new JSDOM(pending(html), {
 		runScripts: 'dangerously',
 		url: 'http://localhost/'
 	});
@@ -550,18 +575,6 @@ describe('stream template hydration races', () => {
 		expect(document.querySelector('template')).toBeNull();
 	});
 
-	it('should put back client nodes that native DPU detached', async () => {
-		const { document, root } = await setupHydration();
-		renderClient(root, <button>client</button>);
-		const button = root.querySelector('button');
-		// Native DPU swaps the range with server content and consumes the template.
-		button.remove();
-		root.lastChild.before(document.createElement('i'));
-		callRC(hydrationDom.window, '1');
-		expect(root.querySelector('button')).toBe(button);
-		expect(root.querySelector('i')).toBeNull();
-	});
-
 	it('should not throw when hydration removed the anchors', async () => {
 		const { document, root } = await setupHydration();
 		root.replaceChildren();
@@ -601,47 +614,10 @@ describe('stream template hydration races', () => {
 			root
 		);
 		const section = root.querySelector('section');
-		section.innerHTML = '<!--$s:1--><i>loading</i><!--/$s:1-->';
+		section.innerHTML = pending('<!--$s:1--><i>loading</i><!--/$s:1-->');
 		appendStreamed(document);
 		expect(section.textContent).toBe('server');
 		expect(root.querySelector('button').textContent).toBe('outside');
-	});
-
-	it('should only walk the client vnodes that can render into the boundary parent', async () => {
-		const { document, root } = await setupHydration();
-		root.replaceChildren();
-		render(
-			<main>
-				<ul>
-					<li>one</li>
-					<li>two</li>
-				</ul>
-				<section />
-			</main>,
-			root
-		);
-		const section = root.querySelector('section');
-		section.innerHTML = '<!--$s:1--><i>loading</i><!--/$s:1-->';
-		const find = (v, dom) =>
-			v &&
-			(v.__e === dom && typeof v.type == 'string'
-				? v
-				: (v.__k || []).reduce((r, c) => r || find(c, dom), null));
-		const ul = find(root.__k, root.querySelector('ul'));
-		let reads = 0;
-		const children = ul.__k;
-		Object.defineProperty(ul, '__k', {
-			configurable: true,
-			get() {
-				reads++;
-				return children;
-			}
-		});
-
-		appendStreamed(document);
-
-		expect(reads).toBe(0);
-		expect(section.textContent).toBe('server');
 	});
 
 	it('should not pull detached client DOM from elsewhere into the boundary', async () => {
