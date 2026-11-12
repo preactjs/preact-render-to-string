@@ -5,6 +5,9 @@ interface RenderToPipeableStreamOptions {
 	nonce?: string;
 	onShellReady?: () => void;
 	onAllReady?: () => void;
+	/** Called when the shell fails to render, nothing is streamed. */
+	onShellError?: (error: any) => void;
+	/** Called for every render error and for every boundary left to the client by an abort. */
 	onError?: (error: any) => void;
 }
 

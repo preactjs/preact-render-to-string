@@ -3,7 +3,12 @@ import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { useId } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
-import { createSubtree, createInitScript } from '../../src/lib/client';
+import {
+	createSubtree,
+	createInitScript,
+	createClientRenderInstruction
+} from '../../src/lib/client';
+import { Deferred } from '../../src/lib/util';
 import { createSuspender } from '../utils';
 import { VNODE, PARENT } from '../../src/lib/constants';
 
@@ -59,7 +64,11 @@ describe('renderToChunks', () => {
 					<Suspender />
 				</Suspense>
 			</div>,
-			{ onWrite: (s) => result.push(s), abortSignal: controller.signal }
+			{
+				onWrite: (s) => result.push(s),
+				onError: () => {},
+				abortSignal: controller.signal
+			}
 		);
 
 		controller.abort();
@@ -69,7 +78,8 @@ describe('renderToChunks', () => {
 
 		expect(result).to.deep.equal([
 			`<div><!--$s:10--><?start name="10">loading...<?end><!--/$s:10--></div>`,
-			createInitScript()
+			createInitScript(),
+			createClientRenderInstruction('10')
 		]);
 	});
 
@@ -389,6 +399,66 @@ describe('renderToChunks', () => {
 		);
 		expect(patches).toHaveLength(1);
 		expect(patches[0]).toContain('<p>first</p><p>second</p>');
+	});
+
+	it('should report a boundary that throws after resuming and leave it to the client', async () => {
+		const { suspended, getResolved } = createSuspender();
+		const error = new Error('render failed');
+		function Thrower() {
+			if (!getResolved()) throw suspended.promise;
+			throw error;
+		}
+
+		const result = [];
+		const errors = [];
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="loading...">
+					<Thrower />
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s), onError: (e) => errors.push(e) }
+		);
+		suspended.resolve();
+		await promise;
+
+		expect(errors).to.deep.equal([error]);
+		const id = /\$s:(\d+)/.exec(result[0])[1];
+		expect(result.slice(2)).to.deep.equal([createClientRenderInstruction(id)]);
+	});
+
+	it('should report a rejected suspension and keep streaming its siblings', async () => {
+		const failed = new Deferred();
+		function Failing() {
+			throw failed.promise;
+		}
+		const working = createSuspender();
+		const error = new Error('fetch failed');
+
+		const result = [];
+		const errors = [];
+		const promise = renderToChunks(
+			<div>
+				<Suspense fallback="a...">
+					<Failing />
+				</Suspense>
+				<Suspense fallback="b...">
+					<working.Suspender />
+				</Suspense>
+			</div>,
+			{ onWrite: (s) => result.push(s), onError: (e) => errors.push(e) }
+		);
+		failed.reject(error);
+		await Promise.resolve();
+		working.suspended.resolve();
+		await promise;
+
+		const html = result.join('');
+		expect(errors).to.deep.equal([error]);
+		expect(html).to.contain('a...');
+		expect(html).to.match(/<script>.*\$s!:/);
+		expect(html).to.match(/<template for="\d+"><p>it works<\/p>/);
+		expect(html).not.to.contain('undefined');
 	});
 });
 

@@ -3,11 +3,13 @@ import { ComponentChildren, ComponentChild, VNode } from 'preact';
 interface Suspended {
 	id: string;
 	promise: Promise<any>;
-	context: any;
-	isSvgMode: boolean;
-	selectValue: any;
-	vnode: VNode;
-	parent: VNode | null;
+	resolve: () => void;
+	vnode: VNode | null;
+	renderer: RendererState | null;
+	renderChild:
+		| ((child: ComponentChildren, parent: ComponentChild) => string)
+		| null;
+	abort: (() => void) | null;
 }
 
 interface RendererErrorHandler {
@@ -21,6 +23,8 @@ interface RendererErrorHandler {
 
 interface RendererState {
 	start: number;
+	reportError: (error: any) => void;
+	nonce?: string;
 	suspended: Suspended[];
 	abortSignal?: AbortSignal | undefined;
 	onWrite: (str: string) => void;
@@ -41,6 +45,7 @@ interface CapturedHooks {
 interface RenderToChunksOptions {
 	context?: any;
 	onError?: (error: any) => void;
+	onShellReady?: () => void;
 	onWrite: (str: string) => void;
 	abortSignal?: AbortSignal;
 	nonce?: string;

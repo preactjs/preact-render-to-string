@@ -246,6 +246,13 @@ describe('render', () => {
 			expect(rendered).to.equal(expected);
 		});
 
+		it('should omit on* attributes', () => {
+			let rendered = render(<div onclick="foo()" onClick="bar()" />),
+				expected = `<div></div>`;
+
+			expect(rendered).to.equal(expected);
+		});
+
 		it('should encode entities', () => {
 			let rendered = render(<div a={'"<>&'}>{'"<>&'}</div>),
 				expected = `<div a="&quot;&lt;>&amp;">&quot;&lt;>&amp;</div>`;

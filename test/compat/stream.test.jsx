@@ -89,6 +89,112 @@ describe('renderToReadableStream', () => {
 		]);
 	});
 
+	it('should call onError for a failing boundary and still close the stream', async () => {
+		const { suspended, getResolved } = createSuspender();
+		const error = new Error('render failed');
+		function Thrower() {
+			if (!getResolved()) throw suspended.promise;
+			throw error;
+		}
+		const errors = [];
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Thrower />
+				</Suspense>
+			</div>,
+			{ onError: (e) => errors.push(e) }
+		);
+		const sink = createSink(stream);
+		suspended.resolve();
+
+		const html = (await sink.promise).join('');
+		await stream.allReady;
+		expect(errors).to.deep.equal([error]);
+		expect(html).to.contain('$s!:');
+		expect(html).not.to.contain('undefined');
+	});
+
+	it('should stop rendering when the consumer cancels', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const errors = [];
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ onError: (e) => errors.push(e) }
+		);
+		const reader = stream.getReader();
+		await reader.read();
+		const reason = new Error('client left');
+		await reader.cancel(reason);
+		suspended.resolve();
+
+		await stream.allReady;
+		expect(errors).to.deep.equal([reason]);
+	});
+
+	it('should fail the render when the signal is already aborted', async () => {
+		const { Suspender } = createSuspender();
+		const controller = new AbortController();
+		const reason = new Error('too late');
+		controller.abort(reason);
+		const errors = [];
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ signal: controller.signal, onError: (e) => errors.push(e) }
+		);
+
+		let rejection;
+		await stream.allReady.catch((e) => (rejection = e));
+		expect(rejection).to.equal(reason);
+		expect(errors).to.deep.equal([reason]);
+	});
+
+	it('should report a shell error', async () => {
+		const error = new Error('shell failed');
+		function Thrower() {
+			throw error;
+		}
+		const errors = [];
+		const stream = renderToReadableStream(<Thrower />, {
+			onError: (e) => errors.push(e)
+		});
+
+		let rejection;
+		await stream.allReady.catch((e) => (rejection = e));
+		expect(rejection).to.equal(error);
+		expect(errors).to.deep.equal([error]);
+	});
+
+	it('should end the stream when the signal aborts', async () => {
+		const { Suspender } = createSuspender();
+		const controller = new AbortController();
+		const errors = [];
+		const stream = renderToReadableStream(
+			<div>
+				<Suspense fallback="loading...">
+					<Suspender />
+				</Suspense>
+			</div>,
+			{ signal: controller.signal, onError: (e) => errors.push(e) }
+		);
+		const sink = createSink(stream);
+		const reason = new Error('timeout');
+		controller.abort(reason);
+
+		const html = (await sink.promise).join('');
+		expect(errors).to.deep.equal([reason]);
+		expect(html).to.contain('$s!:');
+		expect(html.endsWith('</script>')).to.equal(true);
+	});
+
 	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
 		const { Suspender, suspended } = createSuspender();
 

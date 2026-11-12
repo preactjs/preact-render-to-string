@@ -1,7 +1,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { h, render } from 'preact';
-import { createInitScript, createSubtree } from '../src/lib/client';
+import {
+	createInitScript,
+	createSubtree,
+	createClientRenderInstruction
+} from '../src/lib/client';
 
 /**
  * @param {string} [bodyHtml]
@@ -687,5 +691,35 @@ describe('stream template hydration races', () => {
 			'<!--$s:1--><button>client</button><!--$s:2--><i>nested fallback</i><!--/$s:2--><!--/$s:1-->'
 		);
 		expect(document.querySelector('template')).toBeNull();
+	});
+});
+
+describe('stream recovery instructions', () => {
+	function setup() {
+		const { window, document } = createDom(
+			'<div id="root"><!--$s:1--><i>loading</i><!--/$s:1--></div>'
+		);
+		return {
+			root: document.querySelector('#root'),
+			recover(id = '1') {
+				const script = createClientRenderInstruction(id);
+				window.eval(script.slice('<script>'.length, -'</script>'.length));
+			}
+		};
+	}
+
+	it('marks a fallback before hydration without replacing its DOM', () => {
+		const { root, recover } = setup();
+		const fallback = root.querySelector('i');
+		recover();
+		expect(root.firstChild.data).toBe('$s!:1');
+		expect(root.querySelector('i')).toBe(fallback);
+	});
+
+	it('ignores a boundary removed before recovery arrives', () => {
+		const { root, recover } = setup();
+		root.replaceChildren();
+		expect(() => recover()).not.toThrow();
+		expect(root.innerHTML).toBe('');
 	});
 });

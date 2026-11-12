@@ -170,10 +170,12 @@ function markAsDirty() {
 	this.__d = true;
 }
 
-export function createComponent(vnode, context) {
+export function createComponent(vnode, context, globalContext) {
 	return {
 		__v: vnode,
 		context,
+		// _globalContext, read by `use(Context)` in preact/compat
+		__n: globalContext,
 		props: vnode.props,
 		// silently drop state updates
 		setState: markAsDirty,

@@ -152,7 +152,7 @@ function _renderToStringPretty(
 		} else {
 			let rendered;
 
-			let c = (vnode.__c = createComponent(vnode, context));
+			let c = (vnode.__c = createComponent(vnode, context, context));
 
 			let renderHook = options[RENDER];
 
@@ -182,6 +182,7 @@ function _renderToStringPretty(
 				// c = new nodeName(props, context);
 				c = vnode.__c = new nodeName(props, cctx);
 				c.__v = vnode;
+				c.__n = context;
 				// turn off stateful re-rendering:
 				setDirty(c);
 				c.props = props;
@@ -324,6 +325,8 @@ function _renderToStringPretty(
 				s = s + hooked;
 				continue;
 			}
+
+			if (name[0] === 'o' && name[1] === 'n') continue;
 
 			if (name === 'dangerouslySetInnerHTML') {
 				html = v && v.__html;
