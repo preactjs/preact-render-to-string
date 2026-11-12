@@ -2,21 +2,27 @@ import { encodeEntities } from './util.js';
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
+// // No optional chaining or logical assignment: the script is inlined as written, so its syntax
+// // sets the browser floor.
 // ((d) => {
 // 	// Assumptions: the renderer always emits both $s markers as siblings and ids are unique.
 // 	let owned,
 // 		s,
 // 		e,
 // 		// comments by their data ("$s:id" / "/$s:id" for the markers), so each call is a lookup.
-// 		// The first one seen wins, which also keeps keys like "__proto__" from being assigned.
-// 		markers = {},
+// 		// The first one seen wins for as long as it is in the document: reparsing a namespace
+// 		// recreates the markers of nested boundaries.
+// 		markers = new Map(),
 // 		// one live iterator over the document's comments: created on the first call and resumed
 // 		// by every later one, so each comment of the document is only visited once
 // 		comments,
 // 		// index the comments that the iterator or walker `w` yields, until `end` (or the last one)
-// 		scan = (w, end, n) => {
-// 			while ((n = w.nextNode()) != end) {
-// 				markers[n.data] ||= n;
+// 		scan = (w, end, n, m) => {
+// 			while ((n = w.nextNode()) && n != end) {
+// 				m = markers.get(n.data);
+// 				if (!m || !m.isConnected) {
+// 					markers.set(n.data, n);
+// 				}
 // 			}
 // 		},
 // 		// walk a vnode tree (__k = children) and record each vnode's DOM node (__e) in `owned`.
@@ -26,8 +32,8 @@ import { encodeEntities } from './util.js';
 // 		visit = (v) => {
 // 			if (v) {
 // 				owned.push(v.__e);
-// 				if (v.type?.call || v.__e?.contains(s)) {
-// 					v.__k?.forEach(visit);
+// 				if ((typeof v.type == "function" || (v.__e && v.__e.contains(s))) && v.__k) {
+// 					v.__k.forEach(visit);
 // 				}
 // 			}
 // 		};
@@ -43,22 +49,22 @@ import { encodeEntities } from './util.js';
 // 			t = c.previousElementSibling,
 // 			l,
 // 			n;
-// 		if (!t?.matches('template[for="' + id + '"]')) {
+// 		if (t && !t.matches('template[for="' + id + '"]')) {
 // 			t = null;
 // 		}
 // 		// index the markers parsed since the last call
-// 		scan((comments ||= d.createNodeIterator(d, 128)));
-// 		s = markers["$s:" + id];
-// 		e = markers["/$s:" + id];
+// 		scan((comments = comments || d.createNodeIterator(d, 128)));
+// 		s = markers.get("$s:" + id);
+// 		e = markers.get("/$s:" + id);
 // 		// hydration may have removed the markers (they stay in the index, detached),
 // 		// and a lone end marker is no boundary
-// 		if (s?.isConnected && s.parentNode == e?.parentNode) {
+// 		if (s && e && s.isConnected && s.parentNode == e.parentNode) {
 // 			// collect the DOM every vnode under the nearest client root points at
 // 			owned = [];
 // 			for (n = s.parentNode; n && !n.__k; ) {
 // 				n = n.parentNode;
 // 			}
-// 			visit(n?.__k);
+// 			visit(n && n.__k);
 // 			if (t) {
 // 				// polyfill only (no native DPU): `t` is null when the browser already swapped the range.
 // 				// DOM that a client vnode already owns (hydration got here first)
@@ -94,13 +100,15 @@ import { encodeEntities } from './util.js';
 // 			scan(n, e);
 // 		}
 // 		// drop the template even when there was nothing to patch
-// 		t?.remove();
+// 		if (t) {
+// 			t.remove();
+// 		}
 // 		c.remove();
 // 	};
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,r,o,n,i={},a=(e,t,r)=>{for(;(r=e.nextNode())!=t;)i[r.data]||=r},l=e=>{e&&(t.push(e.__e),(e.type?.call||e.__e?.contains(r))&&e.__k?.forEach(l))};window.$PRS=(d=e.currentScript,c=d.dataset.p)=>{let f,s,p=d.previousElementSibling;if(p?.matches('template[for="'+c+'"]')||(p=null),a(n||=e.createNodeIterator(e,128)),r=i["$s:"+c],o=i["/$s:"+c],r?.isConnected&&r.parentNode==o?.parentNode){for(t=[],s=r.parentNode;s&&!s.__k;)s=s.parentNode;if(l(s?.__k),p){for(f=r;(f=f.nextSibling)&&f!=o&&!t.includes(f););s=f==o&&[p.content]}else s=t.filter(e=>e&&!e.parentNode);if(s[0]){for(;(f=r.nextSibling)!=o;)f.remove();o.before(...s)}if(!p==!s[0]&&r.parentNode.closest("svg,math"))for(s=r.nextSibling;s!=o;s=f)f=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=r,a(s,o)}p?.remove(),d.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,n,o,r,i=new Map,a=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=i.get(n.data))&&o.isConnected||i.set(n.data,n)},d=e=>{e&&(t.push(e.__e),("function"==typeof e.type||e.__e&&e.__e.contains(n))&&e.__k&&e.__k.forEach(d))};window.$PRS=(l=e.currentScript,c=l.dataset.p)=>{let f,s,p=l.previousElementSibling;if(p&&!p.matches('template[for="'+c+'"]')&&(p=null),a(r=r||e.createNodeIterator(e,128)),n=i.get("$s:"+c),o=i.get("/$s:"+c),n&&o&&n.isConnected&&n.parentNode==o.parentNode){for(t=[],s=n.parentNode;s&&!s.__k;)s=s.parentNode;if(d(s&&s.__k),p){for(f=n;(f=f.nextSibling)&&f!=o&&!t.includes(f););s=f==o&&[p.content]}else s=t.filter(e=>e&&!e.parentNode);if(s[0]){for(;(f=n.nextSibling)!=o;)f.remove();o.before(...s)}if(!p==!s[0]&&n.parentNode.closest("svg,math"))for(s=n.nextSibling;s!=o;s=f)f=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=n,a(s,o)}p&&p.remove(),l.remove()}})(document);`;
 
 /**
  * @param {string} nonce

@@ -362,6 +362,37 @@ describe('inline init script', () => {
 		);
 	});
 
+	it('should find nested markers that the namespace fix recreated', () => {
+		const { window, document } = createDom(
+			'<svg><!--$s:1--><circle></circle><!--/$s:1--></svg>'
+		);
+		runInitScript(window);
+
+		// native DPU patched the range before the chunk's script runs
+		const end = document.querySelector('svg').lastChild;
+		end.previousSibling.remove();
+		const g = document.createElement('g');
+		g.innerHTML = '<!--$s:2--><!--/$s:2-->';
+		end.before(g);
+		callRC(window, '1');
+		streamChunk(window, '2', '<path></path>');
+
+		expect(document.querySelector('path').namespaceURI).toBe(
+			'http://www.w3.org/2000/svg'
+		);
+		expect(document.querySelector('path').parentNode.localName).toBe('g');
+	});
+
+	it('should not throw when an end marker precedes its start marker', () => {
+		const { window, document } = createDom(
+			'<div><!--/$s:1--><!--$s:1-->loading<!--/$s:1--></div>'
+		);
+		runInitScript(window);
+
+		expect(() => streamChunk(window, '1', '<p>content</p>')).not.toThrow();
+		expect(document.querySelectorAll('template')).toHaveLength(0);
+	});
+
 	it('should parse patched children in the svg/math namespace of their parent', () => {
 		const { window, document } = createDom(
 			'<svg><!--$s:1--><!--/$s:1--></svg><math><!--$s:2--><!--/$s:2--></math>'
