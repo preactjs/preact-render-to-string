@@ -20,7 +20,9 @@ describe('renderToChunks', () => {
 	it('should include the $PRS helper in the init script', () => {
 		expect(createInitScript()).toContain('window.$PRS=');
 		expect(createSubtree('1', '<p>x</p>')).toContain('template for="1"');
-		expect(createSubtree('1', '<p>x</p>')).toContain('$PRS("1")');
+		expect(createSubtree('1', '<p>x</p>')).toContain(
+			'<script data-p="1">$PRS()</script>'
+		);
 	});
 
 	it('should render fallback + attach loaded subtree on suspend', async () => {

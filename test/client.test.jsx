@@ -29,11 +29,11 @@ function runInitScript(window) {
 }
 
 /**
- * Body markup without the "\n" that trails every streamed chunk.
+ * Body markup of the document.
  * @param {Document} document
  */
 function bodyHtml(document) {
-	return document.body.innerHTML.replace(/\n/g, '');
+	return document.body.innerHTML;
 }
 
 /**
@@ -56,7 +56,8 @@ function insertChunk(document, id, html) {
  */
 function callRC(window, id) {
 	const script = window.document.createElement('script');
-	script.textContent = `$PRS("${id}")`;
+	script.dataset.p = id;
+	script.textContent = '$PRS()';
 	window.document.body.appendChild(script);
 }
 
@@ -74,13 +75,13 @@ function streamChunk(window, id, html) {
 describe('createSubtree', () => {
 	it('should wrap content in a template with a for attribute followed by an $PRS call', () => {
 		expect(createSubtree('5', '<p>it works</p>')).toBe(
-			'<template for="5"><p>it works</p></template><script>$PRS("5")</script>\n'
+			'<template for="5"><p>it works</p></template><script data-p="5">$PRS()</script>'
 		);
 	});
 
 	it('should put the nonce on the $PRS script', () => {
 		expect(createSubtree('5', '', 'abc"')).toBe(
-			'<template for="5"></template><script nonce="abc&quot;">$PRS("5")</script>\n'
+			'<template for="5"></template><script data-p="5" nonce="abc&quot;">$PRS()</script>'
 		);
 	});
 });

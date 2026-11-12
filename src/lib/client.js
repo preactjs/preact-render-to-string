@@ -30,28 +30,14 @@ import { encodeEntities } from './util.js';
 // 					v.__k?.forEach(visit);
 // 				}
 // 			}
-// 		},
-// 		// DPU cannot patch into svg/math namespaces (needed even with native support),
-// 		// so reparse each node between the markers in its parent's namespace.
-// 		fixNamespace = (n, next) => {
-// 			if (s.parentNode.closest("svg,math")) {
-// 				for (n = s.nextSibling; n != e; n = next) {
-// 					next = n.nextSibling;
-// 					n.outerHTML = n.outerHTML;
-// 				}
-// 			}
-// 		},
-// 		clear = (n) => {
-// 			while ((n = s.nextSibling) != e) {
-// 				n.remove();
-// 			}
 // 		};
-// 	// Each chunk is <template for="id">..</template><script>$PRS("id")</script>.
+// 	// Each chunk is <template for="id">..</template><script data-p="id">$PRS()</script>: the id is
+// 	// an attribute so every chunk script has the same text and one CSP hash covers all of them.
 // 	// Native DPU consumes the template while parsing; otherwise $PRS polyfills the patch.
 // 	// When only native DPU is supported, `t` is always null, so the whole `if (t) { .. }` polyfill
 // 	// branch (and the `t` lookup below) can be removed, leaving only the fixups in the else branches.
-// 	window.$PRS = (id) => {
-// 		let c = d.currentScript,
+// 	window.$PRS = (c = d.currentScript, id = c.dataset.p) => {
+// 		let
 // 			// the template is emitted right before its script (a document-wide query would rescan
 // 			// everything that was streamed so far on every call)
 // 			t = c.previousElementSibling,
@@ -78,19 +64,26 @@ import { encodeEntities } from './util.js';
 // 				// DOM that a client vnode already owns (hydration got here first)
 // 				// must survive, so leave the boundary alone and only drop the template.
 // 				for (l = s; (l = l.nextSibling) && l != e && !owned.includes(l); );
-// 				if (l == e) {
-// 					clear();
-// 					s.after(t.content);
-// 					fixNamespace();
-// 				}
+// 				n = l == e && [t.content];
 // 			} else {
+// 				// native DPU: client DOM that the swap detached has to be put back
 // 				n = owned.filter((x) => x && !x.parentNode);
-// 				if (n[0]) {
-// 					// native DPU detached client DOM: put it back and drop the server content
-// 					clear();
-// 					e.before(...n);
-// 				} else {
-// 					fixNamespace();
+// 			}
+// 			// `n` holds what belongs between the markers (the template content, or the detached
+// 			// client DOM), and is empty/false when the range has to stay as it is
+// 			if (n[0]) {
+// 				while ((l = s.nextSibling) != e) {
+// 					l.remove();
+// 				}
+// 				e.before(...n);
+// 			}
+// 			// DPU cannot patch into svg/math namespaces (needed even with native support), so reparse
+// 			// each node between the markers in its parent's namespace. Only server content is reparsed:
+// 			// the polyfill just inserted it (t and n[0]) or native DPU did and no client DOM came back.
+// 			if (!t == !n[0] && s.parentNode.closest("svg,math")) {
+// 				for (n = s.nextSibling; n != e; n = l) {
+// 					l = n.nextSibling;
+// 					n.outerHTML = n.outerHTML;
 // 				}
 // 			}
 // 			// nested boundaries' markers arrive with this one's content, before the iterator's
@@ -107,7 +100,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,r,o,n,i={},a=(e,t,r)=>{for(;(r=e.nextNode())!=t;)i[r.data]||=r},l=e=>{e&&(t.push(e.__e),(e.type?.call||e.__e?.contains(r))&&e.__k?.forEach(l))},c=(e,t)=>{if(r.parentNode.closest("svg,math"))for(e=r.nextSibling;e!=o;e=t)t=e.nextSibling,e.outerHTML=e.outerHTML},d=e=>{for(;(e=r.nextSibling)!=o;)e.remove()};window.$PRS=f=>{let s,p,_=e.currentScript,u=_.previousElementSibling;if(u?.matches('template[for="'+f+'"]')||(u=null),a(n||=e.createNodeIterator(e,128)),r=i["$s:"+f],o=i["/$s:"+f],r?.isConnected&&r.parentNode==o?.parentNode){for(t=[],p=r.parentNode;p&&!p.__k;)p=p.parentNode;if(l(p?.__k),u){for(s=r;(s=s.nextSibling)&&s!=o&&!t.includes(s););s==o&&(d(),r.after(u.content),c())}else p=t.filter(e=>e&&!e.parentNode),p[0]?(d(),o.before(...p)):c();p=e.createTreeWalker(e,128),p.currentNode=r,a(p,o)}u?.remove(),_.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,r,o,n,i={},a=(e,t,r)=>{for(;(r=e.nextNode())!=t;)i[r.data]||=r},l=e=>{e&&(t.push(e.__e),(e.type?.call||e.__e?.contains(r))&&e.__k?.forEach(l))};window.$PRS=(d=e.currentScript,c=d.dataset.p)=>{let f,s,p=d.previousElementSibling;if(p?.matches('template[for="'+c+'"]')||(p=null),a(n||=e.createNodeIterator(e,128)),r=i["$s:"+c],o=i["/$s:"+c],r?.isConnected&&r.parentNode==o?.parentNode){for(t=[],s=r.parentNode;s&&!s.__k;)s=s.parentNode;if(l(s?.__k),p){for(f=r;(f=f.nextSibling)&&f!=o&&!t.includes(f););s=f==o&&[p.content]}else s=t.filter(e=>e&&!e.parentNode);if(s[0]){for(;(f=r.nextSibling)!=o;)f.remove();o.before(...s)}if(!p==!s[0]&&r.parentNode.closest("svg,math"))for(s=r.nextSibling;s!=o;s=f)f=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=r,a(s,o)}p?.remove(),d.remove()}})(document);`;
 
 /**
  * @param {string} nonce
@@ -124,5 +117,5 @@ export function createInitScript(nonce) {
  * @returns {string}
  */
 export function createSubtree(id, content, nonce) {
-	return `<template for="${id}">${content}</template><script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>$PRS("${id}")</script>\n`;
+	return `<template for="${id}">${content}</template><script data-p="${id}"${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>$PRS()</script>`;
 }
