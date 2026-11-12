@@ -15,7 +15,7 @@ import { isRecoverable } from './recoverable.js';
  */
 export async function renderToChunks(
 	vnode,
-	{ context, onWrite, abortSignal, nonce }
+	{ context, onWrite, onError, onShellReady, abortSignal, nonce }
 ) {
 	context = context || {};
 
@@ -25,14 +25,19 @@ export async function renderToChunks(
 		abortSignal,
 		onWrite,
 		onError: handleError,
+		reportError: onError || console.error,
 		suspended: [],
 		nonce
 	};
+
+	// Aborted before the shell could render, like a shell error.
+	if (abortSignal && abortSignal.aborted) throw abortSignal.reason;
 
 	try {
 		// Synchronously render the shell
 		// @ts-ignore - using third internal RendererState argument
 		const shell = renderToString(vnode, context, renderer);
+		if (onShellReady) onShellReady();
 
 		// Wait for any suspended sub-trees if there are any
 		const len = renderer.suspended.length;
@@ -86,7 +91,7 @@ async function forkPromises(renderer) {
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
 	const recoverable = isRecoverable(error);
-	if (!recoverable && (!error || !error.then)) throw error;
+	const suspended = !recoverable && error && error.then;
 
 	// Recoverables reach this handler at the boundary itself. Promise retries
 	// can reach it from a descendant, just like their initial suspension.
@@ -105,14 +110,14 @@ function handleError(error, vnode, renderChild) {
 	const id = vnode.__v;
 	const found = this.suspended.find((x) => x.id === id);
 
-	if (recoverable) {
-		for (const pending of this.suspended) {
-			let parent = pending.vnode;
-			while (parent && parent !== vnode) parent = parent[PARENT];
-			if (parent) finishPending(pending, pending.resolve);
-		}
+	// An error below a boundary is reported and the boundary is left to the
+	// client, the same goes for anything that suspends after an abort.
+	const aborted = this.abortSignal && this.abortSignal.aborted;
+	if (!suspended || aborted) {
+		if (!recoverable && !suspended) this.reportError(error);
+		abandon(this, vnode);
 		if (found) {
-			this.onWrite(createClientRenderInstruction(id, this.nonce));
+			if (!aborted) this.onWrite(createClientRenderInstruction(id, this.nonce));
 			return '';
 		}
 		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
@@ -130,19 +135,13 @@ function handleError(error, vnode, renderChild) {
 	};
 	this.suspended.push(pending);
 	if (this.abortSignal) {
-		// Do not resolve the completion promise with the abort event.
-		pending.abort = finishPending.bind(
-			null,
-			pending,
-			pending.resolve,
-			undefined
-		);
-		if (this.abortSignal.aborted) pending.abort();
-		else this.abortSignal.addEventListener('abort', pending.abort);
+		pending.abort = abortPending.bind(null, pending);
+		this.abortSignal.addEventListener('abort', pending.abort);
 	}
 
 	Promise.resolve(error)
 		.then(retryPending.bind(null, pending), rejectPending.bind(null, pending))
+		.catch(failPending.bind(null, pending))
 		.then(
 			finishPending.bind(null, pending, completion.resolve),
 			finishPending.bind(null, pending, completion.reject)
@@ -175,6 +174,42 @@ function rejectPending(pending, error) {
 		pending.vnode,
 		pending.renderChild
 	);
+}
+
+/**
+ * A boundary that failed on the server is reported and left to the client,
+ * the rest of the stream carries on.
+ */
+function failPending(pending, error) {
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	renderer.reportError(error);
+	clientRender(pending);
+}
+
+function abortPending(pending) {
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	renderer.reportError(renderer.abortSignal.reason);
+	clientRender(pending);
+}
+
+/** Hand a flushed fallback, and the work below it, over to the client. */
+function clientRender(pending) {
+	const renderer = pending.renderer;
+	if (!renderer) return;
+	const id = pending.id;
+	abandon(renderer, pending.vnode);
+	renderer.onWrite(createClientRenderInstruction(id, renderer.nonce));
+}
+
+/** Complete the pending work at or below a boundary without streaming it. */
+function abandon(renderer, vnode) {
+	for (const pending of renderer.suspended) {
+		let parent = pending.vnode;
+		while (parent && parent !== vnode) parent = parent[PARENT];
+		if (parent) finishPending(pending, pending.resolve);
+	}
 }
 
 function finishPending(pending, settle, value) {

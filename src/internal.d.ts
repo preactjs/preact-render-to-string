@@ -23,6 +23,7 @@ interface RendererErrorHandler {
 
 interface RendererState {
 	start: number;
+	reportError: (error: any) => void;
 	nonce?: string;
 	suspended: Suspended[];
 	abortSignal?: AbortSignal | undefined;
@@ -44,6 +45,7 @@ interface CapturedHooks {
 interface RenderToChunksOptions {
 	context?: any;
 	onError?: (error: any) => void;
+	onShellReady?: () => void;
 	onWrite: (str: string) => void;
 	abortSignal?: AbortSignal;
 	nonce?: string;

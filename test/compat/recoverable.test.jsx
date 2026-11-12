@@ -202,7 +202,7 @@ describe('recoverable errors', () => {
 		expect(listeners.size).to.equal(0);
 	});
 
-	it('releases remaining pending work when streaming fails', async () => {
+	it('releases remaining pending work when a boundary fails', async () => {
 		const deferred = new Deferred();
 		const never = new Promise(() => {});
 		const listeners = new Set();
@@ -215,6 +215,7 @@ describe('recoverable errors', () => {
 				if (type == 'abort') listeners.delete(listener);
 			}
 		};
+		const errors = [];
 		function Never() {
 			throw never;
 		}
@@ -234,12 +235,13 @@ describe('recoverable errors', () => {
 					<FailParent />
 				</Fragment>
 			),
-			{ abortSignal, onWrite() {} }
+			{ abortSignal, onWrite() {}, onError: (e) => errors.push(e) }
 		);
 		expect(listeners.size).to.equal(2);
 		const error = new Error('failure');
 		deferred.reject(error);
-		await expect(result).rejects.to.equal(error);
+		await result;
+		expect(errors).to.deep.equal([error]);
 		expect(listeners.size).to.equal(0);
 	});
 
@@ -324,15 +326,22 @@ describe('recoverable errors', () => {
 		expect(html).not.to.contain('<preact-island');
 	});
 
-	it('rejects a fatal error from a streaming retry', async () => {
+	it('reports a fatal error from a streaming retry', async () => {
 		const deferred = new Deferred();
 		const error = new Error('failure');
 		const Fail = afterPromise(deferred.promise, () => {
 			throw error;
 		});
-		const result = renderToChunks(boundary(<Fail />), { onWrite() {} });
+		const errors = [],
+			chunks = [];
+		const result = renderToChunks(boundary(<Fail />), {
+			onWrite: (s) => chunks.push(s),
+			onError: (e) => errors.push(e)
+		});
 		deferred.resolve();
-		await expect(result).rejects.to.equal(error);
+		await result;
+		expect(errors).to.deep.equal([error]);
+		expect(chunks.join('')).to.contain('$s!:');
 	});
 
 	it('rejects a streaming bailout with no boundary', async () => {
