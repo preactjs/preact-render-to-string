@@ -236,9 +236,10 @@ createServer((req, res) => {
 |---|---|
 | `onShellReady()` | Called synchronously once the initial shell has been rendered and streaming is about to start. Pipe here for fastest TTFB. |
 | `onAllReady()` | Called after all `<Suspense>` boundaries have resolved and the stream is complete. |
-| `onError(error)` | Called for render errors inside suspended subtrees. |
+| `onError(error)` | Called for every render error, and once per pending boundary when the render is aborted. A failed boundary keeps its fallback and is rendered by the client. |
+| `onShellError(error)` | Called after `onError` when an error outside of any `<Suspense>` boundary fails the shell. Nothing is streamed. |
 
-Calling `abort()` stops the render and destroys the stream; any pending suspended subtrees are dropped.
+Calling `abort()` stops the render, leaves the pending suspended subtrees to the client and ends the response.
 
 ---
 
