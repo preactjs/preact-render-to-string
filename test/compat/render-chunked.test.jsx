@@ -47,7 +47,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			`<div><!--$s:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
+			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
 			createInitScript(),
 			createSubtree('5', '<p>it works</p>')
 		]);
@@ -77,7 +77,7 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			`<div><!--$s:10--><?start name="10">loading...<?end><!--/$s:10--></div>`,
+			`<div><!--$s?:10--><?start name="10">loading...<?end><!--/$s:10--></div>`,
 			createInitScript(),
 			createClientRenderInstruction('10')
 		]);
@@ -123,7 +123,7 @@ describe('renderToChunks', () => {
 		}
 
 		expect(result).to.deep.equal([
-			`<div><!--$s:16--><?start name="16">loading...<?end><!--/$s:16--></div>`,
+			`<div><!--$s?:16--><?start name="16">loading...<?end><!--/$s:16--></div>`,
 			createInitScript(),
 			createSubtree('16', '<p>it works</p>')
 		]);
@@ -154,7 +154,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			`<div><p>id: P0-0</p><!--$s:24--><?start name="24">loading...<?end><!--/$s:24--></div>`,
+			`<div><p>id: P0-0</p><!--$s?:24--><?start name="24">loading...<?end><!--/$s:24--></div>`,
 			createInitScript(),
 			createSubtree('24', '<p>id: P0-1</p>')
 		]);
@@ -192,7 +192,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).toEqual([
-			`<div><p>id: P0-0</p><!--$s:33--><?start name="33">loading...<?end><!--/$s:33--><!--$s:36--><?start name="36">loading...<?end><!--/$s:36--></div>`,
+			`<div><p>id: P0-0</p><!--$s?:33--><?start name="33">loading...<?end><!--/$s:33--><!--$s?:36--><?start name="36">loading...<?end><!--/$s:36--></div>`,
 			createInitScript(),
 			createSubtree('33', '<p>id: P0-1</p>'),
 			createSubtree('36', '<p>id: P0-2</p>')
@@ -313,7 +313,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			`<div><!--$s:70--><?start name="70">loading part 1...<?end><!--/$s:70--></div>`,
+			`<div><!--$s?:70--><?start name="70">loading part 1...<?end><!--/$s:70--></div>`,
 			createInitScript(),
 			createSubtree('70', '<p>it works</p><p>it works</p>')
 		]);
@@ -363,7 +363,7 @@ describe('renderToChunks', () => {
 
 			const id = result[0].match(/\$s:(\d+)/)[1];
 			expect(result).toEqual([
-				`<!--$s:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
+				`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 				createInitScript(),
 				createSubtree(id, '')
 			]);

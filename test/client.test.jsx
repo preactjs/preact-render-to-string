@@ -16,7 +16,7 @@ function pending(html) {
 	return html.replace(
 		/(<!--\$s:(\w+)-->)([^]*?)(<!--\/\$s:\2-->)/g,
 		(_, start, id, fallback, end) =>
-			`${start}<?start name="${id}">${pending(fallback)}<?end>${end}`
+			`<!--$s?:${id}--><?start name="${id}">${pending(fallback)}<?end>${end}`
 	);
 }
 
@@ -377,7 +377,7 @@ describe('inline init script', () => {
 		const end = document.querySelector('div').lastChild;
 		end.previousSibling.remove();
 		const tmp = document.createElement('div');
-		tmp.innerHTML = '<svg><!--$s:2--><rect></rect><!--/$s:2--></svg>';
+		tmp.innerHTML = '<svg><!--$s?:2--><rect></rect><!--/$s:2--></svg>';
 		end.before(tmp.firstChild);
 		callRC(window, '1');
 		// native DPU leaves the nested svg children in the HTML namespace
@@ -509,7 +509,7 @@ function renderClient(root, children) {
 	root.replaceChildren();
 	render(children, root);
 	// Keep the stream anchors, as resumed hydration does in Preact 11.
-	root.prepend(document.createComment('$s:1'));
+	root.prepend(document.createComment('$s?:1'));
 	root.append(document.createComment('/$s:1'));
 }
 
@@ -598,7 +598,7 @@ describe('stream template hydration races', () => {
 		insertChunk(document, '2', '<p>nested</p>');
 		callRC(hydrationDom.window, '2');
 		expect(root.innerHTML).toBe(
-			'<!--$s:1--><button>client</button><!--/$s:1-->'
+			'<!--$s?:1--><button>client</button><!--/$s:1-->'
 		);
 		expect(document.querySelector('template')).toBeNull();
 	});
@@ -664,7 +664,7 @@ describe('stream template hydration races', () => {
 			);
 		appendStreamed(document);
 		expect(root.innerHTML).toBe(
-			'<!--$s:1--><button>client</button><!--$s:2--><i>nested fallback</i><!--/$s:2--><!--/$s:1-->'
+			'<!--$s?:1--><button>client</button><!--$s:2--><i>nested fallback</i><!--/$s:2--><!--/$s:1-->'
 		);
 		expect(document.querySelector('template')).toBeNull();
 	});

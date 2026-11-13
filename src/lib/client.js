@@ -8,7 +8,8 @@ import { encodeEntities } from './util.js';
 // 	// Assumptions: the renderer always emits both $s markers as siblings and ids are unique.
 // 	let s,
 // 		e,
-// 		// comments by their data ("$s:id" / "/$s:id" for the markers), so each call is a lookup.
+// 		// comments by their data ("$s?:id" / "/$s:id" for the markers of a pending boundary), so
+// 		// each call is a lookup.
 // 		// The first one seen wins for as long as it is in the document: reparsing a namespace
 // 		// recreates the markers of nested boundaries.
 // 		markers = new Map(),
@@ -39,7 +40,7 @@ import { encodeEntities } from './util.js';
 // 		}
 // 		// index the markers parsed since the last call
 // 		scan((comments = comments || d.createNodeIterator(d, 128)));
-// 		s = markers.get("$s:" + id);
+// 		s = markers.get("$s?:" + id);
 // 		e = markers.get("/$s:" + id);
 // 		// hydration may have removed the markers (they stay in the index, detached), and the
 // 		// end marker has to be a later sibling of the start marker
@@ -70,6 +71,8 @@ import { encodeEntities } from './util.js';
 // 				n = d.createTreeWalker(d, 128);
 // 				n.currentNode = s;
 // 				scan(n, e);
+// 				// "$s?" marks a range that still holds its fallback: this one is resolved now
+// 				s.data = "$s:" + id;
 // 			}
 // 		}
 // 		// drop the template even when there was nothing to patch
@@ -81,7 +84,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,n,o,r=new Map,i=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=r.get(n.data))&&o.isConnected||r.set(n.data,n)};window.$PRS=(a=e.currentScript,l=a.dataset.p)=>{let d,c,s=a.previousElementSibling;for(s&&!s.matches('template[for="'+l+'"]')&&(s=null),i(o=o||e.createNodeIterator(e,128)),t=r.get("$s:"+l),n=r.get("/$s:"+l),d=t;d&&d!=n;d=d.nextSibling);if(d&&n&&t.isConnected&&(d=t.nextSibling,!s||8==d.nodeType&&"?"==d.data[0])){if(s){for(;(d=t.nextSibling)!=n;)d.remove();n.before(s.content)}if(t.parentNode.closest("svg,math"))for(c=t.nextSibling;c!=n;c=d)d=c.nextSibling,c.outerHTML=c.outerHTML;c=e.createTreeWalker(e,128),c.currentNode=t,i(c,n)}s&&s.remove(),a.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,n,o,r=new Map,i=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=r.get(n.data))&&o.isConnected||r.set(n.data,n)};window.$PRS=(a=e.currentScript,d=a.dataset.p)=>{let l,s,c=a.previousElementSibling;for(c&&!c.matches('template[for="'+d+'"]')&&(c=null),i(o=o||e.createNodeIterator(e,128)),t=r.get("$s?:"+d),n=r.get("/$s:"+d),l=t;l&&l!=n;l=l.nextSibling);if(l&&n&&t.isConnected&&(l=t.nextSibling,!c||8==l.nodeType&&"?"==l.data[0])){if(c){for(;(l=t.nextSibling)!=n;)l.remove();n.before(c.content)}if(t.parentNode.closest("svg,math"))for(s=t.nextSibling;s!=n;s=l)l=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=t,i(s,n),t.data="$s:"+d}c&&c.remove(),a.remove()}})(document);`;
 
 /**
  * @param {string} nonce
@@ -103,5 +106,5 @@ export function createSubtree(id, content, nonce) {
 
 /** Mark an already-flushed fallback for client rendering. */
 export function createClientRenderInstruction(id, nonce) {
-	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>(function(i){var n,c=document.createNodeIterator(document,128);while(c.nextNode()){n=c.referenceNode;if(n.data==='$s:'+i){n.data='$s!:'+i;break}}})(${JSON.stringify(String(id)).replace(/</g, '\\u003c')})</script>`;
+	return `<script${nonce ? ` nonce="${encodeEntities(nonce)}"` : ''}>(function(i){var n,c=document.createNodeIterator(document,128);while(c.nextNode()){n=c.referenceNode;if(n.data==='$s?:'+i){n.data='$s!:'+i;break}}})(${JSON.stringify(String(id)).replace(/</g, '\\u003c')})</script>`;
 }

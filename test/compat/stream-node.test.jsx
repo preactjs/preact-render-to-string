@@ -66,7 +66,7 @@ describe('renderToPipeableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).to.deep.equal([
-			`<div><!--$s:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
+			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
 			createInitScript(),
 			createSubtree('5', '<p>it works</p>')
 		]);
@@ -236,7 +236,7 @@ describe('renderToPipeableStream', () => {
 		const result = await sink.promise;
 		const id = result[0].match(/\$s:(\d+)/)[1];
 		expect(result).toEqual([
-			`<!--$s:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
+			`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 			createInitScript(),
 			createSubtree(id, '')
 		]);
