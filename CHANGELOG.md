@@ -1,5 +1,17 @@
 # preact-render-to-string
 
+## 7.0.0
+
+### Major Changes
+
+- [#490](https://github.com/preactjs/preact-render-to-string/pull/490) [`44c96f0`](https://github.com/preactjs/preact-render-to-string/commit/44c96f01e1e1681f37b70f666ce425936ad52696) Thanks [@MaxwellCohen](https://github.com/MaxwellCohen)! - Stream deferred content using DPU `<template for>` patches and a small React-style init script instead of `<preact-island>` custom elements.
+  
+  Each streamed chunk is a `<template for>` followed by an inline script call. Native DPU consumes the template while parsing; otherwise the init script polyfills the patch. Fallbacks are wrapped with processing-instruction markers, and SVG/MathML subtrees are re-parsed so they display correctly after replacement. The streamed wire format changes, so this is a major.
+
+### Patch Changes
+
+- [#496](https://github.com/preactjs/preact-render-to-string/pull/496) [`bc54bc7`](https://github.com/preactjs/preact-render-to-string/commit/bc54bc75f4d7048a8157bc5754791ecbb4579817) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - A boundary that still holds its fallback now opens with `<!--$s?:id-->`, and the streaming init script renames it to `<!--$s:id-->` once it patched the content in. The script no longer walks the client's vnodes: a range is still the server's for as long as its `<?start>` marker is there.
+
 ## 6.8.3
 
 ### Patch Changes
