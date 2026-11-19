@@ -39,6 +39,9 @@ export async function renderToChunks(
 		const shell = renderToString(vnode, context, renderer);
 		if (onShellReady) onShellReady();
 
+		const prefix = shell.trimStart().startsWith('<html')
+			? '<!DOCTYPE html>'
+			: '';
 		// Wait for any suspended sub-trees if there are any
 		const len = renderer.suspended.length;
 		if (len > 0) {
@@ -47,17 +50,15 @@ export async function renderToChunks(
 			// and causes browsers to reject the content. Instead, we inject the deferred
 			// content before the closing tags, then emit them last.
 			const docSuffixIndex = getDocumentClosingTagsIndex(shell);
-			const hasHtmlTag = shell.trimStart().startsWith('<html');
 			const initialWrite =
 				docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
-			const prefix = hasHtmlTag ? '<!DOCTYPE html>' : '';
 			onWrite(prefix + initialWrite);
 			onWrite(createInitScript(nonce));
 			// We should keep checking all promises
 			await forkPromises(renderer);
 			if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
 		} else {
-			onWrite(shell);
+			onWrite(prefix + shell);
 		}
 	} finally {
 		for (const pending of renderer.suspended)

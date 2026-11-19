@@ -460,6 +460,22 @@ describe('renderToChunks', () => {
 		expect(html).to.match(/<template for="\d+"><p>it works<\/p>/);
 		expect(html).not.to.contain('undefined');
 	});
+
+	it('should prepend <!DOCTYPE html> when rendering a full document that does not suspend', async () => {
+		const result = [];
+		await renderToChunks(
+			<html>
+				<body>
+					<p>ready</p>
+				</body>
+			</html>,
+			{ onWrite: (s) => result.push(s) }
+		);
+
+		expect(result).to.deep.equal([
+			'<!DOCTYPE html><html><body><p>ready</p></body></html>'
+		]);
+	});
 });
 
 describe('createInitScript', () => {
