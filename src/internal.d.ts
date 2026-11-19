@@ -36,6 +36,7 @@ interface RendererState {
 	onError?: RendererErrorHandler;
 	markup: Map<VNode, string>;
 	contexts: Map<VNode, any>;
+	ids: Map<VNode, string>;
 	takeMarkup: (this: RendererState, vnode: VNode) => string;
 	rendering: boolean;
 }
