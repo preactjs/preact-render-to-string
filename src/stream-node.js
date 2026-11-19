@@ -12,7 +12,7 @@ import { renderToChunks } from './lib/chunked.js';
 /**
  * @typedef {object} PipeableStream
  * @property {() => void} abort
- * @property {(writable: import('stream').Writable) => void} pipe
+ * @property {<T extends import('stream').Writable>(writable: T) => T} pipe
  */
 
 /**
@@ -75,18 +75,39 @@ export function renderToPipeableStream(vnode, options, context) {
 	return {
 		abort,
 		/**
-		 * @param {import("stream").Writable} writable
+		 * @template {import("stream").Writable} T
+		 * @param {T} writable
+		 * @returns {T}
 		 */
 		pipe(writable) {
 			stream.pipe(writable, { end: true });
+			// Compression middleware buffers until it is told to flush. This runs
+			// after pipe's own listener, once a tick's chunks reached the writable.
+			if (typeof writable.flush == 'function') {
+				let scheduled = false;
+				stream.on('data', () => {
+					if (scheduled) return;
+					scheduled = true;
+					setImmediate(() => {
+						scheduled = false;
+						if (!writable.destroyed && !writable.writableEnded) {
+							writable.flush();
+						}
+					});
+				});
+			}
 			stream.once('close', () => {
-				if (!stream.readableEnded) writable.destroy();
+				// onShellError may have answered with its own response already
+				if (!stream.readableEnded && !writable.writableEnded) {
+					writable.destroy();
+				}
 			});
 			writable.once('close', () => {
 				if (!writable.writableFinished) {
 					abort(new Error('The destination stream closed early.'));
 				}
 			});
+			return writable;
 		}
 	};
 }

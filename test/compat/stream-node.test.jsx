@@ -241,4 +241,67 @@ describe('renderToPipeableStream', () => {
 			createSubtree(id, '')
 		]);
 	});
+
+	it('should flush a destination that buffers once the written chunks reached it', async () => {
+		const first = createSuspender();
+		const second = createSuspender();
+		const sink = createSink();
+		const decoder = new TextDecoder();
+		let received = '';
+		const flushed = [];
+		sink.stream.on('data', (chunk) => (received += decoder.decode(chunk)));
+		sink.stream.flush = () => flushed.push(received);
+		const { pipe } = renderToPipeableStream(
+			<div>
+				<Suspense fallback="first...">
+					<first.Suspender>first</first.Suspender>
+				</Suspense>
+				<Suspense fallback="second...">
+					<second.Suspender>second</second.Suspender>
+				</Suspense>
+			</div>,
+			{ onShellReady: () => pipe(sink.stream) }
+		);
+		await new Promise((r) => setTimeout(r, 10));
+
+		expect(flushed).to.have.length(1);
+		expect(flushed[0]).to.contain('second...');
+		expect(flushed[0]).to.contain(createInitScript());
+
+		first.suspended.resolve();
+		await new Promise((r) => setTimeout(r, 10));
+
+		expect(flushed).to.have.length(2);
+		expect(flushed[1]).to.contain('>first</template>');
+
+		second.suspended.resolve();
+		await sink.promise;
+		await new Promise((r) => setTimeout(r, 10));
+
+		expect(flushed).to.have.length(2);
+	});
+
+	it('should return the destination from pipe', async () => {
+		const sink = createSink();
+		const { pipe } = renderToPipeableStream(<div />, {});
+		expect(pipe(sink.stream)).to.equal(sink.stream);
+		await sink.promise;
+	});
+
+	it('should not destroy a destination that onShellError ended', async () => {
+		function Thrower() {
+			throw new Error('shell failed');
+		}
+		const destination = new PassThrough({ autoDestroy: false });
+		const output = streamToString(destination);
+		const { pipe } = renderToPipeableStream(<Thrower />, {
+			onError() {},
+			onShellError: () => destination.end('error page')
+		});
+		pipe(destination);
+
+		expect(await output.promise).to.deep.equal(['error page']);
+		await new Promise((r) => setTimeout(r));
+		expect(destination.destroyed).to.equal(false);
+	});
 });
