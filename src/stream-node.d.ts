@@ -13,7 +13,7 @@ interface RenderToPipeableStreamOptions {
 
 interface PipeableStream {
 	abort: (reason?: unknown) => void;
-	pipe: (writable: Writable) => void;
+	pipe: <T extends Writable>(writable: T) => T;
 }
 
 export function renderToPipeableStream<P = {}>(
