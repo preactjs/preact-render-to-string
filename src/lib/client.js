@@ -8,8 +8,8 @@ import { encodeEntities } from './util.js';
 // 	// Assumptions: the renderer always emits both $s markers as siblings and ids are unique.
 // 	let s,
 // 		e,
-// 		// comments by their data ("$s?:id" / "/$s:id" for the markers of a pending boundary), so
-// 		// each call is a lookup.
+// 		// comments by their data ("$s?:id" for the opening marker of a pending boundary), so each
+// 		// call is a lookup.
 // 		// The first one seen wins for as long as it is in the document: reparsing a namespace
 // 		// recreates the markers of nested boundaries.
 // 		markers = new Map(),
@@ -41,11 +41,16 @@ import { encodeEntities } from './util.js';
 // 		// index the markers parsed since the last call
 // 		scan((comments = comments || d.createNodeIterator(d, 128)));
 // 		s = markers.get("$s?:" + id);
-// 		e = markers.get("/$s:" + id);
-// 		// hydration may have removed the markers (they stay in the index, detached), and the
-// 		// end marker has to be a later sibling of the start marker
-// 		for (l = s; l && l != e; l = l.nextSibling);
-// 		if (l && e && s.isConnected) {
+// 		// The closing marker has no id: it is the "/$s" among the later siblings that isn't
+// 		// the end of a range in between. Hydration may have removed the markers (they stay
+// 		// in the index, detached).
+// 		for (e = s, n = 1; n && e && (e = e.nextSibling); ) {
+// 			if (e.nodeType == 8) {
+// 				// +1 for a marker that opens a range, -1 for one that closes a range
+// 				n += !e.data.indexOf("$s") - !e.data.indexOf("/$s");
+// 			}
+// 		}
+// 		if (e && s.isConnected) {
 // 			l = s.nextSibling;
 // 			// A pending fallback is wrapped in <?start>..<?end>, which are comments wherever the
 // 			// template is still there. The client removes them when it takes the range over, and
@@ -84,7 +89,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,n,o,r=new Map,i=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=r.get(n.data))&&o.isConnected||r.set(n.data,n)};window.$PRS=(a=e.currentScript,d=a.dataset.p)=>{let l,s,c=a.previousElementSibling;for(c&&!c.matches('template[for="'+d+'"]')&&(c=null),i(o=o||e.createNodeIterator(e,128)),t=r.get("$s?:"+d),n=r.get("/$s:"+d),l=t;l&&l!=n;l=l.nextSibling);if(l&&n&&t.isConnected&&(l=t.nextSibling,!c||8==l.nodeType&&"?"==l.data[0])){if(c){for(;(l=t.nextSibling)!=n;)l.remove();n.before(c.content)}if(t.parentNode.closest("svg,math"))for(s=t.nextSibling;s!=n;s=l)l=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=t,i(s,n),t.data="$s:"+d}c&&c.remove(),a.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,n,o,r=new Map,a=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=r.get(n.data))&&o.isConnected||r.set(n.data,n)};window.$PRS=(i=e.currentScript,d=i.dataset.p)=>{let l,s,c=i.previousElementSibling;for(c&&!c.matches('template[for="'+d+'"]')&&(c=null),a(o=o||e.createNodeIterator(e,128)),t=r.get("$s?:"+d),n=t,s=1;s&&n&&(n=n.nextSibling);)8==n.nodeType&&(s+=!n.data.indexOf("$s")-!n.data.indexOf("/$s"));if(n&&t.isConnected&&(l=t.nextSibling,!c||8==l.nodeType&&"?"==l.data[0])){if(c){for(;(l=t.nextSibling)!=n;)l.remove();n.before(c.content)}if(t.parentNode.closest("svg,math"))for(s=t.nextSibling;s!=n;s=l)l=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=t,a(s,n),t.data="$s:"+d}c&&c.remove(),i.remove()}})(document);`;
 
 /**
  * @param {string} nonce

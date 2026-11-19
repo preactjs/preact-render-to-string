@@ -14,9 +14,9 @@ import {
  */
 function pending(html) {
 	return html.replace(
-		/(<!--\$s:(\w+)-->)([^]*?)(<!--\/\$s:\2-->)/g,
-		(_, start, id, fallback, end) =>
-			`<!--$s?:${id}--><?start name="${id}">${pending(fallback)}<?end>${end}`
+		/<!--\$s:(\w+)-->([^]*?)<!--\/\$s-->/g,
+		(_, id, fallback) =>
+			`<!--$s?:${id}--><?start name="${id}">${fallback}<?end><!--/$s-->`
 	);
 }
 
@@ -131,21 +131,35 @@ describe('createInitScript', () => {
 describe('inline init script', () => {
 	it('should replace fallback content between $s markers with template content', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->loading...<!--/$s:1--></div>'
+			'<div><!--$s:1-->loading...<!--/$s--></div>'
 		);
 
 		runInitScript(window);
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>resolved</p><!--/$s:1--></div>'
+			'<div><!--$s:1--><p>resolved</p><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
+	it('should find the closing marker past the ranges inside a fallback', () => {
+		// The fallback holds a boundary of its own that was left to the client.
+		const { window, document } = createDom(
+			'<div><!--$s?:1--><?start name="1"><!--$s!:2--><i>inner</i><!--/$s--><b>outer</b><?end><!--/$s--><u>after</u></div>'
+		);
+
+		runInitScript(window);
+		streamChunk(window, '1', '<p>resolved</p>');
+
+		expect(bodyHtml(document)).toBe(
+			'<div><!--$s:1--><p>resolved</p><!--/$s--><u>after</u></div>'
+		);
+	});
+
 	it('should remove the chunk script after patching', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+			'<div><!--$s:1-->loading<!--/$s--></div>'
 		);
 
 		runInitScript(window);
@@ -156,7 +170,7 @@ describe('inline init script', () => {
 
 	it('should leave markers in place after patching', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:9-->fallback<!--/$s:9--></div>'
+			'<div><!--$s:9-->fallback<!--/$s--></div>'
 		);
 
 		runInitScript(window);
@@ -170,31 +184,31 @@ describe('inline init script', () => {
 		let node;
 		while ((node = iter.nextNode())) comments.push(node.data);
 
-		expect(comments).toEqual(['$s:9', '/$s:9']);
+		expect(comments).toEqual(['$s:9', '/$s']);
 		expect(document.querySelector('span').textContent).toBe('ok');
 	});
 
 	it('should patch multiple suspense boundaries independently', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->a<!--/$s:1--><!--$s:2-->b<!--/$s:2--></div>'
+			'<div><!--$s:1-->a<!--/$s--><!--$s:2-->b<!--/$s--></div>'
 		);
 
 		runInitScript(window);
 		streamChunk(window, '2', '<p>two</p>');
 		expect(document.querySelector('div').innerHTML).toBe(
-			parsed('<!--$s:1-->a<!--/$s:1-->') + '<!--$s:2--><p>two</p><!--/$s:2-->'
+			parsed('<!--$s:1-->a<!--/$s-->') + '<!--$s:2--><p>two</p><!--/$s-->'
 		);
 
 		streamChunk(window, '1', '<p>one</p>');
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>one</p><!--/$s:1--><!--$s:2--><p>two</p><!--/$s:2--></div>'
+			'<div><!--$s:1--><p>one</p><!--/$s--><!--$s:2--><p>two</p><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
 	it('should continue patching later chunks when an earlier one has no markers', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+			'<div><!--$s:1-->loading<!--/$s--></div>'
 		);
 
 		runInitScript(window);
@@ -202,27 +216,27 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1--><p>resolved</p><!--/$s:1-->'
+			'<!--$s:1--><p>resolved</p><!--/$s-->'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
 	it('should drop templates that do not match any suspense markers', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+			'<div><!--$s:1-->loading<!--/$s--></div>'
 		);
 
 		runInitScript(window);
 		streamChunk(window, '999', '<p>nope</p>');
 
 		expect(bodyHtml(document)).toBe(
-			parsed('<div><!--$s:1-->loading<!--/$s:1--></div>')
+			parsed('<div><!--$s:1-->loading<!--/$s--></div>')
 		);
 	});
 
 	it('should leave the boundary alone when its start marker is gone', () => {
 		const { window, document } = createDom(
-			'<div><i>client</i><!--/$s:1--></div>'
+			'<div><i>client</i><!--/$s--></div>'
 		);
 		const errors = [];
 		window.addEventListener('error', (e) => errors.push(e.error));
@@ -233,13 +247,13 @@ describe('inline init script', () => {
 		callRC(window, '1');
 
 		expect(errors).toEqual([]);
-		expect(bodyHtml(document)).toBe('<div><i>client</i><!--/$s:1--></div>');
+		expect(bodyHtml(document)).toBe('<div><i>client</i><!--/$s--></div>');
 		expect(document.querySelectorAll('template, script')).toHaveLength(0);
 	});
 
 	it('should still patch templates when htmlFor is present on HTMLTemplateElement', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+			'<div><!--$s:1-->loading<!--/$s--></div>'
 		);
 
 		Object.defineProperty(window.HTMLTemplateElement.prototype, 'htmlFor', {
@@ -257,21 +271,21 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>resolved</p><!--/$s:1--></div>'
+			'<div><!--$s:1--><p>resolved</p><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
 	it('should patch a chunk with empty content', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->loading<!--/$s:1--></div>'
+			'<div><!--$s:1-->loading<!--/$s--></div>'
 		);
 
 		runInitScript(window);
 		streamChunk(window, '1', '');
 
 		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1--><!--/$s:1-->'
+			'<!--$s:1--><!--/$s-->'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -300,7 +314,7 @@ describe('inline init script', () => {
 	it('should find the markers of all boundaries with a single document scan', () => {
 		const n = 20;
 		let shell = '';
-		for (let i = 0; i < n; i++) shell += `<!--$s:${i}-->loading<!--/$s:${i}-->`;
+		for (let i = 0; i < n; i++) shell += `<!--$s:${i}-->loading<!--/$s-->`;
 		const { window, document } = createDom(`<div>${shell}</div>`);
 		runInitScript(window);
 
@@ -330,45 +344,43 @@ describe('inline init script', () => {
 	});
 
 	it('should find markers added to the document after an earlier chunk', () => {
-		const { window, document } = createDom(
-			'<div><!--$s:1-->a<!--/$s:1--></div>'
-		);
+		const { window, document } = createDom('<div><!--$s:1-->a<!--/$s--></div>');
 		runInitScript(window);
 		streamChunk(window, '1', '<p>one</p>');
 
 		document.body.insertAdjacentHTML(
 			'beforeend',
-			pending('<section><!--$s:2-->b<!--/$s:2--></section>')
+			pending('<section><!--$s:2-->b<!--/$s--></section>')
 		);
 		streamChunk(window, '2', '<p>two</p>');
 
 		expect(document.querySelector('section').innerHTML).toBe(
-			'<!--$s:2--><p>two</p><!--/$s:2-->'
+			'<!--$s:2--><p>two</p><!--/$s-->'
 		);
 	});
 
 	it('should patch a nested boundary whose markers came with the outer chunk', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->outer fallback<!--/$s:1--></div>'
+			'<div><!--$s:1-->outer fallback<!--/$s--></div>'
 		);
 		runInitScript(window);
 
 		streamChunk(
 			window,
 			'1',
-			'<section><!--$s:2-->inner fallback<!--/$s:2--></section>'
+			'<section><!--$s:2-->inner fallback<!--/$s--></section>'
 		);
 		streamChunk(window, '2', '<p>inner</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><section><!--$s:2--><p>inner</p><!--/$s:2--></section><!--/$s:1--></div>'
+			'<div><!--$s:1--><section><!--$s:2--><p>inner</p><!--/$s--></section><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
 
 	it('should find nested markers that native DPU patched in', () => {
 		const { window, document } = createDom(
-			'<div><!--$s:1-->outer fallback<!--/$s:1--></div>'
+			'<div><!--$s:1-->outer fallback<!--/$s--></div>'
 		);
 		runInitScript(window);
 		// let the iterator pass the outer markers before native DPU patches the range
@@ -377,7 +389,7 @@ describe('inline init script', () => {
 		const end = document.querySelector('div').lastChild;
 		end.previousSibling.remove();
 		const tmp = document.createElement('div');
-		tmp.innerHTML = '<svg><!--$s?:2--><rect></rect><!--/$s:2--></svg>';
+		tmp.innerHTML = '<svg><!--$s?:2--><rect></rect><!--/$s--></svg>';
 		end.before(tmp.firstChild);
 		callRC(window, '1');
 		// native DPU leaves the nested svg children in the HTML namespace
@@ -393,7 +405,7 @@ describe('inline init script', () => {
 
 	it('should find nested markers that the namespace fix recreated', () => {
 		const { window, document } = createDom(
-			'<svg><!--$s:1--><circle></circle><!--/$s:1--></svg>'
+			'<svg><!--$s:1--><circle></circle><!--/$s--></svg>'
 		);
 		runInitScript(window);
 
@@ -401,7 +413,7 @@ describe('inline init script', () => {
 		const svg = document.querySelector('svg');
 		while (svg.childNodes.length > 2) svg.childNodes[1].remove();
 		const g = document.createElement('g');
-		g.innerHTML = pending('<!--$s:2--><!--/$s:2-->');
+		g.innerHTML = pending('<!--$s:2--><!--/$s-->');
 		svg.lastChild.before(g);
 		callRC(window, '1');
 		streamChunk(window, '2', '<path></path>');
@@ -414,7 +426,7 @@ describe('inline init script', () => {
 
 	it('should not throw when an end marker precedes its start marker', () => {
 		const { window, document } = createDom(
-			'<div><!--/$s:1--><!--$s:1-->loading<!--/$s:1--></div>'
+			'<div><!--/$s--><!--$s:1-->loading<!--/$s--></div>'
 		);
 		runInitScript(window);
 
@@ -424,7 +436,7 @@ describe('inline init script', () => {
 
 	it('should parse patched children in the svg/math namespace of their parent', () => {
 		const { window, document } = createDom(
-			'<svg><!--$s:1--><!--/$s:1--></svg><math><!--$s:2--><!--/$s:2--></math>'
+			'<svg><!--$s:1--><!--/$s--></svg><math><!--$s:2--><!--/$s--></math>'
 		);
 
 		runInitScript(window);
@@ -441,7 +453,7 @@ describe('inline init script', () => {
 
 	it('should fix the svg/math namespace after native DPU patched the range', () => {
 		const { window, document } = createDom(
-			'<svg><!--$s:1--><circle></circle><!--/$s:1--></svg><math><!--$s:2--><mn>1</mn><!--/$s:2--></math>'
+			'<svg><!--$s:1--><circle></circle><!--/$s--></svg><math><!--$s:2--><mn>1</mn><!--/$s--></math>'
 		);
 		runInitScript(window);
 
@@ -453,7 +465,7 @@ describe('inline init script', () => {
 		]) {
 			const end = [...document.querySelectorAll('svg, math')]
 				.flatMap((el) => [...el.childNodes])
-				.find((n) => n.data === '/$s:' + id);
+				.find((n) => n.data === '$s?:' + id).parentNode.lastChild;
 			end.previousSibling.remove();
 			end.before(document.createElement(tag));
 			// the chunk's script runs after the (absent) template: no template, so only fixups
@@ -470,7 +482,7 @@ describe('inline init script', () => {
 
 	it('should not reparse unrelated svg or math elements', () => {
 		const { window, document } = createDom(
-			'<svg><circle></circle></svg><div><!--$s:1-->loading<!--/$s:1--></div>'
+			'<svg><circle></circle></svg><div><!--$s:1-->loading<!--/$s--></div>'
 		);
 		const circle = document.querySelector('circle');
 
@@ -484,7 +496,7 @@ describe('inline init script', () => {
 let hydrationDom;
 const previousDocument = globalThis.document;
 async function setupHydration(
-	html = '<div id="root"><!--$s:1--><i>loading</i><!--/$s:1--></div>'
+	html = '<div id="root"><!--$s:1--><i>loading</i><!--/$s--></div>'
 ) {
 	hydrationDom = new JSDOM(pending(html), {
 		runScripts: 'dangerously',
@@ -510,7 +522,7 @@ function renderClient(root, children) {
 	render(children, root);
 	// Keep the stream anchors, as resumed hydration does in Preact 11.
 	root.prepend(document.createComment('$s?:1'));
-	root.append(document.createComment('/$s:1'));
+	root.append(document.createComment('/$s'));
 }
 
 describe('stream template hydration races', () => {
@@ -522,9 +534,7 @@ describe('stream template hydration races', () => {
 	it('should replace a fallback that has no client-rendered nodes', async () => {
 		const { document, root } = await setupHydration();
 		appendStreamed(document);
-		expect(root.innerHTML).toBe(
-			'<!--$s:1--><button>server</button><!--/$s:1-->'
-		);
+		expect(root.innerHTML).toBe('<!--$s:1--><button>server</button><!--/$s-->');
 		expect(document.querySelector('template')).toBeNull();
 	});
 
@@ -593,12 +603,12 @@ describe('stream template hydration races', () => {
 		renderClient(root, <button>client</button>);
 		appendStreamed(
 			document,
-			'<button>server</button><!--$s:2--><i>nested fallback</i><!--/$s:2-->'
+			'<button>server</button><!--$s:2--><i>nested fallback</i><!--/$s-->'
 		);
 		insertChunk(document, '2', '<p>nested</p>');
 		callRC(hydrationDom.window, '2');
 		expect(root.innerHTML).toBe(
-			'<!--$s?:1--><button>client</button><!--/$s:1-->'
+			'<!--$s?:1--><button>client</button><!--/$s-->'
 		);
 		expect(document.querySelector('template')).toBeNull();
 	});
@@ -614,7 +624,7 @@ describe('stream template hydration races', () => {
 			root
 		);
 		const section = root.querySelector('section');
-		section.innerHTML = pending('<!--$s:1--><i>loading</i><!--/$s:1-->');
+		section.innerHTML = pending('<!--$s:1--><i>loading</i><!--/$s-->');
 		appendStreamed(document);
 		expect(section.textContent).toBe('server');
 		expect(root.querySelector('button').textContent).toBe('outside');
@@ -633,13 +643,13 @@ describe('stream template hydration races', () => {
 			root
 		);
 		const section = root.querySelector('section');
-		section.innerHTML = '<!--$s:1--><b>server</b><!--/$s:1-->';
+		section.innerHTML = '<!--$s:1--><b>server</b><!--/$s-->';
 		// e.g. a suspended client subtree that is parked outside the document
 		const parked = root.querySelector('p');
 		parked.remove();
 		// native DPU already patched the range, so there is no template
 		callRC(hydrationDom.window, '1');
-		expect(section.innerHTML).toBe('<!--$s:1--><b>server</b><!--/$s:1-->');
+		expect(section.innerHTML).toBe('<!--$s:1--><b>server</b><!--/$s-->');
 		expect(parked.parentNode).toBeNull();
 	});
 
@@ -660,11 +670,11 @@ describe('stream template hydration races', () => {
 			.querySelector('button')
 			.insertAdjacentHTML(
 				'afterend',
-				'<!--$s:2--><i>nested fallback</i><!--/$s:2-->'
+				'<!--$s:2--><i>nested fallback</i><!--/$s-->'
 			);
 		appendStreamed(document);
 		expect(root.innerHTML).toBe(
-			'<!--$s?:1--><button>client</button><!--$s:2--><i>nested fallback</i><!--/$s:2--><!--/$s:1-->'
+			'<!--$s?:1--><button>client</button><!--$s:2--><i>nested fallback</i><!--/$s--><!--/$s-->'
 		);
 		expect(document.querySelector('template')).toBeNull();
 	});
@@ -673,7 +683,7 @@ describe('stream template hydration races', () => {
 describe('stream recovery instructions', () => {
 	function setup() {
 		const { window, document } = createDom(
-			'<div id="root"><!--$s:1--><i>loading</i><!--/$s:1--></div>'
+			'<div id="root"><!--$s:1--><i>loading</i><!--/$s--></div>'
 		);
 		return {
 			root: document.querySelector('#root'),
