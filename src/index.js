@@ -416,6 +416,15 @@ function _renderToString(
 
 			let isClassComponent =
 				type.prototype && typeof type.prototype.render == 'function';
+			// A streamed boundary retries its children with its own context
+			if (
+				renderer &&
+				renderer.contexts &&
+				type.prototype &&
+				type.prototype[CHILD_DID_SUSPEND]
+			) {
+				renderer.contexts.set(vnode, context);
+			}
 			if (isClassComponent) {
 				rendered = /**#__NOINLINE__**/ renderClassComponent(
 					vnode,
@@ -590,6 +599,10 @@ function _renderToString(
 				return wrapWithSuspenseMarkers(str);
 			}
 
+			if (renderer && renderer.markup && renderer.markup.has(vnode)) {
+				return renderer.takeMarkup(vnode);
+			}
+
 			return str;
 		} catch (error) {
 			if (isRecoverable(error)) {
@@ -598,12 +611,12 @@ function _renderToString(
 			}
 			if (!asyncMode && renderer && renderer.onError) {
 				const onError = (error) => {
-					return renderer.onError(error, vnode, (child, parent) => {
+					return renderer.onError(error, vnode, (child, parent, ctx) => {
 						try {
 							return withSkipEffects(() =>
 								_renderToString(
 									child,
-									context,
+									ctx || context,
 									isSvgMode,
 									selectValue,
 									parent,
