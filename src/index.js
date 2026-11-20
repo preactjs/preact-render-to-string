@@ -603,6 +603,13 @@ function _renderToString(
 				return renderer.takeMarkup(vnode);
 			}
 
+			// A streamed boundary marks its range even when it didn't suspend, so
+			// hydration can tell whose range a marker opens. The `:` tells it from
+			// the range of a component that suspended (`<!--$s-->`).
+			if (renderer && recover && type.prototype[CHILD_DID_SUSPEND]) {
+				return '<!--$s:-->' + str + END_SUSPENSE_DENOMINATOR;
+			}
+
 			return str;
 		} catch (error) {
 			if (isRecoverable(error)) {

@@ -29,6 +29,7 @@ export async function renderToChunks(
 		suspended: [],
 		markup: new Map(),
 		contexts: new Map(),
+		ids: new Map(),
 		takeMarkup,
 		rendering: true,
 		nonce
@@ -116,7 +117,10 @@ function handleError(error, vnode, renderChild) {
 	// let the siblings render (and suspend) in this pass.
 	const defer = caught != vnode && this.rendering;
 
-	const id = vnode.__v;
+	// Ids only have to be unique within a render: count the boundaries instead
+	// of using the vnode id, which keeps growing for as long as the server runs.
+	let id = this.ids.get(vnode);
+	if (id == null) this.ids.set(vnode, (id = this.ids.size.toString(36)));
 	const ctx = this.contexts.get(vnode);
 	const found = this.suspended.find((x) => x.id === id && x.renderer);
 
@@ -130,7 +134,7 @@ function handleError(error, vnode, renderChild) {
 			if (!aborted) this.onWrite(createClientRenderInstruction(id, this.nonce));
 			return '';
 		}
-		const html = `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT], ctx)}<!--/$s:${id}-->`;
+		const html = `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT], ctx)}<!--/$s-->`;
 		if (!defer) return html;
 		this.markup.set(vnode, html);
 		return '';
@@ -162,7 +166,7 @@ function handleError(error, vnode, renderChild) {
 		);
 
 	if (found) return '';
-	const html = `<!--$s?:${id}--><?start name="${id}">${renderChild(vnode.props.fallback, vnode[PARENT], ctx)}<?end><!--/$s:${id}-->`;
+	const html = `<!--$s?:${id}--><?start name="${id}">${renderChild(vnode.props.fallback, vnode[PARENT], ctx)}<?end><!--/$s-->`;
 	if (!defer) return html;
 	this.markup.set(vnode, html);
 	return '';

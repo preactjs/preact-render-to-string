@@ -47,10 +47,43 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
+			`<div><!--$s?:0--><?start name="0">loading...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>')
+			createSubtree('0', '<p>it works</p>')
 		]);
+	});
+
+	it('should number the boundaries of every render from 0', async () => {
+		const render = async () => {
+			const first = createSuspender();
+			const second = createSuspender();
+			const result = [];
+			const promise = renderToChunks(
+				<div>
+					<Suspense fallback="a">
+						<first.Suspender />
+					</Suspense>
+					<Suspense fallback="b">
+						<second.Suspender />
+					</Suspense>
+				</div>,
+				{ onWrite: (s) => result.push(s) }
+			);
+			second.suspended.resolve();
+			await second.suspended.promise;
+			first.suspended.resolve();
+			await promise;
+			return result;
+		};
+
+		const expected = [
+			`<div><!--$s?:0--><?start name="0">a<?end><!--/$s--><!--$s?:1--><?start name="1">b<?end><!--/$s--></div>`,
+			createInitScript(),
+			createSubtree('1', '<p>it works</p>'),
+			createSubtree('0', '<p>it works</p>')
+		];
+		expect(await render()).to.deep.equal(expected);
+		expect(await render()).to.deep.equal(expected);
 	});
 
 	it('should abort pending suspensions with AbortSignal', async () => {
@@ -77,9 +110,9 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			`<div><!--$s?:10--><?start name="10">loading...<?end><!--/$s:10--></div>`,
+			`<div><!--$s?:0--><?start name="0">loading...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createClientRenderInstruction('10')
+			createClientRenderInstruction('0')
 		]);
 	});
 
@@ -123,9 +156,9 @@ describe('renderToChunks', () => {
 		}
 
 		expect(result).to.deep.equal([
-			`<div><!--$s?:16--><?start name="16">loading...<?end><!--/$s:16--></div>`,
+			`<div><!--$s?:0--><?start name="0">loading...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createSubtree('16', '<p>it works</p>')
+			createSubtree('0', '<p>it works</p>')
 		]);
 	});
 
@@ -154,9 +187,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			`<div><p>id: P0-0</p><!--$s?:24--><?start name="24">loading...<?end><!--/$s:24--></div>`,
+			`<div><p>id: P0-0</p><!--$s?:0--><?start name="0">loading...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createSubtree('24', '<p>id: P0-1</p>')
+			createSubtree('0', '<p>id: P0-1</p>')
 		]);
 	});
 
@@ -192,10 +225,10 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).toEqual([
-			`<div><p>id: P0-0</p><!--$s?:33--><?start name="33">loading...<?end><!--/$s:33--><!--$s?:36--><?start name="36">loading...<?end><!--/$s:36--></div>`,
+			`<div><p>id: P0-0</p><!--$s?:0--><?start name="0">loading...<?end><!--/$s--><!--$s?:1--><?start name="1">loading...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createSubtree('33', '<p>id: P0-1</p>'),
-			createSubtree('36', '<p>id: P0-2</p>')
+			createSubtree('0', '<p>id: P0-1</p>'),
+			createSubtree('1', '<p>id: P0-2</p>')
 		]);
 	});
 
@@ -313,9 +346,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			`<div><!--$s?:70--><?start name="70">loading part 1...<?end><!--/$s:70--></div>`,
+			`<div><!--$s?:0--><?start name="0">loading part 1...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createSubtree('70', '<p>it works</p><p>it works</p>')
+			createSubtree('0', '<p>it works</p><p>it works</p>')
 		]);
 	});
 
@@ -361,9 +394,9 @@ describe('renderToChunks', () => {
 			suspended.resolve();
 			await promise;
 
-			const id = result[0].match(/\$s:(\d+)/)[1];
+			const id = result[0].match(/\$s[?!]:(\w+)/)[1];
 			expect(result).toEqual([
-				`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
+				`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s-->`,
 				createInitScript(),
 				createSubtree(id, '')
 			]);
@@ -420,9 +453,9 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 		await promise;
 
-		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
+		const id = result[0].match(/\$s\?:(\w+)/)[1];
 		expect(result).to.deep.equal([
-			`<main><!--$s?:${id}--><?start name="${id}"><i>loading</i><?end><!--/$s:${id}--></main>`,
+			`<main><!--$s?:${id}--><?start name="${id}"><i>loading</i><?end><!--/$s--></main>`,
 			createInitScript(),
 			createSubtree(
 				id,
@@ -455,16 +488,16 @@ describe('renderToChunks', () => {
 		await promise;
 
 		const html = result.join('');
-		const [outerId, innerId] = [...html.matchAll(/\$s\?:(-?\d+)/g)].map(
+		const [outerId, innerId] = [...html.matchAll(/\$s\?:(\w+)/g)].map(
 			(m) => m[1]
 		);
 		expect(result[0]).to.equal(
-			`<!--$s?:${outerId}--><?start name="${outerId}">outer<?end><!--/$s:${outerId}-->`
+			`<!--$s?:${outerId}--><?start name="${outerId}">outer<?end><!--/$s-->`
 		);
 		expect(result.slice(2)).to.deep.equal([
 			createSubtree(
 				outerId,
-				`<div><p>it works</p></div><!--$s?:${innerId}--><?start name="${innerId}">inner<?end><!--/$s:${innerId}-->`
+				`<div><p>it works</p></div><!--$s?:${innerId}--><?start name="${innerId}">inner<?end><!--/$s-->`
 			),
 			createSubtree(innerId, '<div>inner</div>')
 		]);
@@ -491,7 +524,7 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 		await promise;
 
-		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
+		const id = result[0].match(/\$s\?:(\w+)/)[1];
 		expect(result[2]).to.equal(createSubtree(id, 'b'));
 	});
 
@@ -521,7 +554,7 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 		await promise;
 
-		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
+		const id = result[0].match(/\$s\?:(\w+)/)[1];
 		expect(result[2]).to.equal(
 			createSubtree(id, '<p>depth 1</p><p>depth 2</p><p>it works</p>')
 		);
@@ -549,7 +582,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(errors).to.deep.equal([error]);
-		const id = /\$s:(\d+)/.exec(result[0])[1];
+		const id = /\$s[?!]:(\w+)/.exec(result[0])[1];
 		expect(result.slice(2)).to.deep.equal([createClientRenderInstruction(id)]);
 	});
 
@@ -583,7 +616,7 @@ describe('renderToChunks', () => {
 		expect(errors).to.deep.equal([error]);
 		expect(html).to.contain('a...');
 		expect(html).to.match(/<script>.*\$s!:/);
-		expect(html).to.match(/<template for="\d+"><p>it works<\/p>/);
+		expect(html).to.match(/<template for="\w+"><p>it works<\/p>/);
 		expect(html).not.to.contain('undefined');
 	});
 

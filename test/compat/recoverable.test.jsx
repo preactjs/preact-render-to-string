@@ -144,9 +144,7 @@ describe('recoverable errors', () => {
 			{ onWrite: (s) => chunks.push(s) }
 		);
 		expect(chunks).to.have.length(1);
-		expect(chunks[0]).to.match(
-			/^<!--\$s!:\d+--><i>fallback<\/i><!--\/\$s:\d+-->$/
-		);
+		expect(chunks[0]).to.match(/^<!--\$s!:\w+--><i>fallback<\/i><!--\/\$s-->$/);
 	});
 
 	it('marks an already-flushed fallback and completes abandoned sibling work', async () => {
@@ -171,7 +169,7 @@ describe('recoverable errors', () => {
 			),
 			{ nonce: 'nonce', onWrite: (s) => chunks.push(s) }
 		);
-		const id = chunks[0].match(/\$s:(\d+)/)[1];
+		const id = chunks[0].match(/\$s[?!]:(\w+)/)[1];
 		deferred.resolve();
 		await result;
 		expect(chunks).to.contain(createClientRenderInstruction(id, 'nonce'));

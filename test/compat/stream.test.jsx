@@ -83,9 +83,9 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).toEqual([
-			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
+			`<div><!--$s?:0--><?start name="0">loading...<?end><!--/$s--></div>`,
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>')
+			createSubtree('0', '<p>it works</p>')
 		]);
 	});
 
@@ -226,9 +226,9 @@ describe('renderToReadableStream', () => {
 		suspended.resolve();
 
 		const result = await sink.promise;
-		const id = result[0].match(/\$s:(\d+)/)[1];
+		const id = result[0].match(/\$s[?!]:(\w+)/)[1];
 		expect(result).toEqual([
-			`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
+			`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s-->`,
 			createInitScript(),
 			createSubtree(id, '')
 		]);
