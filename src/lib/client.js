@@ -77,7 +77,7 @@ import { encodeEntities } from './util.js';
 // 				n.currentNode = s;
 // 				scan(n, e);
 // 				// "$s?" marks a range that still holds its fallback: this one is resolved now
-// 				s.data = "$s:" + id;
+// 				s.data = "$s::" + id;
 // 			}
 // 		}
 // 		// drop the template even when there was nothing to patch
@@ -89,7 +89,7 @@ import { encodeEntities } from './util.js';
 // })(document);
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and paste it into https://try.terser.org/.
-const INIT_SCRIPT = `(e=>{let t,n,o,r=new Map,a=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=r.get(n.data))&&o.isConnected||r.set(n.data,n)};window.$PRS=(i=e.currentScript,d=i.dataset.p)=>{let l,s,c=i.previousElementSibling;for(c&&!c.matches('template[for="'+d+'"]')&&(c=null),a(o=o||e.createNodeIterator(e,128)),t=r.get("$s?:"+d),n=t,s=1;s&&n&&(n=n.nextSibling);)8==n.nodeType&&(s+=!n.data.indexOf("$s")-!n.data.indexOf("/$s"));if(n&&t.isConnected&&(l=t.nextSibling,!c||8==l.nodeType&&"?"==l.data[0])){if(c){for(;(l=t.nextSibling)!=n;)l.remove();n.before(c.content)}if(t.parentNode.closest("svg,math"))for(s=t.nextSibling;s!=n;s=l)l=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=t,a(s,n),t.data="$s:"+d}c&&c.remove(),i.remove()}})(document);`;
+const INIT_SCRIPT = `(e=>{let t,n,o,r=new Map,a=(e,t,n,o)=>{for(;(n=e.nextNode())&&n!=t;)(o=r.get(n.data))&&o.isConnected||r.set(n.data,n)};window.$PRS=(i=e.currentScript,d=i.dataset.p)=>{let l,s,c=i.previousElementSibling;for(c&&!c.matches('template[for="'+d+'"]')&&(c=null),a(o=o||e.createNodeIterator(e,128)),t=r.get("$s?:"+d),n=t,s=1;s&&n&&(n=n.nextSibling);)8==n.nodeType&&(s+=!n.data.indexOf("$s")-!n.data.indexOf("/$s"));if(n&&t.isConnected&&(l=t.nextSibling,!c||8==l.nodeType&&"?"==l.data[0])){if(c){for(;(l=t.nextSibling)!=n;)l.remove();n.before(c.content)}if(t.parentNode.closest("svg,math"))for(s=t.nextSibling;s!=n;s=l)l=s.nextSibling,s.outerHTML=s.outerHTML;s=e.createTreeWalker(e,128),s.currentNode=t,a(s,n),t.data="$s::"+d}c&&c.remove(),i.remove()}})(document);`;
 
 /**
  * @param {string} nonce

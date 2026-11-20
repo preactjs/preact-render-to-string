@@ -138,7 +138,7 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>resolved</p><!--/$s--></div>'
+			'<div><!--$s::1--><p>resolved</p><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -153,7 +153,7 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>resolved</p><!--/$s--><u>after</u></div>'
+			'<div><!--$s::1--><p>resolved</p><!--/$s--><u>after</u></div>'
 		);
 	});
 
@@ -184,7 +184,7 @@ describe('inline init script', () => {
 		let node;
 		while ((node = iter.nextNode())) comments.push(node.data);
 
-		expect(comments).toEqual(['$s:9', '/$s']);
+		expect(comments).toEqual(['$s::9', '/$s']);
 		expect(document.querySelector('span').textContent).toBe('ok');
 	});
 
@@ -196,12 +196,12 @@ describe('inline init script', () => {
 		runInitScript(window);
 		streamChunk(window, '2', '<p>two</p>');
 		expect(document.querySelector('div').innerHTML).toBe(
-			parsed('<!--$s:1-->a<!--/$s-->') + '<!--$s:2--><p>two</p><!--/$s-->'
+			parsed('<!--$s:1-->a<!--/$s-->') + '<!--$s::2--><p>two</p><!--/$s-->'
 		);
 
 		streamChunk(window, '1', '<p>one</p>');
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>one</p><!--/$s--><!--$s:2--><p>two</p><!--/$s--></div>'
+			'<div><!--$s::1--><p>one</p><!--/$s--><!--$s::2--><p>two</p><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -216,7 +216,7 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1--><p>resolved</p><!--/$s-->'
+			'<!--$s::1--><p>resolved</p><!--/$s-->'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -271,7 +271,7 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '<p>resolved</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><p>resolved</p><!--/$s--></div>'
+			'<div><!--$s::1--><p>resolved</p><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -285,7 +285,7 @@ describe('inline init script', () => {
 		streamChunk(window, '1', '');
 
 		expect(document.querySelector('div').innerHTML).toBe(
-			'<!--$s:1--><!--/$s-->'
+			'<!--$s::1--><!--/$s-->'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -355,7 +355,7 @@ describe('inline init script', () => {
 		streamChunk(window, '2', '<p>two</p>');
 
 		expect(document.querySelector('section').innerHTML).toBe(
-			'<!--$s:2--><p>two</p><!--/$s-->'
+			'<!--$s::2--><p>two</p><!--/$s-->'
 		);
 	});
 
@@ -373,7 +373,7 @@ describe('inline init script', () => {
 		streamChunk(window, '2', '<p>inner</p>');
 
 		expect(bodyHtml(document)).toBe(
-			'<div><!--$s:1--><section><!--$s:2--><p>inner</p><!--/$s--></section><!--/$s--></div>'
+			'<div><!--$s::1--><section><!--$s::2--><p>inner</p><!--/$s--></section><!--/$s--></div>'
 		);
 		expect(document.querySelectorAll('template')).toHaveLength(0);
 	});
@@ -534,7 +534,9 @@ describe('stream template hydration races', () => {
 	it('should replace a fallback that has no client-rendered nodes', async () => {
 		const { document, root } = await setupHydration();
 		appendStreamed(document);
-		expect(root.innerHTML).toBe('<!--$s:1--><button>server</button><!--/$s-->');
+		expect(root.innerHTML).toBe(
+			'<!--$s::1--><button>server</button><!--/$s-->'
+		);
 		expect(document.querySelector('template')).toBeNull();
 	});
 
