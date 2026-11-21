@@ -600,8 +600,36 @@ function _renderToString(
 				return wrapWithSuspenseMarkers(str);
 			}
 
+			// The components a streamed boundary renders mark their ranges, so
+			// hydration can tell what one of them rendered from the whole range of
+			// the boundary.
+			if (
+				renderer &&
+				renderer.streaming &&
+				type !== Fragment &&
+				!(type.prototype && type.prototype[CHILD_DID_SUSPEND])
+			) {
+				let p = parent;
+				while (p && p.type === Fragment) p = p[PARENT];
+				if (p === renderer.streaming) {
+					return BEGIN_SUSPENSE_DENOMINATOR + str + END_SUSPENSE_DENOMINATOR;
+				}
+			}
+
 			if (renderer && renderer.markup && renderer.markup.has(vnode)) {
 				return renderer.takeMarkup(vnode);
+			}
+
+			// A streamed boundary that didn't suspend marks its range like one
+			// that was patched: hydration can then tell it from the range of a
+			// boundary its content starts with.
+			if (
+				renderer &&
+				recover &&
+				typeof str == 'string' &&
+				str.startsWith('<!--$s')
+			) {
+				return `<!--$s:${vnode.__v}-->${str}<!--/$s:${vnode.__v}-->`;
 			}
 
 			return str;

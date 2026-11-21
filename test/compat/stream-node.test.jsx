@@ -68,7 +68,7 @@ describe('renderToPipeableStream', () => {
 		expect(result).to.deep.equal([
 			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>')
+			createSubtree('5', '<!--$s--><p>it works</p><!--/$s-->')
 		]);
 	});
 
@@ -238,7 +238,7 @@ describe('renderToPipeableStream', () => {
 		expect(result).toEqual([
 			`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 			createInitScript(),
-			createSubtree(id, '')
+			createSubtree(id, '<!--$s--><!--/$s-->')
 		]);
 	});
 
@@ -272,7 +272,7 @@ describe('renderToPipeableStream', () => {
 		await new Promise((r) => setTimeout(r, 10));
 
 		expect(flushed).to.have.length(2);
-		expect(flushed[1]).to.contain('>first</template>');
+		expect(flushed[1]).to.contain('>first<!--/$s--></template>');
 
 		second.suspended.resolve();
 		await sink.promise;
