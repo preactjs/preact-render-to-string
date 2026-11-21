@@ -85,7 +85,7 @@ describe('renderToReadableStream', () => {
 		expect(result).toEqual([
 			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
 			createInitScript(),
-			createSubtree('5', '<!--$s--><p>it works</p><!--/$s-->')
+			createSubtree('5', '<!--$s2--><p>it works</p><!--/$s-->')
 		]);
 	});
 
@@ -230,7 +230,7 @@ describe('renderToReadableStream', () => {
 		expect(result).toEqual([
 			`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 			createInitScript(),
-			createSubtree(id, '<!--$s--><!--/$s-->')
+			createSubtree(id, '<!--$s2--><!--/$s-->')
 		]);
 	});
 });

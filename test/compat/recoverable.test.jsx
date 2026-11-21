@@ -104,7 +104,7 @@ describe('recoverable errors', () => {
 		);
 		deferred.resolve();
 		expect(await result).to.equal(
-			'<!--$s!--><!--$s--><i>ready</i><!--/$s--><!--/$s-->'
+			'<!--$s!--><!--$s2--><i>ready</i><!--/$s--><!--/$s-->'
 		);
 	});
 

@@ -49,7 +49,7 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
 			createInitScript(),
-			createSubtree('5', '<!--$s--><p>it works</p><!--/$s-->')
+			createSubtree('5', '<!--$s2--><p>it works</p><!--/$s-->')
 		]);
 	});
 
@@ -125,7 +125,7 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			`<div><!--$s?:16--><?start name="16">loading...<?end><!--/$s:16--></div>`,
 			createInitScript(),
-			createSubtree('16', '<!--$s--><p>it works</p><!--/$s-->')
+			createSubtree('16', '<!--$s2--><p>it works</p><!--/$s-->')
 		]);
 	});
 
@@ -156,7 +156,7 @@ describe('renderToChunks', () => {
 		expect(result).to.deep.equal([
 			`<div><p>id: P0-0</p><!--$s?:24--><?start name="24">loading...<?end><!--/$s:24--></div>`,
 			createInitScript(),
-			createSubtree('24', '<!--$s--><p>id: P0-1</p><!--/$s-->')
+			createSubtree('24', '<!--$s2--><p>id: P0-1</p><!--/$s-->')
 		]);
 	});
 
@@ -194,8 +194,8 @@ describe('renderToChunks', () => {
 		expect(result).toEqual([
 			`<div><p>id: P0-0</p><!--$s?:33--><?start name="33">loading...<?end><!--/$s:33--><!--$s?:36--><?start name="36">loading...<?end><!--/$s:36--></div>`,
 			createInitScript(),
-			createSubtree('33', '<!--$s--><p>id: P0-1</p><!--/$s-->'),
-			createSubtree('36', '<!--$s--><p>id: P0-2</p><!--/$s-->')
+			createSubtree('33', '<!--$s2--><p>id: P0-1</p><!--/$s-->'),
+			createSubtree('36', '<!--$s2--><p>id: P0-2</p><!--/$s-->')
 		]);
 	});
 
@@ -317,7 +317,7 @@ describe('renderToChunks', () => {
 			createInitScript(),
 			createSubtree(
 				'70',
-				'<!--$s--><p>it works</p><!--/$s--><!--$s--><p>it works</p><!--/$s-->'
+				'<!--$s3--><p>it works</p><!--/$s--><!--$s3--><p>it works</p><!--/$s-->'
 			)
 		]);
 	});
@@ -368,7 +368,7 @@ describe('renderToChunks', () => {
 			expect(result).toEqual([
 				`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 				createInitScript(),
-				createSubtree(id, '<!--$s--><!--/$s-->')
+				createSubtree(id, '<!--$s2--><!--/$s-->')
 			]);
 		}
 	);
@@ -402,7 +402,7 @@ describe('renderToChunks', () => {
 		);
 		expect(patches).toHaveLength(1);
 		expect(patches[0]).toContain(
-			'<!--$s--><p>first</p><!--/$s--><!--$s--><p>second</p><!--/$s-->'
+			'<!--$s2--><p>first</p><!--/$s--><!--$s2--><p>second</p><!--/$s-->'
 		);
 	});
 
@@ -431,7 +431,7 @@ describe('renderToChunks', () => {
 			createInitScript(),
 			createSubtree(
 				id,
-				'<h1>header</h1><!--$s--><div class="card"><p>it works</p></div><!--/$s--><footer>footer</footer>'
+				'<h1>header</h1><!--$s2--><div class="card"><p>it works</p></div><!--/$s--><footer>footer</footer>'
 			)
 		]);
 	});
@@ -469,9 +469,9 @@ describe('renderToChunks', () => {
 		expect(result.slice(2)).to.deep.equal([
 			createSubtree(
 				outerId,
-				`<!--$s--><div><p>it works</p></div><!--/$s--><!--$s?:${innerId}--><?start name="${innerId}">inner<?end><!--/$s:${innerId}-->`
+				`<!--$s2--><div><p>it works</p></div><!--/$s--><!--$s?:${innerId}--><?start name="${innerId}">inner<?end><!--/$s:${innerId}-->`
 			),
-			createSubtree(innerId, '<!--$s--><div>inner</div><!--/$s-->')
+			createSubtree(innerId, '<!--$s3--><div>inner</div><!--/$s-->')
 		]);
 	});
 
@@ -497,7 +497,7 @@ describe('renderToChunks', () => {
 		await promise;
 
 		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
-		expect(result[2]).to.equal(createSubtree(id, '<!--$s-->b<!--/$s-->'));
+		expect(result[2]).to.equal(createSubtree(id, '<!--$s2-->b<!--/$s-->'));
 	});
 
 	it('should retry a boundary with its own context', async () => {
@@ -530,7 +530,7 @@ describe('renderToChunks', () => {
 		expect(result[2]).to.equal(
 			createSubtree(
 				id,
-				'<!--$s--><p>depth 1</p><p>depth 2</p><p>it works</p><!--/$s-->'
+				'<!--$s2--><p>depth 1</p><p>depth 2</p><p>it works</p><!--/$s-->'
 			)
 		);
 	});
@@ -591,7 +591,7 @@ describe('renderToChunks', () => {
 		expect(errors).to.deep.equal([error]);
 		expect(html).to.contain('a...');
 		expect(html).to.match(/<script>.*\$s!:/);
-		expect(html).to.match(/<template for="\d+"><!--\$s--><p>it works<\/p>/);
+		expect(html).to.match(/<template for="\d+"><!--\$s\d+--><p>it works<\/p>/);
 		expect(html).not.to.contain('undefined');
 	});
 

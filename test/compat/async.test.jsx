@@ -71,7 +71,7 @@ describe('Async renderToString', () => {
 			expect(options.__s).to.equal(false);
 
 			suspended.resolve();
-			expect(await pending).to.equal('<!--$s--><span>first</span><!--/$s-->');
+			expect(await pending).to.equal('<!--$s3--><span>first</span><!--/$s-->');
 
 			expect(
 				calls.filter(
@@ -120,7 +120,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!--$s--><div class="foo">bar</div><!--/$s-->`;
+		const expected = `<!--$s2--><div class="foo">bar</div><!--/$s-->`;
 
 		suspended.resolve();
 
@@ -143,7 +143,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!--$s--><!--/$s--><div class="foo">bar</div>`;
+		const expected = `<!--$s2--><!--/$s--><div class="foo">bar</div>`;
 
 		suspended.resolve();
 
@@ -172,7 +172,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s2--><li>one</li><!--$s3--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -204,7 +204,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s2--><li>one</li><!--$s4--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -241,7 +241,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--><li>four</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s2--><li>one</li><!--$s4--><li>two</li><!--/$s--><!--$s4--><li>three</li><!--/$s--><li>four</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -282,7 +282,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--$s--><li>three</li><!--/$s--><!--/$s--><li>four</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s2--><li>one</li><!--$s4--><li>two</li><!--$s6--><li>three</li><!--/$s--><!--/$s--><li>four</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -320,7 +320,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s2--><li>one</li><!--/$s--><!--$s3--><li>two</li><!--/$s--><!--$s2--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -355,7 +355,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s2--><li>one</li><!--/$s--><!--$s2--><li>two</li><!--/$s--><!--$s2--><li>three</li><!--/$s--></ul>`;
 
 		suspendedOne.promise.then(() => {
 			void suspendedTwo.resolve();
@@ -420,7 +420,7 @@ describe('Async renderToString', () => {
 
 		suspended.resolve();
 		const rendered = await promise;
-		expect(rendered).to.equal('<!--$s--><p>ok</p><!--/$s-->');
+		expect(rendered).to.equal('<!--$s2--><p>ok</p><!--/$s-->');
 	});
 
 	const Id = () => <input id={useId()} />;
@@ -493,7 +493,7 @@ describe('Async renderToString', () => {
 
 		// Before we get to the actual DOM this suspends twice
 		expect(rendered).to.equal(
-			`<!--$s--><!--$s--><div>2</div><!--/$s--><!--/$s-->`
+			`<!--$s2--><!--$s5--><div>2</div><!--/$s--><!--/$s-->`
 		);
 	});
 
@@ -593,7 +593,7 @@ describe('Async renderToString', () => {
 			suspended.resolve();
 
 			expect(await pending).to.equal(
-				'<div class="wrap"><i>a</i><!--$s--><b>lazy</b><!--/$s--></div>'
+				'<div class="wrap"><i>a</i><!--$s3--><b>lazy</b><!--/$s--></div>'
 			);
 		});
 
@@ -622,7 +622,7 @@ describe('Async renderToString', () => {
 			first.suspended.resolve();
 
 			expect(await pending).to.equal(
-				'<ul><li><!--$s--><b>one</b><!--/$s--></li><li><!--$s--><b>two</b><!--/$s--></li></ul>'
+				'<ul><li><!--$s2--><b>one</b><!--/$s--></li><li><!--$s2--><b>two</b><!--/$s--></li></ul>'
 			);
 		});
 	});

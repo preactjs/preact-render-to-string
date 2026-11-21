@@ -35,8 +35,22 @@ const EMPTY_ARR = [];
 const isArray = Array.isArray;
 const assign = Object.assign;
 const EMPTY_STR = '';
-const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
+
+/**
+ * Open a range for a component. The number is how many components (not
+ * counting Fragments) sit between it and the closest element, so the client
+ * can tell it apart from a descendant that starts at the same spot and
+ * suspends there instead.
+ * @param {VNode} vnode
+ */
+function ownerMarker(vnode) {
+	let depth = 0;
+	for (; vnode && typeof vnode.type == 'function'; vnode = vnode[PARENT]) {
+		if (vnode.type !== Fragment) depth++;
+	}
+	return '<!--$s' + depth + '-->';
+}
 
 /**
  * Wraps a render result with suspense boundary markers, handling all possible
@@ -44,15 +58,14 @@ const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
  * @param {string | Array | Promise} result
  * @returns {string | Array | Promise}
  */
-function wrapWithSuspenseMarkers(result, clientOnly = false) {
-	const start = clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR;
+function wrapWithSuspenseMarkers(result, start) {
 	if (isArray(result)) {
 		result.unshift(start);
 		result.push(END_SUSPENSE_DENOMINATOR);
 		return result;
 	}
 	if (result && typeof result.then === 'function') {
-		return result.then((value) => wrapWithSuspenseMarkers(value, clientOnly));
+		return result.then((value) => wrapWithSuspenseMarkers(value, start));
 	}
 	return start + result + END_SUSPENSE_DENOMINATOR;
 }
@@ -570,7 +583,7 @@ function _renderToString(
 					asyncMode
 						? renderAsyncFallback(renderFallback)
 						: withSkipEffects(renderFallback),
-					true
+					'<!--$s!-->'
 				);
 			});
 
@@ -597,7 +610,7 @@ function _renderToString(
 			}
 
 			if (vnode._suspended) {
-				return wrapWithSuspenseMarkers(str);
+				return wrapWithSuspenseMarkers(str, ownerMarker(vnode));
 			}
 
 			// The components a streamed boundary renders mark their ranges, so
@@ -612,7 +625,7 @@ function _renderToString(
 				let p = parent;
 				while (p && p.type === Fragment) p = p[PARENT];
 				if (p === renderer.streaming) {
-					return BEGIN_SUSPENSE_DENOMINATOR + str + END_SUSPENSE_DENOMINATOR;
+					return ownerMarker(vnode) + str + END_SUSPENSE_DENOMINATOR;
 				}
 			}
 
@@ -691,7 +704,9 @@ function _renderToString(
 							hooks
 						)
 					);
-					return vnode._suspended ? wrapWithSuspenseMarkers(result) : result;
+					return vnode._suspended
+						? wrapWithSuspenseMarkers(result, ownerMarker(vnode))
+						: result;
 				} catch (e) {
 					if (!e || typeof e.then != 'function') throw e;
 
