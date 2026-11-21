@@ -83,9 +83,11 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).toEqual([
-			`<div><!--$s:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
+			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
+			'<div hidden>',
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>')
+			createSubtree('5', '<p>it works</p>'),
+			'</div>'
 		]);
 	});
 
@@ -192,7 +194,7 @@ describe('renderToReadableStream', () => {
 		const html = (await sink.promise).join('');
 		expect(errors).to.deep.equal([reason]);
 		expect(html).to.contain('$s!:');
-		expect(html.endsWith('</script>')).to.equal(true);
+		expect(html.endsWith('</div>')).to.equal(true);
 	});
 
 	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
@@ -228,9 +230,11 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 		const id = result[0].match(/\$s:(\d+)/)[1];
 		expect(result).toEqual([
-			`<!--$s:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
+			`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
+			'<div hidden>',
 			createInitScript(),
-			createSubtree(id, '')
+			createSubtree(id, ''),
+			'</div>'
 		]);
 	});
 });
