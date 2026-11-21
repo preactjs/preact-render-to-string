@@ -35,6 +35,8 @@ const EMPTY_ARR = [];
 const isArray = Array.isArray;
 const assign = Object.assign;
 const EMPTY_STR = '';
+// Whether renderToStringAsync is rendering a subtree again after it suspended
+let retrying = false;
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
 
 /**
@@ -68,7 +70,7 @@ function isMarked(vnode, parent, renderer) {
 		(type.prototype && type.prototype[CHILD_DID_SUSPEND])
 	)
 		return false;
-	if (renderer && renderer.streaming) return true;
+	if (retrying || (renderer && renderer.streaming)) return true;
 	while (parent && parent.type === Fragment) parent = parent[PARENT];
 	return !!(
 		parent &&
@@ -702,18 +704,24 @@ function _renderToString(
 			const renderNestedChildren = () => {
 				if (mask) mask[1] = 0;
 				try {
-					const result = withSkipEffects(() =>
-						_renderToString(
-							rendered,
-							context,
-							isSvgMode,
-							selectValue,
-							vnode,
-							asyncMode,
-							renderer,
-							hooks
-						)
-					);
+					const result = withSkipEffects(() => {
+						const wasRetrying = retrying;
+						retrying = true;
+						try {
+							return _renderToString(
+								rendered,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode,
+								asyncMode,
+								renderer,
+								hooks
+							);
+						} finally {
+							retrying = wasRetrying;
+						}
+					});
 					return vnode._suspended || isMarked(vnode, parent, renderer)
 						? wrapWithSuspenseMarkers(result, ownerMarker(vnode))
 						: result;

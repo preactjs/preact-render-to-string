@@ -71,7 +71,7 @@ describe('Async renderToString', () => {
 			expect(options.__s).to.equal(false);
 
 			suspended.resolve();
-			expect(await pending).to.equal('<!--$s3--><span>first</span><!--/$s-->');
+			expect(await pending).to.equal('<!--$s3--><!--$s4--><span>first</span><!--/$s--><!--/$s-->');
 
 			expect(
 				calls.filter(
@@ -143,7 +143,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!--$s2--><!--/$s--><div class="foo">bar</div>`;
+		const expected = `<!--$s2--><!--$s3--><!--/$s--><!--/$s--><div class="foo">bar</div>`;
 
 		suspended.resolve();
 
@@ -515,7 +515,7 @@ describe('Async renderToString', () => {
 
 		// Before we get to the actual DOM this suspends twice
 		expect(rendered).to.equal(
-			`<!--$s2--><!--$s5--><div>2</div><!--/$s--><!--/$s-->`
+			`<!--$s2--><!--$s3--><!--$s5--><!--$s6--><div>2</div><!--/$s--><!--/$s--><!--/$s--><!--/$s-->`
 		);
 	});
 
