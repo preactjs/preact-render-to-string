@@ -149,7 +149,7 @@ function handleError(error, vnode, renderChild) {
 	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
 	return found
 		? ''
-		: `<!--$s?:${id}--><?start name="${id}">${fallback}<?end><!--/$s:${id}-->`;
+		: `<!--$s:${id}--><?start name="${id}">${fallback}<?end><!--/$s:${id}-->`;
 }
 
 function retryPending(pending) {
