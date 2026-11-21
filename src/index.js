@@ -53,6 +53,29 @@ function ownerMarker(vnode) {
 }
 
 /**
+ * Whether a Suspense boundary renders this component directly. Its range gets
+ * markers, so a client that suspends in it while hydrating keeps all of what
+ * it rendered, rather than its first node or the boundary's whole range.
+ * @param {VNode} vnode
+ * @param {VNode} parent
+ */
+function isBoundaryChild(vnode, parent) {
+	let type = vnode.type;
+	if (
+		type === Fragment ||
+		(type.prototype && type.prototype[CHILD_DID_SUSPEND])
+	)
+		return false;
+	while (parent && parent.type === Fragment) parent = parent[PARENT];
+	return !!(
+		parent &&
+		typeof parent.type == 'function' &&
+		parent.type.prototype &&
+		parent.type.prototype[CHILD_DID_SUSPEND]
+	);
+}
+
+/**
  * Wraps a render result with suspense boundary markers, handling all possible
  * return types from _renderToString: string, Array, or Promise.
  * @param {string | Array | Promise} result
@@ -609,24 +632,8 @@ function _renderToString(
 				return resolveRenderResult(str).catch(recover);
 			}
 
-			if (vnode._suspended) {
+			if (vnode._suspended || isBoundaryChild(vnode, parent)) {
 				return wrapWithSuspenseMarkers(str, ownerMarker(vnode));
-			}
-
-			// The components a streamed boundary renders mark their ranges, so
-			// hydration can tell what one of them rendered from the whole range of
-			// the boundary.
-			if (
-				renderer &&
-				renderer.streaming &&
-				type !== Fragment &&
-				!(type.prototype && type.prototype[CHILD_DID_SUSPEND])
-			) {
-				let p = parent;
-				while (p && p.type === Fragment) p = p[PARENT];
-				if (p === renderer.streaming) {
-					return ownerMarker(vnode) + str + END_SUSPENSE_DENOMINATOR;
-				}
 			}
 
 			if (renderer && renderer.markup && renderer.markup.has(vnode)) {
@@ -640,7 +647,7 @@ function _renderToString(
 				renderer &&
 				recover &&
 				typeof str == 'string' &&
-				str.startsWith('<!--$s')
+				/^<!--\$s[?!]:/.test(str)
 			) {
 				return `<!--$s:${vnode.__v}-->${str}<!--/$s:${vnode.__v}-->`;
 			}
@@ -704,7 +711,7 @@ function _renderToString(
 							hooks
 						)
 					);
-					return vnode._suspended
+					return vnode._suspended || isBoundaryChild(vnode, parent)
 						? wrapWithSuspenseMarkers(result, ownerMarker(vnode))
 						: result;
 				} catch (e) {

@@ -38,8 +38,6 @@ interface RendererState {
 	contexts: Map<VNode, any>;
 	takeMarkup: (this: RendererState, vnode: VNode) => string;
 	rendering: boolean;
-	/** The boundary whose streamed chunk is rendering */
-	streaming?: VNode;
 }
 
 interface CapturedHooks {

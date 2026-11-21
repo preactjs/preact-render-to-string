@@ -174,14 +174,11 @@ function retryPending(pending) {
 	const vnode = pending.vnode;
 	const suspendedCount = renderer.suspended.length;
 	renderer.rendering = true;
-	const streaming = renderer.streaming;
-	renderer.streaming = vnode;
 	let child;
 	try {
 		child = pending.renderChild(vnode.props.children, vnode, pending.context);
 	} finally {
 		renderer.rendering = false;
-		renderer.streaming = streaming;
 	}
 	const suspendedAgain = renderer.suspended
 		.slice(suspendedCount)

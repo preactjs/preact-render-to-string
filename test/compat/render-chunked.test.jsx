@@ -373,6 +373,19 @@ describe('renderToChunks', () => {
 		}
 	);
 
+	it('should mark each component a boundary renders directly in the shell', async () => {
+		const Two = () => [<b key="a">a</b>, <b key="b">b</b>];
+		const result = [];
+		await renderToChunks(
+			<Suspense fallback="loading...">
+				<Two />
+			</Suspense>,
+			{ onWrite: (chunk) => result.push(chunk) }
+		);
+
+		expect(result).toEqual(['<!--$s2--><b>a</b><b>b</b><!--/$s-->']);
+	});
+
 	it('should wait for every suspension in a boundary before patching it', async () => {
 		const first = createSuspender();
 		const second = createSuspender();
