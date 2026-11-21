@@ -53,19 +53,22 @@ function ownerMarker(vnode) {
 }
 
 /**
- * Whether a Suspense boundary renders this component directly. Its range gets
- * markers, so a client that suspends in it while hydrating keeps all of what
- * it rendered, rather than its first node or the boundary's whole range.
+ * Whether a component's range gets markers: when a Suspense boundary renders
+ * it directly, or anywhere in a streamed chunk. A client that suspends in it
+ * while hydrating then keeps all of what it rendered, rather than its first
+ * node or the boundary's whole range.
  * @param {VNode} vnode
  * @param {VNode} parent
+ * @param {RendererState | undefined | false} renderer
  */
-function isBoundaryChild(vnode, parent) {
+function isMarked(vnode, parent, renderer) {
 	let type = vnode.type;
 	if (
 		type === Fragment ||
 		(type.prototype && type.prototype[CHILD_DID_SUSPEND])
 	)
 		return false;
+	if (renderer && renderer.streaming) return true;
 	while (parent && parent.type === Fragment) parent = parent[PARENT];
 	return !!(
 		parent &&
@@ -632,7 +635,7 @@ function _renderToString(
 				return resolveRenderResult(str).catch(recover);
 			}
 
-			if (vnode._suspended || isBoundaryChild(vnode, parent)) {
+			if (vnode._suspended || isMarked(vnode, parent, renderer)) {
 				return wrapWithSuspenseMarkers(str, ownerMarker(vnode));
 			}
 
@@ -711,7 +714,7 @@ function _renderToString(
 							hooks
 						)
 					);
-					return vnode._suspended || isBoundaryChild(vnode, parent)
+					return vnode._suspended || isMarked(vnode, parent, renderer)
 						? wrapWithSuspenseMarkers(result, ownerMarker(vnode))
 						: result;
 				} catch (e) {

@@ -299,7 +299,7 @@ describe('recoverable errors', () => {
 		first.resolve();
 		second.resolve();
 		await result;
-		expect(chunks.join('')).to.contain('<b>ready</b><!--/$s--></template>');
+		expect(chunks.join('')).to.contain('<b>ready</b><!--/$s--><!--/$s--></template>');
 		expect(chunks.filter((s) => s.startsWith('<template for'))).to.have.length(
 			1
 		);

@@ -178,11 +178,14 @@ function retryPending(pending) {
 	const mask = vnode[COMPONENT] && vnode[COMPONENT][MASK];
 	if (mask) mask[1] = 0;
 	renderer.rendering = true;
+	const streaming = renderer.streaming;
+	renderer.streaming = true;
 	let child;
 	try {
 		child = pending.renderChild(vnode.props.children, vnode, pending.context);
 	} finally {
 		renderer.rendering = false;
+		renderer.streaming = streaming;
 	}
 	const suspendedAgain = renderer.suspended
 		.slice(suspendedCount)
