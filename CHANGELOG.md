@@ -1,5 +1,13 @@
 # preact-render-to-string
 
+## 6.8.4
+
+### Patch Changes
+
+- [#499](https://github.com/preactjs/preact-render-to-string/pull/499) [`a52f799`](https://github.com/preactjs/preact-render-to-string/commit/a52f7991bb422a05e817057426f567d92e2a2f04) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - `renderToPipeableStream` flushes a destination that has a `flush()` method, such as a response behind Express's `compression()` middleware, so the shell and each boundary reach the browser as they render instead of all at the end. `pipe()` returns the destination, and a response that `onShellError` already ended is no longer destroyed.
+
+- [#498](https://github.com/preactjs/preact-render-to-string/pull/498) [`3487bd3`](https://github.com/preactjs/preact-render-to-string/commit/3487bd3c7fd61322c25a9db312695ef004c4031a) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - A streamed full document now starts with `<!DOCTYPE html>` when nothing in it suspends too, so a page no longer switches to quirks mode once its data or lazy modules are cached on the server.
+
 ## 6.8.3
 
 ### Patch Changes
