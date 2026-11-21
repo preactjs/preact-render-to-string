@@ -175,7 +175,7 @@ describe('recoverable errors', () => {
 		deferred.resolve();
 		await result;
 		expect(chunks).to.contain(createClientRenderInstruction(id, 'nonce'));
-		expect(chunks.join('')).not.to.contain('<preact-island');
+		expect(chunks.join('')).not.to.contain('<template for');
 		expect(chunks.join('')).not.to.contain('undefined');
 	});
 
@@ -279,7 +279,7 @@ describe('recoverable errors', () => {
 			await new Promise((resolve) => setTimeout(resolve, 0));
 			expect(abandonedRenders).toBe(1);
 			expect(chunks).to.deep.equal(completed);
-			expect(chunks.join('')).not.to.contain('<preact-island');
+			expect(chunks.join('')).not.to.contain('<template for');
 		});
 	}
 
@@ -299,8 +299,8 @@ describe('recoverable errors', () => {
 		first.resolve();
 		second.resolve();
 		await result;
-		expect(chunks.join('')).to.contain('<b>ready</b></preact-island>');
-		expect(chunks.filter((s) => s.startsWith('<preact-island'))).to.have.length(
+		expect(chunks.join('')).to.contain('<b>ready</b></template>');
+		expect(chunks.filter((s) => s.startsWith('<template for'))).to.have.length(
 			1
 		);
 	});
@@ -323,7 +323,7 @@ describe('recoverable errors', () => {
 		const html = chunks.join('');
 		expect(html).to.contain('<b>keep</b>');
 		expect(html).to.contain('<script');
-		expect(html).not.to.contain('<preact-island');
+		expect(html).not.to.contain('<template for');
 	});
 
 	it('reports a fatal error from a streaming retry', async () => {
