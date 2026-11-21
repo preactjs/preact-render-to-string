@@ -1,5 +1,5 @@
 import { renderToString } from '../index.js';
-import { CHILD_DID_SUSPEND, PARENT } from './constants.js';
+import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
 import { Deferred } from './util.js';
 import {
 	createInitScript,
@@ -27,10 +27,6 @@ export async function renderToChunks(
 		onError: handleError,
 		reportError: onError || console.error,
 		suspended: [],
-		markup: new Map(),
-		contexts: new Map(),
-		takeMarkup,
-		rendering: true,
 		nonce
 	};
 
@@ -41,7 +37,6 @@ export async function renderToChunks(
 		// Synchronously render the shell
 		// @ts-ignore - using third internal RendererState argument
 		const shell = renderToString(vnode, context, renderer);
-		renderer.rendering = false;
 		if (onShellReady) onShellReady();
 
 		const prefix = shell.trimStart().startsWith('<html')
@@ -92,13 +87,6 @@ async function forkPromises(renderer) {
 	}
 }
 
-/** Only Suspense-like classes (compat's Suspense) are boundaries, not
- * components that set `_childDidSuspend` on the instance (preact-iso). */
-function isBoundary(vnode) {
-	const proto = vnode.type && vnode.type.prototype;
-	return !!(proto && proto[CHILD_DID_SUSPEND]);
-}
-
 /** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
 	const recoverable = isRecoverable(error);
@@ -106,19 +94,20 @@ function handleError(error, vnode, renderChild) {
 
 	// Recoverables reach this handler at the boundary itself. Promise retries
 	// can reach it from a descendant, just like their initial suspension.
-	const caught = vnode;
-	if (!recoverable || !isBoundary(vnode)) {
-		while ((vnode = vnode[PARENT]) && !isBoundary(vnode));
+	if (
+		!recoverable ||
+		!vnode[COMPONENT] ||
+		!vnode[COMPONENT][CHILD_DID_SUSPEND]
+	) {
+		while ((vnode = vnode[PARENT])) {
+			const component = vnode[COMPONENT];
+			if (component && component[CHILD_DID_SUSPEND]) break;
+		}
 	}
 	if (!vnode) throw error;
-	// The range has to cover all of the boundary's children, not just the
-	// component that caught: hand the markup to the boundary's own frame and
-	// let the siblings render (and suspend) in this pass.
-	const defer = caught != vnode && this.rendering;
 
 	const id = vnode.__v;
-	const ctx = this.contexts.get(vnode);
-	const found = this.suspended.find((x) => x.id === id && x.renderer);
+	const found = this.suspended.find((x) => x.id === id);
 
 	// An error below a boundary is reported and the boundary is left to the
 	// client, the same goes for anything that suspends after an abort.
@@ -126,14 +115,11 @@ function handleError(error, vnode, renderChild) {
 	if (!suspended || aborted) {
 		if (!recoverable && !suspended) this.reportError(error);
 		abandon(this, vnode);
-		if (found && !this.markup.has(vnode)) {
+		if (found) {
 			if (!aborted) this.onWrite(createClientRenderInstruction(id, this.nonce));
 			return '';
 		}
-		const html = `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT], ctx)}<!--/$s:${id}-->`;
-		if (!defer) return html;
-		this.markup.set(vnode, html);
-		return '';
+		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
 	}
 
 	const completion = new Deferred();
@@ -142,7 +128,6 @@ function handleError(error, vnode, renderChild) {
 		vnode,
 		renderer: this,
 		renderChild,
-		context: ctx,
 		promise: completion.promise,
 		resolve: completion.resolve,
 		abort: null
@@ -161,11 +146,10 @@ function handleError(error, vnode, renderChild) {
 			finishPending.bind(null, pending, completion.reject)
 		);
 
-	if (found) return '';
-	const html = `<!--$s?:${id}--><?start name="${id}">${renderChild(vnode.props.fallback, vnode[PARENT], ctx)}<?end><!--/$s:${id}-->`;
-	if (!defer) return html;
-	this.markup.set(vnode, html);
-	return '';
+	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
+	return found
+		? ''
+		: `<!--$s?:${id}--><?start name="${id}">${fallback}<?end><!--/$s:${id}-->`;
 }
 
 function retryPending(pending) {
@@ -173,13 +157,7 @@ function retryPending(pending) {
 	if (!renderer) return;
 	const vnode = pending.vnode;
 	const suspendedCount = renderer.suspended.length;
-	renderer.rendering = true;
-	let child;
-	try {
-		child = pending.renderChild(vnode.props.children, vnode, pending.context);
-	} finally {
-		renderer.rendering = false;
-	}
+	const child = pending.renderChild(vnode.props.children, vnode);
 	const suspendedAgain = renderer.suspended
 		.slice(suspendedCount)
 		.some((s) => s.id === pending.id);
@@ -224,23 +202,6 @@ function clientRender(pending) {
 	const id = pending.id;
 	abandon(renderer, pending.vnode);
 	renderer.onWrite(createClientRenderInstruction(id, renderer.nonce));
-}
-
-/**
- * The boundary's content was discarded for its fallback: the boundaries found
- * inside it are rendered again when it retries.
- * @this {RendererState}
- */
-function takeMarkup(vnode) {
-	const markup = this.markup.get(vnode);
-	this.markup.delete(vnode);
-	for (const pending of this.suspended) {
-		let parent = pending.vnode;
-		if (parent === vnode) continue;
-		while (parent && parent !== vnode) parent = parent[PARENT];
-		if (parent) finishPending(pending, pending.resolve);
-	}
-	return markup;
 }
 
 /** Complete the pending work at or below a boundary without streaming it. */
