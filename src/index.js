@@ -26,7 +26,8 @@ import {
 	SKIP_EFFECTS,
 	VNODE,
 	CATCH_ERROR,
-	CHILD_DID_SUSPEND
+	CHILD_DID_SUSPEND,
+	MASK
 } from './lib/constants.js';
 
 const EMPTY_OBJ = {};
@@ -642,7 +643,13 @@ function _renderToString(
 
 			if (!error || typeof error.then != 'function') throw error;
 
+			// The retry renders this subtree from scratch. When it is the body of
+			// a Suspense, restart the boundary's useId counter so ids match a
+			// client that renders it in one go.
+			const owner = type === Fragment && parent[COMPONENT];
+			const mask = owner && owner[MASK];
 			const renderNestedChildren = () => {
+				if (mask) mask[1] = 0;
 				try {
 					const result = withSkipEffects(() =>
 						_renderToString(

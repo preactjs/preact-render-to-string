@@ -423,6 +423,40 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<!--$s--><p>ok</p><!--/$s-->');
 	});
 
+	const Id = () => <input id={useId()} />;
+	// Needs a preact whose Suspense scopes useId ("PP0-0-0" inside one)
+	const scopedIds = renderToString(
+		<Suspense fallback={null}>
+			<Id />
+		</Suspense>
+	).includes('PP');
+
+	it.skipIf(!scopedIds)(
+		'should restart the ids of a boundary that retries',
+		async () => {
+			const { suspended, Suspender } = createSuspender();
+			const promise = renderToStringAsync(
+				<Suspense fallback={null}>
+					<Id />
+					<Suspender>
+						<Id />
+					</Suspender>
+				</Suspense>
+			);
+			suspended.resolve();
+			const rendered = await promise;
+
+			expect(rendered.replace(/<!--\/?\$s-->/g, '')).to.equal(
+				renderToString(
+					<Suspense fallback={null}>
+						<Id />
+						<Id />
+					</Suspense>
+				)
+			);
+		}
+	);
+
 	it('should work with an in-render suspension', async () => {
 		const Context = createContext();
 
