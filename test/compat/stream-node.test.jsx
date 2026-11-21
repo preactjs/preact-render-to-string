@@ -276,7 +276,7 @@ describe('renderToPipeableStream', () => {
 		await new Promise((r) => setTimeout(r, 10));
 
 		expect(flushed).to.have.length(2);
-		expect(flushed[1]).to.contain('>first</template>');
+		expect(flushed[1]).to.contain('>first</preact-island>');
 
 		second.suspended.resolve();
 		await sink.promise;
