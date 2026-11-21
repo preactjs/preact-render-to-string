@@ -35,8 +35,50 @@ const EMPTY_ARR = [];
 const isArray = Array.isArray;
 const assign = Object.assign;
 const EMPTY_STR = '';
-const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
+// Whether renderToStringAsync is rendering a subtree again after it suspended
+let retrying = false;
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
+
+/**
+ * Open a range for a component. The number is how many components (not
+ * counting Fragments) sit between it and the closest element, so the client
+ * can tell it apart from a descendant that starts at the same spot and
+ * suspends there instead.
+ * @param {VNode} vnode
+ */
+function ownerMarker(vnode) {
+	let depth = 0;
+	for (; vnode && typeof vnode.type == 'function'; vnode = vnode[PARENT]) {
+		if (vnode.type !== Fragment) depth++;
+	}
+	return '<!--$s' + depth + '-->';
+}
+
+/**
+ * Whether a component's range gets markers: when a Suspense boundary renders
+ * it directly, or anywhere in a streamed chunk. A client that suspends in it
+ * while hydrating then keeps all of what it rendered, rather than its first
+ * node or the boundary's whole range.
+ * @param {VNode} vnode
+ * @param {VNode} parent
+ * @param {RendererState | undefined | false} renderer
+ */
+function isMarked(vnode, parent, renderer) {
+	let type = vnode.type;
+	if (
+		type === Fragment ||
+		(type.prototype && type.prototype[CHILD_DID_SUSPEND])
+	)
+		return false;
+	if (retrying || (renderer && renderer.streaming)) return true;
+	while (parent && parent.type === Fragment) parent = parent[PARENT];
+	return !!(
+		parent &&
+		typeof parent.type == 'function' &&
+		parent.type.prototype &&
+		parent.type.prototype[CHILD_DID_SUSPEND]
+	);
+}
 
 /**
  * Wraps a render result with suspense boundary markers, handling all possible
@@ -44,15 +86,14 @@ const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
  * @param {string | Array | Promise} result
  * @returns {string | Array | Promise}
  */
-function wrapWithSuspenseMarkers(result, clientOnly = false) {
-	const start = clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR;
+function wrapWithSuspenseMarkers(result, start) {
 	if (isArray(result)) {
 		result.unshift(start);
 		result.push(END_SUSPENSE_DENOMINATOR);
 		return result;
 	}
 	if (result && typeof result.then === 'function') {
-		return result.then((value) => wrapWithSuspenseMarkers(value, clientOnly));
+		return result.then((value) => wrapWithSuspenseMarkers(value, start));
 	}
 	return start + result + END_SUSPENSE_DENOMINATOR;
 }
@@ -417,6 +458,15 @@ function _renderToString(
 
 			let isClassComponent =
 				type.prototype && typeof type.prototype.render == 'function';
+			// A streamed boundary retries its children with its own context
+			if (
+				renderer &&
+				renderer.contexts &&
+				type.prototype &&
+				type.prototype[CHILD_DID_SUSPEND]
+			) {
+				renderer.contexts.set(vnode, context);
+			}
 			if (isClassComponent) {
 				rendered = /**#__NOINLINE__**/ renderClassComponent(
 					vnode,
@@ -561,7 +611,7 @@ function _renderToString(
 					asyncMode
 						? renderAsyncFallback(renderFallback)
 						: withSkipEffects(renderFallback),
-					true
+					'<!--$s!-->'
 				);
 			});
 
@@ -587,8 +637,24 @@ function _renderToString(
 				return resolveRenderResult(str).catch(recover);
 			}
 
-			if (vnode._suspended) {
-				return wrapWithSuspenseMarkers(str);
+			if (vnode._suspended || isMarked(vnode, parent, renderer)) {
+				return wrapWithSuspenseMarkers(str, ownerMarker(vnode));
+			}
+
+			if (renderer && renderer.markup && renderer.markup.has(vnode)) {
+				return renderer.takeMarkup(vnode);
+			}
+
+			// A streamed boundary that didn't suspend marks its range like one
+			// that was patched: hydration can then tell it from the range of a
+			// boundary its content starts with.
+			if (
+				renderer &&
+				recover &&
+				typeof str == 'string' &&
+				/^<!--\$s[?!]:/.test(str)
+			) {
+				return `<!--$s:${vnode.__v}-->${str}<!--/$s:${vnode.__v}-->`;
 			}
 
 			return str;
@@ -599,12 +665,12 @@ function _renderToString(
 			}
 			if (!asyncMode && renderer && renderer.onError) {
 				const onError = (error) => {
-					return renderer.onError(error, vnode, (child, parent) => {
+					return renderer.onError(error, vnode, (child, parent, ctx) => {
 						try {
 							return withSkipEffects(() =>
 								_renderToString(
 									child,
-									context,
+									ctx || context,
 									isSvgMode,
 									selectValue,
 									parent,
@@ -638,19 +704,27 @@ function _renderToString(
 			const renderNestedChildren = () => {
 				if (mask) mask[1] = 0;
 				try {
-					const result = withSkipEffects(() =>
-						_renderToString(
-							rendered,
-							context,
-							isSvgMode,
-							selectValue,
-							vnode,
-							asyncMode,
-							renderer,
-							hooks
-						)
-					);
-					return vnode._suspended ? wrapWithSuspenseMarkers(result) : result;
+					const result = withSkipEffects(() => {
+						const wasRetrying = retrying;
+						retrying = true;
+						try {
+							return _renderToString(
+								rendered,
+								context,
+								isSvgMode,
+								selectValue,
+								vnode,
+								asyncMode,
+								renderer,
+								hooks
+							);
+						} finally {
+							retrying = wasRetrying;
+						}
+					});
+					return vnode._suspended || isMarked(vnode, parent, renderer)
+						? wrapWithSuspenseMarkers(result, ownerMarker(vnode))
+						: result;
 				} catch (e) {
 					if (!e || typeof e.then != 'function') throw e;
 

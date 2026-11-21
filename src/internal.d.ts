@@ -6,18 +6,23 @@ interface Suspended {
 	resolve: () => void;
 	vnode: VNode | null;
 	renderer: RendererState | null;
-	renderChild:
-		| ((child: ComponentChildren, parent: ComponentChild) => string)
-		| null;
+	renderChild: RenderChild | null;
+	context: any;
 	abort: (() => void) | null;
 }
+
+type RenderChild = (
+	child: ComponentChildren,
+	parent: ComponentChild,
+	context?: any
+) => string;
 
 interface RendererErrorHandler {
 	(
 		this: RendererState,
 		error: any,
 		vnode: VNode<{ fallback: any }>,
-		renderChild: (child: ComponentChildren, parent: ComponentChild) => string
+		renderChild: RenderChild
 	): string | undefined;
 }
 
@@ -29,6 +34,12 @@ interface RendererState {
 	abortSignal?: AbortSignal | undefined;
 	onWrite: (str: string) => void;
 	onError?: RendererErrorHandler;
+	markup: Map<VNode, string>;
+	contexts: Map<VNode, any>;
+	takeMarkup: (this: RendererState, vnode: VNode) => string;
+	rendering: boolean;
+	/** Whether a streamed chunk is rendering */
+	streaming?: boolean;
 }
 
 interface CapturedHooks {

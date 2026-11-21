@@ -1,8 +1,9 @@
-import { h } from 'preact';
+import { h, createContext } from 'preact';
 import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
-import { useId } from 'preact/hooks';
+import { useId, useContext } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
+import { renderToString } from '../../src/index.js';
 import {
 	createSubtree,
 	createInitScript,
@@ -22,6 +23,14 @@ describe('renderToChunks', () => {
 		expect(result).toEqual(['<div class="foo">bar</div>']);
 	});
 
+	it('should include the $PRS helper in the init script', () => {
+		expect(createInitScript()).toContain('window.$PRS=');
+		expect(createSubtree('1', '<p>x</p>')).toContain('template for="1"');
+		expect(createSubtree('1', '<p>x</p>')).toContain(
+			'<script data-p="1">$PRS()</script>'
+		);
+	});
+
 	it('should render fallback + attach loaded subtree on suspend', async () => {
 		const { Suspender, suspended } = createSuspender();
 
@@ -39,11 +48,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
-			'<div hidden>',
+			`<div><!--$s?:5--><?start name="5">loading...<?end><!--/$s:5--></div>`,
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>'),
-			'</div>'
+			createSubtree('5', '<!--$s2--><p>it works</p><!--/$s-->')
 		]);
 	});
 
@@ -71,11 +78,9 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:10-->loading...<!--/$s:10--></div>',
-			'<div hidden>',
+			`<div><!--$s?:10--><?start name="10">loading...<?end><!--/$s:10--></div>`,
 			createInitScript(),
-			createClientRenderInstruction('10'),
-			'</div>'
+			createClientRenderInstruction('10')
 		]);
 	});
 
@@ -119,11 +124,9 @@ describe('renderToChunks', () => {
 		}
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:16-->loading...<!--/$s:16--></div>',
-			'<div hidden>',
+			`<div><!--$s?:16--><?start name="16">loading...<?end><!--/$s:16--></div>`,
 			createInitScript(),
-			createSubtree('16', '<p>it works</p>'),
-			'</div>'
+			createSubtree('16', '<!--$s2--><!--$s3--><p>it works</p><!--/$s--><!--/$s-->')
 		]);
 	});
 
@@ -152,11 +155,9 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><p>id: P0-0</p><!--$s:24-->loading...<!--/$s:24--></div>',
-			'<div hidden>',
+			`<div><p>id: P0-0</p><!--$s?:24--><?start name="24">loading...<?end><!--/$s:24--></div>`,
 			createInitScript(),
-			createSubtree('24', '<p>id: P0-1</p>'),
-			'</div>'
+			createSubtree('24', '<!--$s2--><!--$s3--><p>id: P0-1</p><!--/$s--><!--/$s-->')
 		]);
 	});
 
@@ -192,12 +193,10 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).toEqual([
-			'<div><p>id: P0-0</p><!--$s:33-->loading...<!--/$s:33--><!--$s:36-->loading...<!--/$s:36--></div>',
-			'<div hidden>',
+			`<div><p>id: P0-0</p><!--$s?:33--><?start name="33">loading...<?end><!--/$s:33--><!--$s?:36--><?start name="36">loading...<?end><!--/$s:36--></div>`,
 			createInitScript(),
-			createSubtree('33', '<p>id: P0-1</p>'),
-			createSubtree('36', '<p>id: P0-2</p>'),
-			'</div>'
+			createSubtree('33', '<!--$s2--><!--$s3--><p>id: P0-1</p><!--/$s--><!--/$s-->'),
+			createSubtree('36', '<!--$s2--><!--$s3--><p>id: P0-2</p><!--/$s--><!--/$s-->')
 		]);
 	});
 
@@ -223,8 +222,8 @@ describe('renderToChunks', () => {
 
 		const fullHtml = result.join('');
 
-		// Deferred wrapper must appear before </body></html>, not after
-		const deferredPos = fullHtml.indexOf('<div hidden>');
+		// Deferred init script / templates must appear before </body></html>, not after
+		const deferredPos = fullHtml.indexOf(createInitScript());
 		const bodyClosePos = fullHtml.indexOf('</body>');
 		const htmlClosePos = fullHtml.indexOf('</html>');
 
@@ -315,11 +314,12 @@ describe('renderToChunks', () => {
 		await promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:70-->loading part 1...<!--/$s:70--></div>',
-			'<div hidden>',
+			`<div><!--$s?:70--><?start name="70">loading part 1...<?end><!--/$s:70--></div>`,
 			createInitScript(),
-			createSubtree('70', '<p>it works</p><p>it works</p>'),
-			'</div>'
+			createSubtree(
+				'70',
+				'<!--$s3--><p>it works</p><!--/$s--><!--$s3--><p>it works</p><!--/$s-->'
+			)
 		]);
 	});
 
@@ -342,7 +342,7 @@ describe('renderToChunks', () => {
 		expect(fullHtml).to.contain('<script nonce="r4nd0m-nonce">');
 
 		// The init script should be the only script emitted
-		expect(result[2]).to.equal(createInitScript('r4nd0m-nonce'));
+		expect(result[1]).to.equal(createInitScript('r4nd0m-nonce'));
 	});
 
 	it.each([
@@ -367,14 +367,25 @@ describe('renderToChunks', () => {
 
 			const id = result[0].match(/\$s:(\d+)/)[1];
 			expect(result).toEqual([
-				`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
-				'<div hidden>',
+				`<!--$s?:${id}--><?start name="${id}">loading...<?end><!--/$s:${id}-->`,
 				createInitScript(),
-				createSubtree(id, ''),
-				'</div>'
+				createSubtree(id, '<!--$s2--><!--/$s-->')
 			]);
 		}
 	);
+
+	it('should mark each component a boundary renders directly in the shell', async () => {
+		const Two = () => [<b key="a">a</b>, <b key="b">b</b>];
+		const result = [];
+		await renderToChunks(
+			<Suspense fallback="loading...">
+				<Two />
+			</Suspense>,
+			{ onWrite: (chunk) => result.push(chunk) }
+		);
+
+		expect(result).toEqual(['<!--$s2--><b>a</b><b>b</b><!--/$s-->']);
+	});
 
 	it('should wait for every suspension in a boundary before patching it', async () => {
 		const first = createSuspender();
@@ -395,16 +406,147 @@ describe('renderToChunks', () => {
 		first.suspended.resolve();
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(
-			result.filter((chunk) => chunk.startsWith('<preact-island'))
+			result.filter((chunk) => chunk.startsWith('<template for='))
 		).toEqual([]);
 
 		second.suspended.resolve();
 		await promise;
 		const patches = result.filter((chunk) =>
-			chunk.startsWith('<preact-island')
+			chunk.startsWith('<template for=')
 		);
 		expect(patches).toHaveLength(1);
-		expect(patches[0]).toContain('<p>first</p><p>second</p>');
+		expect(patches[0]).toContain(
+			'<!--$s2--><p>first</p><!--/$s--><!--$s2--><p>second</p><!--/$s-->'
+		);
+	});
+
+	it('should keep the siblings of a wrapped suspender inside the boundary', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const Card = ({ children }) => <div class="card">{children}</div>;
+		const result = [];
+		const promise = renderToChunks(
+			<main>
+				<Suspense fallback={<i>loading</i>}>
+					<h1>header</h1>
+					<Card>
+						<Suspender />
+					</Card>
+					<footer>footer</footer>
+				</Suspense>
+			</main>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+		await promise;
+
+		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
+		expect(result).to.deep.equal([
+			`<main><!--$s?:${id}--><?start name="${id}"><i>loading</i><?end><!--/$s:${id}--></main>`,
+			createInitScript(),
+			createSubtree(
+				id,
+				'<h1>header</h1><!--$s2--><div class="card"><!--$s1--><p>it works</p><!--/$s--></div><!--/$s--><footer>footer</footer>'
+			)
+		]);
+	});
+
+	it('should stream a boundary found in discarded content once, inside its parent', async () => {
+		const outer = createSuspender();
+		const inner = createSuspender();
+		const Card = ({ children }) => <div>{children}</div>;
+		const result = [];
+		const promise = renderToChunks(
+			<Suspense fallback="outer">
+				<Card>
+					<outer.Suspender />
+				</Card>
+				<Suspense fallback="inner">
+					<Card>
+						<inner.Suspender>inner</inner.Suspender>
+					</Card>
+				</Suspense>
+			</Suspense>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		outer.suspended.resolve();
+		await new Promise((r) => setTimeout(r));
+		inner.suspended.resolve();
+		await promise;
+
+		const html = result.join('');
+		const [outerId, innerId] = [...html.matchAll(/\$s\?:(-?\d+)/g)].map(
+			(m) => m[1]
+		);
+		expect(result[0]).to.equal(
+			`<!--$s?:${outerId}--><?start name="${outerId}">outer<?end><!--/$s:${outerId}-->`
+		);
+		expect(result.slice(2)).to.deep.equal([
+			createSubtree(
+				outerId,
+				`<!--$s2--><div><!--$s1--><p>it works</p><!--/$s--></div><!--/$s--><!--$s?:${innerId}--><?start name="${innerId}">inner<?end><!--/$s:${innerId}-->`
+			),
+			createSubtree(innerId, '<!--$s3--><div><!--$s1-->inner<!--/$s--></div><!--/$s-->')
+		]);
+	});
+
+	it('should not treat a component that catches suspensions on its instance as a boundary', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const Route = ({ route }) => route;
+		function Router({ children }) {
+			this.__c = () => {};
+			return <Route route={children[1]} />;
+		}
+		const result = [];
+		const promise = renderToChunks(
+			<Suspense fallback="loading">
+				<Router>
+					<p>a</p>
+					<Suspender>b</Suspender>
+					<p>c</p>
+				</Router>
+			</Suspense>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+		await promise;
+
+		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
+		expect(result[2]).to.equal(createSubtree(id, '<!--$s2--><!--$s3--><!--$s4-->b<!--/$s--><!--/$s--><!--/$s-->'));
+	});
+
+	it('should retry a boundary with its own context', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const Depth = createContext(0);
+		function Nested({ children }) {
+			const depth = useContext(Depth) + 1;
+			return (
+				<Depth.Provider value={depth}>
+					<p>depth {depth}</p>
+					{children}
+				</Depth.Provider>
+			);
+		}
+		const result = [];
+		const promise = renderToChunks(
+			<Suspense fallback="loading">
+				<Nested>
+					<Nested>
+						<Suspender />
+					</Nested>
+				</Nested>
+			</Suspense>,
+			{ onWrite: (s) => result.push(s) }
+		);
+		suspended.resolve();
+		await promise;
+
+		const id = result[0].match(/\$s\?:(-?\d+)/)[1];
+		expect(result[2]).to.equal(
+			createSubtree(
+				id,
+				'<!--$s2--><!--$s3--><p>depth 1</p><!--$s4--><!--$s5--><p>depth 2</p><!--$s6--><p>it works</p><!--/$s--><!--/$s--><!--/$s--><!--/$s--><!--/$s-->'
+			)
+		);
 	});
 
 	it('should report a boundary that throws after resuming and leave it to the client', async () => {
@@ -430,10 +572,7 @@ describe('renderToChunks', () => {
 
 		expect(errors).to.deep.equal([error]);
 		const id = /\$s:(\d+)/.exec(result[0])[1];
-		expect(result.slice(3)).to.deep.equal([
-			createClientRenderInstruction(id),
-			'</div>'
-		]);
+		expect(result.slice(2)).to.deep.equal([createClientRenderInstruction(id)]);
 	});
 
 	it('should report a rejected suspension and keep streaming its siblings', async () => {
@@ -466,7 +605,7 @@ describe('renderToChunks', () => {
 		expect(errors).to.deep.equal([error]);
 		expect(html).to.contain('a...');
 		expect(html).to.match(/<script>.*\$s!:/);
-		expect(html).to.match(/<preact-island[^>]*><p>it works<\/p>/);
+		expect(html).to.match(/<template for="\d+"><!--\$s\d+--><p>it works<\/p>/);
 		expect(html).not.to.contain('undefined');
 	});
 
@@ -503,5 +642,38 @@ describe('createInitScript', () => {
 		const script = createInitScript('a"b&c<d');
 		expect(script.startsWith('<script nonce="a&quot;b&amp;c&lt;d">')).to.be
 			.true;
+	});
+
+	it('should restart the ids of a boundary when its chunk renders', async ({
+		skip
+	}) => {
+		const Id = () => <i id={useId()} />;
+		// Needs a preact whose Suspense scopes useId ("PP0-0-0" inside one)
+		if (
+			!renderToString(
+				<Suspense fallback={null}>
+					<Id />
+				</Suspense>
+			).includes('PP')
+		)
+			skip();
+
+		const { Suspender, suspended } = createSuspender();
+		const result = [];
+		const promise = renderToChunks(
+			<Suspense fallback="loading...">
+				<Id />
+				<Suspender>
+					<Id />
+				</Suspender>
+			</Suspense>,
+			{ onWrite: (chunk) => result.push(chunk) }
+		);
+		suspended.resolve();
+		await promise;
+
+		expect(result[2]).to.contain(
+			'<!--$s2--><i id="PP0-0-0"></i><!--/$s--><!--$s2--><i id="PP0-0-1"></i><!--/$s-->'
+		);
 	});
 });
