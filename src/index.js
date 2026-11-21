@@ -595,7 +595,7 @@ function _renderToString(
 				return resolveRenderResult(str).catch(recover);
 			}
 
-			if (vnode._suspended) {
+			if (vnode._suspended || isBoundaryChild(vnode, renderer, asyncMode)) {
 				return wrapWithSuspenseMarkers(str);
 			}
 
@@ -871,6 +871,30 @@ function resolveRenderResult(result) {
 					parts.join(EMPTY_STR)
 				)
 			: value
+	);
+}
+
+/**
+ * Whether a component is rendered directly by a Suspense boundary. Its range
+ * gets markers, so a client that suspends in it while hydrating keeps all of
+ * what it rendered rather than its first node.
+ * @param {VNode} vnode
+ */
+function isBoundaryChild(vnode, renderer, asyncMode) {
+	let type = vnode.type,
+		p = vnode[PARENT];
+	if (
+		(renderer && !asyncMode) ||
+		type === Fragment ||
+		(type.prototype && type.prototype[CHILD_DID_SUSPEND])
+	)
+		return false;
+	while (p && p.type === Fragment) p = p[PARENT];
+	return !!(
+		p &&
+		typeof p.type == 'function' &&
+		p.type.prototype &&
+		p.type.prototype[CHILD_DID_SUSPEND]
 	);
 }
 

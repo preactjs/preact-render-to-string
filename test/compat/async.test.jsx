@@ -423,6 +423,25 @@ describe('Async renderToString', () => {
 		expect(rendered).to.equal('<!--$s--><p>ok</p><!--/$s-->');
 	});
 
+	it('should mark each component a Suspense renders directly', async () => {
+		const Two = () => (
+			<Fragment>
+				<b>a</b>
+				<b>b</b>
+			</Fragment>
+		);
+		const tree = (
+			<Suspense fallback={null}>
+				<Two />
+				<p>c</p>
+			</Suspense>
+		);
+		const expected = '<!--$s--><b>a</b><b>b</b><!--/$s--><p>c</p>';
+
+		expect(await renderToStringAsync(tree)).to.equal(expected);
+		expect(renderToString(tree)).to.equal(expected);
+	});
+
 	it('should work with an in-render suspension', async () => {
 		const Context = createContext();
 
