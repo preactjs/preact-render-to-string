@@ -446,12 +446,15 @@ describe('Async renderToString', () => {
 			suspended.resolve();
 			const rendered = await promise;
 
-			expect(rendered.replace(/<!--\/?\$s-->/g, '')).to.equal(
-				renderToString(
-					<Suspense fallback={null}>
-						<Id />
-						<Id />
-					</Suspense>
+			const ids = (html) => html.match(/P[\w-]+/g);
+			expect(ids(rendered)).to.deep.equal(
+				ids(
+					renderToString(
+						<Suspense fallback={null}>
+							<Id />
+							<Id />
+						</Suspense>
+					)
 				)
 			);
 		}

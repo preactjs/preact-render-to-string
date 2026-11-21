@@ -3,6 +3,7 @@ import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { useId, useContext } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
+import { renderToString } from '../../src/index.js';
 import {
 	createSubtree,
 	createInitScript,
@@ -641,5 +642,38 @@ describe('createInitScript', () => {
 		const script = createInitScript('a"b&c<d');
 		expect(script.startsWith('<script nonce="a&quot;b&amp;c&lt;d">')).to.be
 			.true;
+	});
+
+	it('should restart the ids of a boundary when its chunk renders', async ({
+		skip
+	}) => {
+		const Id = () => <i id={useId()} />;
+		// Needs a preact whose Suspense scopes useId ("PP0-0-0" inside one)
+		if (
+			!renderToString(
+				<Suspense fallback={null}>
+					<Id />
+				</Suspense>
+			).includes('PP')
+		)
+			skip();
+
+		const { Suspender, suspended } = createSuspender();
+		const result = [];
+		const promise = renderToChunks(
+			<Suspense fallback="loading...">
+				<Id />
+				<Suspender>
+					<Id />
+				</Suspender>
+			</Suspense>,
+			{ onWrite: (chunk) => result.push(chunk) }
+		);
+		suspended.resolve();
+		await promise;
+
+		expect(result[2]).to.contain(
+			'<!--$s2--><i id="PP0-0-0"></i><!--/$s--><!--$s2--><i id="PP0-0-1"></i><!--/$s-->'
+		);
 	});
 });

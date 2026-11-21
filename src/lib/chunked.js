@@ -1,5 +1,5 @@
 import { renderToString } from '../index.js';
-import { CHILD_DID_SUSPEND, PARENT } from './constants.js';
+import { CHILD_DID_SUSPEND, COMPONENT, MASK, PARENT } from './constants.js';
 import { Deferred } from './util.js';
 import {
 	createInitScript,
@@ -173,6 +173,10 @@ function retryPending(pending) {
 	if (!renderer) return;
 	const vnode = pending.vnode;
 	const suspendedCount = renderer.suspended.length;
+	// The retry renders the boundary's children from scratch: restart its
+	// useId counter so ids match a client that renders them in one go.
+	const mask = vnode[COMPONENT] && vnode[COMPONENT][MASK];
+	if (mask) mask[1] = 0;
 	renderer.rendering = true;
 	let child;
 	try {
