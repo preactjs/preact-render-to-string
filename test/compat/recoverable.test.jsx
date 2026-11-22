@@ -3,7 +3,11 @@ import { Suspense } from 'preact/compat';
 import { describe, it, expect } from 'vitest';
 import { renderToString, renderToStringAsync } from '../../src/index.js';
 import { renderToChunks } from '../../src/lib/chunked.js';
-import { createClientRenderInstruction } from '../../src/lib/client.js';
+import { pendingRange } from '../utils.jsx';
+import {
+	createClientRenderInstruction,
+	createSubtree
+} from '../../src/lib/client.js';
 import { Deferred } from '../../src/lib/util.js';
 import { renderToReadableStream } from '../../src/stream.js';
 import { renderToPipeableStream } from '../../src/stream-node.js';
@@ -144,12 +148,10 @@ describe('recoverable errors', () => {
 			{ onWrite: (s) => chunks.push(s) }
 		);
 		expect(chunks).to.have.length(1);
-		expect(chunks[0]).to.match(
-			/^<!--\$s!:\d+--><i>fallback<\/i><!--\/\$s:\d+-->$/
-		);
+		expect(chunks[0]).to.equal('<!--$s!--><i>fallback</i><!--/$s-->');
 	});
 
-	it('marks an already-flushed fallback and completes abandoned sibling work', async () => {
+	it('marks an already-flushed fallback and completes abandoned nested work', async () => {
 		const deferred = new Deferred();
 		const Pending = afterPromise(deferred.promise);
 		function Never() {
@@ -165,17 +167,18 @@ describe('recoverable errors', () => {
 		const result = renderToChunks(
 			boundary(
 				<Fragment>
-					<NeverParent />
+					{boundary(<NeverParent />)}
 					<PendingParent />
 				</Fragment>
 			),
 			{ nonce: 'nonce', onWrite: (s) => chunks.push(s) }
 		);
-		const id = chunks[0].match(/\$s:(\d+)/)[1];
 		deferred.resolve();
 		await result;
-		expect(chunks).to.contain(createClientRenderInstruction(id, 'nonce'));
-		expect(chunks.join('')).not.to.contain('<preact-island');
+		// the nested boundary never reached the response, the outer one is id 1
+		expect(chunks[0]).to.equal(pendingRange('1', '<i>fallback</i>'));
+		expect(chunks).to.contain(createClientRenderInstruction('1', 'nonce'));
+		expect(chunks.join('')).not.to.contain('<template');
 		expect(chunks.join('')).not.to.contain('undefined');
 	});
 
@@ -202,7 +205,7 @@ describe('recoverable errors', () => {
 		expect(listeners.size).to.equal(0);
 	});
 
-	it('releases remaining pending work when a boundary fails', async () => {
+	it('releases nested pending work when a boundary fails', async () => {
 		const deferred = new Deferred();
 		const never = new Promise(() => {});
 		const listeners = new Set();
@@ -219,9 +222,10 @@ describe('recoverable errors', () => {
 		function Never() {
 			throw never;
 		}
-		function Fail() {
-			throw deferred.promise;
-		}
+		const error = new Error('failure');
+		const Fail = afterPromise(deferred.promise, () => {
+			throw error;
+		});
 		function NeverParent() {
 			return <Never />;
 		}
@@ -231,15 +235,15 @@ describe('recoverable errors', () => {
 		const result = renderToChunks(
 			boundary(
 				<Fragment>
-					<NeverParent />
+					{boundary(<NeverParent />)}
 					<FailParent />
 				</Fragment>
 			),
 			{ abortSignal, onWrite() {}, onError: (e) => errors.push(e) }
 		);
-		expect(listeners.size).to.equal(2);
-		const error = new Error('failure');
-		deferred.reject(error);
+		// only the outer boundary is pending, the nested one was abandoned
+		expect(listeners.size).to.equal(1);
+		deferred.resolve();
 		await result;
 		expect(errors).to.deep.equal([error]);
 		expect(listeners.size).to.equal(0);
@@ -265,8 +269,8 @@ describe('recoverable errors', () => {
 			const result = renderToChunks(
 				boundary(
 					<Fragment>
+						{boundary(<AbandonedParent />)}
 						<BailParent />
-						<AbandonedParent />
 					</Fragment>
 				),
 				{ onWrite: (s) => chunks.push(s) }
@@ -274,12 +278,14 @@ describe('recoverable errors', () => {
 			expect(abandonedRenders).toBe(1);
 			first.resolve();
 			await result;
+			// the nested boundary rendered again with the outer retry
+			expect(abandonedRenders).toBe(2);
 			const completed = chunks.slice();
 			second[outcome](new Error('abandoned'));
 			await new Promise((resolve) => setTimeout(resolve, 0));
-			expect(abandonedRenders).toBe(1);
+			expect(abandonedRenders).toBe(2);
 			expect(chunks).to.deep.equal(completed);
-			expect(chunks.join('')).not.to.contain('<preact-island');
+			expect(chunks.join('')).not.to.contain('<template');
 		});
 	}
 
@@ -299,10 +305,10 @@ describe('recoverable errors', () => {
 		first.resolve();
 		second.resolve();
 		await result;
-		expect(chunks.join('')).to.contain('<b>ready</b></preact-island>');
-		expect(chunks.filter((s) => s.startsWith('<preact-island'))).to.have.length(
-			1
-		);
+		// ids follow the order the boundaries suspended in
+		expect(chunks).to.contain(createSubtree('1', '<b>ready</b>'));
+		expect(chunks.filter((s) => s.startsWith('<template'))).to.have.length(1);
+		expect(chunks).to.contain(createClientRenderInstruction('0'));
 	});
 
 	it('abandons only the nested streaming boundary that bails out late', async () => {
@@ -341,7 +347,7 @@ describe('recoverable errors', () => {
 		deferred.resolve();
 		await result;
 		expect(errors).to.deep.equal([error]);
-		expect(chunks.join('')).to.contain('$s!:');
+		expect(chunks).to.contain(createClientRenderInstruction('0'));
 	});
 
 	it('rejects a streaming bailout with no boundary', async () => {
@@ -354,7 +360,7 @@ describe('recoverable errors', () => {
 		const stream = renderToReadableStream(boundary(<BrowserOnly />));
 		const reader = stream.getReader();
 		const first = await reader.read();
-		expect(new TextDecoder().decode(first.value)).to.contain('<!--$s!:');
+		expect(new TextDecoder().decode(first.value)).to.contain('<!--$s!-->');
 		expect((await reader.read()).done).to.equal(true);
 		await stream.allReady;
 	});
@@ -375,6 +381,6 @@ describe('recoverable errors', () => {
 			}).pipe(writable);
 		});
 		expect(errors).to.deep.equal([]);
-		expect(chunks.join('')).to.contain('<!--$s!:');
+		expect(chunks.join('')).to.contain('<!--$s!-->');
 	});
 });

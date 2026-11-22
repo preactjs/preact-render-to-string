@@ -37,6 +37,8 @@ const assign = Object.assign;
 const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
+// Opens a boundary's range (`$s?id` while it streams, `$s!` for the client)
+const BEGIN_BOUNDARY = '<!--$s=-->';
 
 /**
  * Wraps a render result with suspense boundary markers, handling all possible
@@ -44,15 +46,14 @@ const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
  * @param {string | Array | Promise} result
  * @returns {string | Array | Promise}
  */
-function wrapWithSuspenseMarkers(result, clientOnly = false) {
-	const start = clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR;
+function wrapWithSuspenseMarkers(result, start = BEGIN_SUSPENSE_DENOMINATOR) {
 	if (isArray(result)) {
 		result.unshift(start);
 		result.push(END_SUSPENSE_DENOMINATOR);
 		return result;
 	}
 	if (result && typeof result.then === 'function') {
-		return result.then((value) => wrapWithSuspenseMarkers(value, clientOnly));
+		return result.then((value) => wrapWithSuspenseMarkers(value, start));
 	}
 	return start + result + END_SUSPENSE_DENOMINATOR;
 }
@@ -488,6 +489,8 @@ function _renderToString(
 					);
 				} catch (err) {
 					if (isRecoverable(err)) throw err;
+					// Let the Suspense boundary above stream it
+					if (renderer && err && typeof err.then == 'function') throw err;
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
 					}
@@ -561,9 +564,12 @@ function _renderToString(
 					asyncMode
 						? renderAsyncFallback(renderFallback)
 						: withSkipEffects(renderFallback),
-					true
+					'<!--$s!-->'
 				);
 			});
+
+		// Suspense classes only, not instances that set `_childDidSuspend` (preact-iso)
+		const isBoundary = type.prototype && type.prototype[CHILD_DID_SUSPEND];
 
 		try {
 			// Recurse into children before invoking the after-diff hook
@@ -584,11 +590,21 @@ function _renderToString(
 			if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 			if (asyncMode && recover && typeof str != 'string') {
-				return resolveRenderResult(str).catch(recover);
+				return resolveRenderResult(str).then(
+					isBoundary
+						? (html) => BEGIN_BOUNDARY + html + END_SUSPENSE_DENOMINATOR
+						: undefined,
+					recover
+				);
 			}
 
 			if (vnode._suspended) {
 				return wrapWithSuspenseMarkers(str);
+			}
+
+			// Mark the range the client hydrates as one unit
+			if (isBoundary) {
+				return wrapWithSuspenseMarkers(str, BEGIN_BOUNDARY);
 			}
 
 			return str;
@@ -598,32 +614,23 @@ function _renderToString(
 				if (!renderer || asyncMode) return recover(error);
 			}
 			if (!asyncMode && renderer && renderer.onError) {
-				const onError = (error) => {
-					return renderer.onError(error, vnode, (child, parent) => {
-						try {
-							return withSkipEffects(() =>
-								_renderToString(
-									child,
-									context,
-									isSvgMode,
-									selectValue,
-									parent,
-									asyncMode,
-									renderer,
-									hooks
-								)
-							);
-						} catch (e) {
-							return onError(e);
-						}
-					});
-				};
-				let res = onError(error);
+				// Let the closest boundary render its fallback
+				if (!isBoundary) throw error;
 
-				if (res !== undefined) return res;
-
-				if (hooks.catchError) hooks.catchError(error, vnode);
-				return EMPTY_STR;
+				return renderer.onError(error, vnode, (child, parent) =>
+					withSkipEffects(() =>
+						_renderToString(
+							child,
+							context,
+							isSvgMode,
+							selectValue,
+							parent,
+							asyncMode,
+							renderer,
+							hooks
+						)
+					)
+				);
 			}
 
 			if (!asyncMode) throw error;

@@ -15,6 +15,15 @@ export function dedent([str]) {
 }
 
 const defaultChildren = <p>it works</p>;
+/**
+ * A boundary whose content is still to be streamed, as the renderer writes it.
+ * @param {string} id
+ * @param {string} fallback
+ */
+export function pendingRange(id, fallback) {
+	return `<!--$s?${id}--><?start name="${id}">${fallback}<?end><!--/$s?${id}-->`;
+}
+
 export function createSuspender() {
 	const deferred = new Deferred();
 	let resolved;

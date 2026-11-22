@@ -2,10 +2,14 @@ import { PassThrough } from 'node:stream';
 import { h } from 'preact';
 import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
-import { createSubtree, createInitScript } from '../../src/lib/client';
+import {
+	createSubtree,
+	createInitScript,
+	createClientRenderInstruction
+} from '../../src/lib/client';
 import { renderToPipeableStream } from '../../src/stream-node';
 import { Deferred } from '../../src/lib/util';
-import { createSuspender } from '../utils';
+import { createSuspender, pendingRange } from '../utils';
 
 function streamToString(stream) {
 	const decoder = new TextDecoder();
@@ -66,11 +70,9 @@ describe('renderToPipeableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).to.deep.equal([
-			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
-			'<div hidden>',
+			`<div>${pendingRange('0', 'loading...')}</div>`,
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>'),
-			'</div>'
+			createSubtree('0', '<p>it works</p>')
 		]);
 	});
 
@@ -119,8 +121,9 @@ describe('renderToPipeableStream', () => {
 		expect(errors).to.deep.equal([reason, reason]);
 		expect(allReady).to.equal(true);
 		expect(html).to.contain('loading...');
-		expect(html).to.contain('$s!:');
-		expect(html.endsWith('</div>')).to.equal(true);
+		expect(html).to.contain(createClientRenderInstruction('0'));
+		expect(html).to.contain(createClientRenderInstruction('1'));
+		expect(html.endsWith(createClientRenderInstruction('1'))).to.equal(true);
 	});
 
 	it('should not call onShellReady when the shell throws', async () => {
@@ -168,9 +171,7 @@ describe('renderToPipeableStream', () => {
 
 		const html = (await sink.promise).join('');
 		expect(calls).to.deep.equal([error, 'shell', 'all']);
-		expect(html).to.match(
-			/^<div><!--\$s!:\d+-->loading...<!--\/\$s:\d+--><\/div>$/
-		);
+		expect(html).to.equal('<div><!--$s!-->loading...<!--/$s--></div>');
 	});
 
 	it('should abort the render when the destination closes early', async () => {
@@ -236,13 +237,10 @@ describe('renderToPipeableStream', () => {
 		suspended.resolve();
 
 		const result = await sink.promise;
-		const id = result[0].match(/\$s:(\d+)/)[1];
 		expect(result).toEqual([
-			`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
-			'<div hidden>',
+			pendingRange('0', 'loading...'),
 			createInitScript(),
-			createSubtree(id, ''),
-			'</div>'
+			createSubtree('0', '')
 		]);
 	});
 
@@ -276,7 +274,7 @@ describe('renderToPipeableStream', () => {
 		await new Promise((r) => setTimeout(r, 10));
 
 		expect(flushed).to.have.length(2);
-		expect(flushed[1]).to.contain('>first</preact-island>');
+		expect(flushed[1]).to.contain(createSubtree('0', 'first'));
 
 		second.suspended.resolve();
 		await sink.promise;
