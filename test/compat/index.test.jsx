@@ -11,6 +11,43 @@ describe('compat', () => {
 		expect(rendered).to.equal(expected);
 	});
 
+	it('should mark the content of a Suspense boundary', () => {
+		expect(
+			render(
+				<div>
+					<compat.Suspense fallback="loading...">
+						<p>ready</p>
+					</compat.Suspense>
+				</div>
+			)
+		).to.equal('<div><!--$s=--><p>ready</p><!--/$s--></div>');
+	});
+
+	it('should mark nested Suspense boundaries and an empty one', () => {
+		expect(
+			render(
+				<compat.Suspense fallback="a">
+					<compat.Suspense fallback="b">x</compat.Suspense>
+					<compat.Suspense fallback="c" />
+				</compat.Suspense>
+			)
+		).to.equal('<!--$s=--><!--$s=-->x<!--/$s--><!--$s=--><!--/$s--><!--/$s-->');
+	});
+
+	it('should not mark components that are not Suspense boundaries', () => {
+		// like preact-iso, it sets the handler on the instance only
+		class Fake extends Component {
+			constructor(props) {
+				super(props);
+				this.__c = () => {};
+			}
+			render() {
+				return <b>x</b>;
+			}
+		}
+		expect(render(<Fake />)).to.equal('<b>x</b>');
+	});
+
 	it('should apply defaultProps to class components', () => {
 		class Test extends Component {
 			render(props) {
