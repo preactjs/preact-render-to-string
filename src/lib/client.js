@@ -2,18 +2,14 @@ import { encodeEntities } from './util.js';
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
-// // No optional chaining or logical assignment: the script is inlined as written, so its syntax
-// // sets the browser floor.
+// // Inlined as written: no optional chaining or logical assignment
 // ((d) => {
 // 	let s,
 // 		e,
-// 		// comments by their data ("$s?id" opens a pending range and "/$s?id" closes
-// 		// it), so each call is a lookup. The first one seen wins for as long as it
-// 		// is in the document: reparsing a namespace recreates the markers of nested
-// 		// boundaries.
+// 		// markers by their data; the first one in the document wins (reparsing a
+// 		// namespace recreates nested markers)
 // 		markers = new Map(),
-// 		// one live iterator over the document's comments: created on the first
-// 		// call and resumed by every later one, so each comment is visited once
+// 		// one iterator over the document's comments, resumed on each call
 // 		comments,
 // 		// index the comments that the iterator or walker `w` yields, until `end`
 // 		scan = (w, end, n, m) => {
@@ -24,8 +20,7 @@ import { encodeEntities } from './util.js';
 // 				}
 // 			}
 // 		},
-// 		// The client unmounted a boundary while it was pending and left its
-// 		// markers for us (`__w` is 0): drop them with what is in between.
+// 		// remove a range the client unmounted while pending (`__w` is 0)
 // 		drop = (s, e, n) => {
 // 			while ((n = s.nextSibling) != e) {
 // 				n.remove();
@@ -33,9 +28,8 @@ import { encodeEntities } from './util.js';
 // 			e.remove();
 // 			s.remove();
 // 		};
-// 	// When the response ends, a chunk that never arrived, or only in part,
-// 	// can't clear such a range. And a boundary still waiting for its chunk
-// 	// is left to the client ("$s!").
+// 	// when the response ends, boundaries still waiting go to the client, and
+// 	// unmounted ranges are removed
 // 	d.addEventListener("DOMContentLoaded", () => {
 // 		scan((comments = comments || d.createNodeIterator(d, 128)));
 // 		markers.forEach((m) => {
@@ -50,11 +44,10 @@ import { encodeEntities } from './util.js';
 // 			}
 // 		});
 // 	});
-// 	// Each chunk is <template for="id">..</template><script data-p="id">$PRS()</script>:
-// 	// the id is an attribute so every chunk script has the same text and one CSP
-// 	// hash covers all of them. Native DPU consumes the template while parsing and
-// 	// streams it into the range; otherwise $PRS polyfills the patch. A script
-// 	// with data-x and no template hands the range to the client.
+// 	// each chunk is <template for="id">..</template><script data-p="id">$PRS()</script>:
+// 	// the same script text everywhere, so one CSP hash covers it. Native DPU
+// 	// streams the template into the range, otherwise $PRS patches it. data-x
+// 	// without a template hands the range to the client.
 // 	window.$PRS = (c = d.currentScript, id = c.dataset.p) => {
 // 		let t = c.previousElementSibling,
 // 			n,
@@ -65,12 +58,9 @@ import { encodeEntities } from './util.js';
 // 		// index the markers parsed since the last call
 // 		scan((comments = comments || d.createNodeIterator(d, 128)));
 // 		s = markers.get("$s?" + id);
-// 		// A pending range closes with its id: what streams into it can hold
-// 		// ranges that are not closed yet, so counting markers would not find it.
+// 		// find the closer by id: the streamed content can hold unclosed ranges
 // 		e = markers.get("/$s?" + id);
-// 		// The range may sit in a subtree the client took out of the document for
-// 		// now. The browser does not patch it there, so the template is still here.
-// 		// The closing marker has to be a later sibling of the opening one.
+// 		// skip a range that is out of the document (the closer must be a sibling)
 // 		for (n = e && s; n && n != e; n = n.nextSibling);
 // 		if (!n) {
 // 			e = n;
@@ -80,11 +70,8 @@ import { encodeEntities } from './util.js';
 // 				drop(s, e);
 // 			} else if (s.data == "$s?" + id) {
 // 				n = s.nextSibling;
-// 				// "$s!": the client renders this boundary. The server asks for it
-// 				// with data-x. It is also all that is left when the chunk is lost:
-// 				// there is no template, yet the range still opens with <?start>
-// 				// (hydrating a whole document removes a template it finds half
-// 				// parsed in <body>, and the browser doesn't patch without one).
+// 				// "$s!" when the server asks for it (data-x), or when the template
+// 				// was lost and the range still opens with <?start>
 // 				if ("x" in c.dataset || (!t && (n.nodeType == 7 || /^[?]start/.test(n.data)))) {
 // 					s.data = "$s!";
 // 				} else {
@@ -95,11 +82,8 @@ import { encodeEntities } from './util.js';
 // 						}
 // 						e.before(t.content);
 // 					}
-// 					// DPU cannot patch into svg/math namespaces (needed even with
-// 					// native support), so reparse each element in its parent's
-// 					// namespace. The HTML parser turned every <image> into an <img>,
-// 					// which the svg namespace doesn't know: write it back (an HTML
-// 					// <img> below a foreignObject parses as <img> again).
+// 					// DPU can't patch into svg/math, so reparse the content in its
+// 					// namespace, restoring the <image> tags the HTML parser made <img>
 // 					if (s.parentNode.closest("svg,math")) {
 // 						for (n = s.nextSibling; n != e; n = l) {
 // 							l = n.nextSibling;
@@ -108,10 +92,8 @@ import { encodeEntities } from './util.js';
 // 							}
 // 						}
 // 					}
-// 					// nested boundaries' markers arrive with this one's content, before
-// 					// the iterator's position, so index what is between the markers now
-// 					// (a TreeWalker, unlike a NodeIterator, isn't tracked by the document
-// 					// for the rest of its life)
+// 					// index the nested markers that arrived with the content (a TreeWalker
+// 					// isn't tracked by the document like a NodeIterator)
 // 					n = d.createTreeWalker(d, 128);
 // 					n.currentNode = s;
 // 					scan(n, e);
@@ -145,8 +127,8 @@ export function createInitScript(nonce) {
 }
 
 /**
- * The content of a boundary: the browser streams the template into the range
- * that `<?start name="id">` opens, and the script tells hydration it is there.
+ * The browser streams the template into the `<?start name="id">` range, and
+ * the script tells hydration it is there.
  * @param {string} id
  * @param {string} content
  * @param {string} [nonce]
