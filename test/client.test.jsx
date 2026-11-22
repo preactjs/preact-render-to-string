@@ -404,6 +404,22 @@ describe('inline init script', () => {
 		);
 	});
 
+	it('should keep working when the init script runs twice', async () => {
+		const { window, document } = await createDom(`<div>${range('1')}</div>`);
+		const html = createInitScript();
+		expect(() =>
+			window.eval(html.slice('<script>'.length, -'</script>'.length))
+		).not.toThrow();
+		await appendIsland(window, createSubtree('1', '<p>resolved</p>'));
+		document.body.appendChild(document.createComment(''));
+		await tick();
+
+		expect(islands(document)).toHaveLength(0);
+		expect(document.body.innerHTML).toBe(
+			'<div><!--$s=--><p>resolved</p><!--/$s?1--></div>'
+		);
+	});
+
 	it('should leave another node after the island alone', async () => {
 		const { window, document } = await createDom(`<div>${range('1')}</div>`);
 		await appendIsland(window, createSubtree('1', '<p>resolved</p>'));

@@ -5,6 +5,10 @@ import { encodeEntities } from './util.js';
 // // No optional chaining or logical assignment: the script is inlined as written, so its syntax
 // // sets the browser floor.
 // ((d) => {
+// 	// a second copy of this script in the document leaves the first in charge
+// 	if (customElements.get("preact-island")) {
+// 		return;
+// 	}
 // 	let s,
 // 		e,
 // 		// comments by their data ("$s?id" opens a pending range and "/$s?id" closes
@@ -137,7 +141,7 @@ import { encodeEntities } from './util.js';
 
 // To modify the INIT_SCRIPT, uncomment the above code, modify it, and minify it
 // (`esbuild --minify --target=es2017` or https://try.terser.org/).
-const INIT_SCRIPT = `(o=>{let i,a,l=new Map,d,f=(t,r,e,s)=>{for(;(e=t.nextNode())&&e!=r;)s=l.get(e.data),(!s||!s.isConnected)&&l.set(e.data,e)},c=(t,r,e)=>{for(;(e=t.nextSibling)!=r;)e.remove();r.remove(),t.remove()},n=(t,r,e,s)=>{for(r=t.dataset.target,f(d=d||o.createNodeIterator(o,128)),i=l.get("$s?"+r),a=l.get("/$s?"+r),e=a&&i;e&&e!=a;e=e.nextSibling);if(e){if(i.__w===0)c(i,a);else if(i.data=="$s?"+r){if("x"in t.dataset)i.data="$s!";else{for(;(e=i.nextSibling)!=a;)e.remove();for(;e=t.firstChild;)a.before(e);if(i.parentNode.closest("svg,math"))for(e=i.nextSibling;e!=a;e=s)s=e.nextSibling,e.nodeType==1&&(e.outerHTML=e.outerHTML.replace(/<img([^>]*)>/g,"<image$1/>"));e=o.createTreeWalker(o,128),e.currentNode=i,f(e,a),i.data="$s="}i.__w&&i.__w()}}(e=t.nextSibling)&&e.nodeType==8&&!e.data&&e.remove(),t.remove()};o.addEventListener("DOMContentLoaded",()=>{o.querySelectorAll("preact-island").forEach(t=>{t.nextSibling||(t.dataset.x=""),n(t)}),f(d=d||o.createNodeIterator(o,128)),l.forEach(t=>{if(t.__w===0){for(a=t;a&&a.data!="/"+t.data;a=a.nextSibling);a&&c(t,a)}else t.__w&&t.data[2]=="?"&&(t.data="$s!",t.__w())})}),customElements.define("preact-island",class extends HTMLElement{connectedCallback(){let t=this,r=new MutationObserver(()=>{t.nextSibling&&(r.disconnect(),n(t))});r.observe(t.parentNode,{childList:!0})}})})(document);`;
+const INIT_SCRIPT = `(o=>{if(customElements.get("preact-island"))return;let i,a,l=new Map,d,f=(t,r,e,s)=>{for(;(e=t.nextNode())&&e!=r;)s=l.get(e.data),(!s||!s.isConnected)&&l.set(e.data,e)},n=(t,r,e)=>{for(;(e=t.nextSibling)!=r;)e.remove();r.remove(),t.remove()},c=(t,r,e,s)=>{for(r=t.dataset.target,f(d=d||o.createNodeIterator(o,128)),i=l.get("$s?"+r),a=l.get("/$s?"+r),e=a&&i;e&&e!=a;e=e.nextSibling);if(e){if(i.__w===0)n(i,a);else if(i.data=="$s?"+r){if("x"in t.dataset)i.data="$s!";else{for(;(e=i.nextSibling)!=a;)e.remove();for(;e=t.firstChild;)a.before(e);if(i.parentNode.closest("svg,math"))for(e=i.nextSibling;e!=a;e=s)s=e.nextSibling,e.nodeType==1&&(e.outerHTML=e.outerHTML.replace(/<img([^>]*)>/g,"<image$1/>"));e=o.createTreeWalker(o,128),e.currentNode=i,f(e,a),i.data="$s="}i.__w&&i.__w()}}(e=t.nextSibling)&&e.nodeType==8&&!e.data&&e.remove(),t.remove()};o.addEventListener("DOMContentLoaded",()=>{o.querySelectorAll("preact-island").forEach(t=>{t.nextSibling||(t.dataset.x=""),c(t)}),f(d=d||o.createNodeIterator(o,128)),l.forEach(t=>{if(t.__w===0){for(a=t;a&&a.data!="/"+t.data;a=a.nextSibling);a&&n(t,a)}else t.__w&&t.data[2]=="?"&&(t.data="$s!",t.__w())})}),customElements.define("preact-island",class extends HTMLElement{connectedCallback(){let t=this,r=new MutationObserver(()=>{t.nextSibling&&(r.disconnect(),c(t))});r.observe(t.parentNode,{childList:!0})}})})(document)`;
 
 /**
  * @param {string} nonce
