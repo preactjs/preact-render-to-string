@@ -47,11 +47,10 @@ export async function renderToChunks(
 		const len = renderer.suspended.length;
 		if (len > 0) {
 			// When rendering a full HTML document, the shell ends with </body></html>.
-			// Inserting the deferred islands after </html> is invalid HTML and causes
-			// browsers to reject the content. Instead, we inject the deferred content
-			// before the closing tags, then emit them last. There is no wrapper around
-			// them: hydrating a whole document would remove it while the parser
-			// still writes chunks into it.
+			// Inserting the deferred <template for> patches after </html> is invalid
+			// HTML and causes browsers to reject the content. Instead, we inject the
+			// deferred content before the closing tags, then emit them last. A
+			// <template for> also only patches a range below its own parent.
 			const docSuffixIndex = getDocumentClosingTagsIndex(shell);
 			const initialWrite =
 				docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
@@ -137,9 +136,11 @@ function handleError(error, vnode, renderChild) {
 
 	// The fallback renders next to the boundary, not below it: a boundary
 	// inside it has its range in the response, whatever this one does next.
-	// The closing marker carries the id too, so the island finds this range's
-	// end without counting the ranges inside it.
-	return `<!--$s?${pending.id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s?${pending.id}-->`;
+	// `<?start>`/`<?end>` mark what the chunk's <template for> replaces. The
+	// closing marker carries the id too: while the chunk streams in, the
+	// ranges inside it are not all closed yet, and this one still has to be
+	// found.
+	return `<!--$s?${pending.id}--><?start name="${pending.id}">${renderChild(vnode.props.fallback, vnode[PARENT])}<?end><!--/$s?${pending.id}-->`;
 }
 
 /** Render the boundary's content once the promise it waits on settles. */
@@ -174,7 +175,7 @@ function retryPending(pending) {
 		// Suspended again: its range is in the response already, so wait
 		return waitFor(pending, error);
 	}
-	renderer.onWrite(createSubtree(pending.id, child));
+	renderer.onWrite(createSubtree(pending.id, child, renderer.nonce));
 }
 
 function rejectPending(pending, error) {
@@ -207,7 +208,7 @@ function clientRender(pending) {
 	if (!renderer) return;
 	const id = pending.id;
 	abandon(renderer, pending.vnode);
-	renderer.onWrite(createClientRenderInstruction(id));
+	renderer.onWrite(createClientRenderInstruction(id, renderer.nonce));
 }
 
 /**

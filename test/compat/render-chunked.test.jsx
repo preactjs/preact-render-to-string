@@ -214,7 +214,7 @@ describe('renderToChunks', () => {
 		const fullHtml = result.join('');
 
 		// Deferred content must appear before </body></html>, not after
-		const deferredPos = fullHtml.indexOf('<preact-island');
+		const deferredPos = fullHtml.indexOf('<template for=');
 		const bodyClosePos = fullHtml.indexOf('</body>');
 		const htmlClosePos = fullHtml.indexOf('</html>');
 
@@ -350,10 +350,13 @@ describe('renderToChunks', () => {
 		expect(fullHtml).to.contain('<script nonce="r4nd0m-nonce">');
 
 		expect(result[1]).to.equal(createInitScript('r4nd0m-nonce'));
-		expect(result[2]).to.equal(createSubtree('0', '<p>it works</p>'));
-		// the init script is the only script, and the chunk carries no nonce
-		expect(fullHtml.match(/<script/g)).to.have.length(1);
-		expect(result[2]).not.to.contain('nonce');
+		expect(result[2]).to.equal(
+			createSubtree('0', '<p>it works</p>', 'r4nd0m-nonce')
+		);
+		// every script carries the nonce
+		expect(fullHtml.match(/<script/g)).to.have.length(
+			fullHtml.match(/<script[^>]* nonce="r4nd0m-nonce"/g).length
+		);
 	});
 
 	it.each([
@@ -402,15 +405,11 @@ describe('renderToChunks', () => {
 
 		first.suspended.resolve();
 		await new Promise((resolve) => setTimeout(resolve, 0));
-		expect(
-			result.filter((chunk) => chunk.startsWith('<preact-island'))
-		).toEqual([]);
+		expect(result.filter((chunk) => chunk.startsWith('<template'))).toEqual([]);
 
 		second.suspended.resolve();
 		await promise;
-		const patches = result.filter((chunk) =>
-			chunk.startsWith('<preact-island')
-		);
+		const patches = result.filter((chunk) => chunk.startsWith('<template'));
 		expect(patches).toHaveLength(1);
 		expect(patches[0]).toContain('<p>first</p><p>second</p>');
 	});
@@ -518,7 +517,7 @@ describe('suspense boundary markers', () => {
 		expect(chunks).to.deep.equal([
 			'<div><!--$s=--><p>ready</p><!--/$s--></div>'
 		]);
-		expect(chunks.join('')).not.to.contain('preact-island');
+		expect(chunks.join('')).not.to.contain('$PRS');
 	});
 
 	it('should mark a pending boundary with its id on both markers', async () => {
@@ -531,10 +530,12 @@ describe('suspense boundary markers', () => {
 		suspended.resolve();
 		await done;
 
-		expect(chunks[0]).to.equal('<!--$s?0-->loading...<!--/$s?0-->');
+		expect(chunks[0]).to.equal(
+			'<!--$s?0--><?start name="0">loading...<?end><!--/$s?0-->'
+		);
 		expect(chunks[1]).to.equal(createInitScript());
 		expect(chunks[2]).to.equal(
-			'<preact-island hidden data-target="0"><p>it works</p></preact-island><!---->'
+			'<template for="0"><p>it works</p></template><script data-p="0">$PRS()</script>'
 		);
 		expect(chunks).to.have.length(3);
 	});
@@ -583,9 +584,7 @@ describe('suspense boundary markers', () => {
 		const many = await run(12);
 		const ids = many
 			.slice(2)
-			.map(
-				(chunk) => /^<preact-island hidden data-target="(\w+)"/.exec(chunk)[1]
-			);
+			.map((chunk) => /^<template for="(\w+)"/.exec(chunk)[1]);
 		expect(ids).to.deep.equal(
 			Array.from({ length: 12 }, (_, i) => i.toString(36))
 		);
@@ -726,7 +725,7 @@ describe('suspense boundary markers', () => {
 		expect(chunks).to.deep.equal([
 			pendingRange('0', 'loading...'),
 			createInitScript('abc'),
-			createClientRenderInstruction('0')
+			'<script data-p="0" data-x nonce="abc">$PRS()</script>'
 		]);
 	});
 
@@ -755,12 +754,12 @@ describe('suspense boundary markers', () => {
 		expect(chunks).to.deep.equal([
 			`<div>${pendingRange('0', 'a...')}${pendingRange('1', 'b...')}</div>`,
 			createInitScript('abc'),
-			createClientRenderInstruction('0'),
-			createClientRenderInstruction('1')
+			'<script data-p="0" data-x nonce="abc">$PRS()</script>',
+			'<script data-p="1" data-x nonce="abc">$PRS()</script>'
 		]);
 	});
 
-	it('should put the nonce on the init script only, not on chunks or client render islands', async () => {
+	it('should put the nonce on the init script, the chunks and the client render scripts', async () => {
 		const ok = createSuspender();
 		const failing = createSuspender();
 		function Thrower() {
@@ -783,11 +782,11 @@ describe('suspense boundary markers', () => {
 		await done;
 
 		const html = chunks.join('');
-		expect(html.match(/<script/g)).to.have.length(1);
-		expect(html.match(/nonce=/g)).to.have.length(1);
+		expect(html.match(/<script/g)).to.have.length(3);
+		expect(html.match(/<script[^>]* nonce="n&quot;1">/g)).to.have.length(3);
 		expect(chunks).to.contain(createInitScript('n"1'));
-		expect(chunks).to.contain(createSubtree('0', '<p>it works</p>'));
-		expect(chunks).to.contain(createClientRenderInstruction('1'));
+		expect(chunks).to.contain(createSubtree('0', '<p>it works</p>', 'n"1'));
+		expect(chunks).to.contain(createClientRenderInstruction('1', 'n"1'));
 	});
 
 	describe('with options.errorBoundaries', () => {

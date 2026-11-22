@@ -177,7 +177,7 @@ describe('recoverable errors', () => {
 		await result;
 		// the nested boundary never reached the response, the outer one is id 1
 		expect(chunks[0]).to.equal(pendingRange('1', '<i>fallback</i>'));
-		expect(chunks).to.contain(createClientRenderInstruction('1'));
+		expect(chunks).to.contain(createClientRenderInstruction('1', 'nonce'));
 		expect(chunks.join('')).not.to.contain('<template');
 		expect(chunks.join('')).not.to.contain('undefined');
 	});
@@ -307,11 +307,7 @@ describe('recoverable errors', () => {
 		await result;
 		// ids follow the order the boundaries suspended in
 		expect(chunks).to.contain(createSubtree('1', '<b>ready</b>'));
-		expect(
-			chunks.filter(
-				(s) => s.startsWith('<preact-island') && !s.includes('data-x')
-			)
-		).to.have.length(1);
+		expect(chunks.filter((s) => s.startsWith('<template'))).to.have.length(1);
 		expect(chunks).to.contain(createClientRenderInstruction('0'));
 	});
 
@@ -333,9 +329,7 @@ describe('recoverable errors', () => {
 		const html = chunks.join('');
 		expect(html).to.contain('<b>keep</b>');
 		expect(html).to.contain('<script');
-		// only the nested boundary is handed to the client
-		expect(chunks).to.contain(createClientRenderInstruction('0'));
-		expect(html).not.to.contain('<template');
+		expect(html).not.to.contain('<preact-island');
 	});
 
 	it('reports a fatal error from a streaming retry', async () => {

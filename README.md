@@ -151,7 +151,7 @@ main().catch((error) => {
 
 Preact supports streaming HTML to the client incrementally, flushing `<Suspense>` fallbacks immediately and replacing them with the resolved content as data arrives. This reduces Time to First Byte and allows the browser to start parsing earlier.
 
-The content of a boundary is sent in a hidden `<preact-island>` custom element, which moves it into the page once it has arrived. A boundary hydrates once all of its content is there, so the client never renders into a boundary the server is still working on.
+The content of a boundary is sent as a `<template for>` ([Declarative Partial Updates](https://github.com/WICG/declarative-partial-updates)). Browsers that support it stream the content straight into the page, and a small inline script does the same everywhere else. A boundary hydrates once all of its content is there, so the client never renders into a boundary the server is still working on.
 
 #### `renderToReadableStream` — Web Streams
 

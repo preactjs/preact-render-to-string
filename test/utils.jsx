@@ -21,7 +21,7 @@ const defaultChildren = <p>it works</p>;
  * @param {string} fallback
  */
 export function pendingRange(id, fallback) {
-	return `<!--$s?${id}-->${fallback}<!--/$s?${id}-->`;
+	return `<!--$s?${id}--><?start name="${id}">${fallback}<?end><!--/$s?${id}-->`;
 }
 
 export function createSuspender() {
