@@ -1,5 +1,5 @@
 import { renderToString } from '../index.js';
-import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
+import { CHILD_DID_SUSPEND, COMPONENT, MASK, PARENT } from './constants.js';
 import { Deferred } from './util.js';
 import {
 	createInitScript,
@@ -156,6 +156,8 @@ function retryPending(pending) {
 	const renderer = pending.renderer;
 	if (!renderer) return;
 	const vnode = pending.vnode;
+	const mask = vnode[COMPONENT][MASK];
+	if (mask) mask[1] = 0;
 	const suspendedCount = renderer.suspended.length;
 	const child = pending.renderChild(vnode.props.children, vnode);
 	const suspendedAgain = renderer.suspended
