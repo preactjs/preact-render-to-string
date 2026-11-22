@@ -2,10 +2,14 @@
 import { h } from 'preact';
 import { expect, beforeAll, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
-import { createSubtree, createInitScript } from '../../src/lib/client';
+import {
+	createSubtree,
+	createInitScript,
+	createClientRenderInstruction
+} from '../../src/lib/client';
 import { renderToReadableStream } from '../../src/stream';
 import { Deferred } from '../../src/lib/util';
-import { createSuspender } from '../utils';
+import { createSuspender, pendingRange } from '../utils';
 
 /**
  * @param {ReadableStream} input
@@ -83,11 +87,9 @@ describe('renderToReadableStream', () => {
 		const result = await sink.promise;
 
 		expect(result).toEqual([
-			'<div><!--$s:5-->loading...<!--/$s:5--></div>',
-			'<div hidden>',
+			`<div>${pendingRange('0', 'loading...')}</div>`,
 			createInitScript(),
-			createSubtree('5', '<p>it works</p>'),
-			'</div>'
+			createSubtree('0', '<p>it works</p>')
 		]);
 	});
 
@@ -113,7 +115,7 @@ describe('renderToReadableStream', () => {
 		const html = (await sink.promise).join('');
 		await stream.allReady;
 		expect(errors).to.deep.equal([error]);
-		expect(html).to.contain('$s!:');
+		expect(html).to.contain(createClientRenderInstruction('0'));
 		expect(html).not.to.contain('undefined');
 	});
 
@@ -193,8 +195,8 @@ describe('renderToReadableStream', () => {
 
 		const html = (await sink.promise).join('');
 		expect(errors).to.deep.equal([reason]);
-		expect(html).to.contain('$s!:');
-		expect(html.endsWith('</div>')).to.equal(true);
+		expect(html).to.contain(createClientRenderInstruction('0'));
+		expect(html.endsWith(createClientRenderInstruction('0'))).to.equal(true);
 	});
 
 	it('should include the nonce attribute on the init script when a nonce is provided', async () => {
@@ -228,13 +230,10 @@ describe('renderToReadableStream', () => {
 		suspended.resolve();
 
 		const result = await sink.promise;
-		const id = result[0].match(/\$s:(\d+)/)[1];
 		expect(result).toEqual([
-			`<!--$s:${id}-->loading...<!--/$s:${id}-->`,
-			'<div hidden>',
+			pendingRange('0', 'loading...'),
 			createInitScript(),
-			createSubtree(id, ''),
-			'</div>'
+			createSubtree('0', '')
 		]);
 	});
 });

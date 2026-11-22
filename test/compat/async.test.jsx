@@ -71,7 +71,9 @@ describe('Async renderToString', () => {
 			expect(options.__s).to.equal(false);
 
 			suspended.resolve();
-			expect(await pending).to.equal('<!--$s--><span>first</span><!--/$s-->');
+			expect(await pending).to.equal(
+				'<!--$s=--><!--$s--><span>first</span><!--/$s--><!--/$s-->'
+			);
 
 			expect(
 				calls.filter(
@@ -120,7 +122,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!--$s--><div class="foo">bar</div><!--/$s-->`;
+		const expected = `<!--$s=--><!--$s--><div class="foo">bar</div><!--/$s--><!--/$s-->`;
 
 		suspended.resolve();
 
@@ -143,7 +145,7 @@ describe('Async renderToString', () => {
 			</Suspense>
 		);
 
-		const expected = `<!--$s--><!--/$s--><div class="foo">bar</div>`;
+		const expected = `<!--$s=--><!--$s--><!--/$s--><div class="foo">bar</div><!--/$s-->`;
 
 		suspended.resolve();
 
@@ -172,7 +174,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s=--><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -204,7 +206,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s=--><!--$s--><li>one</li><!--$s=--><!--$s--><li>two</li><!--/$s--><!--/$s--><li>three</li><!--/$s--><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -241,7 +243,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--><li>four</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s=--><!--$s--><li>one</li><!--$s=--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--><!--/$s--><li>four</li><!--/$s--><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -282,7 +284,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--$s--><li>two</li><!--$s--><li>three</li><!--/$s--><!--/$s--><li>four</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s=--><!--$s--><li>one</li><!--$s=--><!--$s--><li>two</li><!--$s=--><!--$s--><li>three</li><!--/$s--><!--/$s--><!--/$s--><!--/$s--><li>four</li><!--/$s--><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -320,7 +322,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s=--><!--$s--><li>one</li><!--/$s--><!--$s=--><!--$s--><li>two</li><!--/$s--><!--/$s--><!--$s--><li>three</li><!--/$s--><!--/$s--></ul>`;
 
 		suspendedOne.resolve();
 		suspendedTwo.resolve();
@@ -355,7 +357,7 @@ describe('Async renderToString', () => {
 			</ul>
 		);
 
-		const expected = `<ul><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--></ul>`;
+		const expected = `<ul><!--$s=--><!--$s--><li>one</li><!--/$s--><!--$s--><li>two</li><!--/$s--><!--$s--><li>three</li><!--/$s--><!--/$s--></ul>`;
 
 		suspendedOne.promise.then(() => {
 			void suspendedTwo.resolve();
@@ -369,6 +371,54 @@ describe('Async renderToString', () => {
 		const rendered = await promise;
 
 		expect(rendered).to.equal(expected);
+	});
+
+	it('should mark a boundary without suspensions as content', async () => {
+		const rendered = await renderToStringAsync(
+			<div>
+				<Suspense fallback="loading...">
+					<p>ready</p>
+				</Suspense>
+			</div>
+		);
+
+		expect(rendered).to.equal('<div><!--$s=--><p>ready</p><!--/$s--></div>');
+	});
+
+	it('should cover all children of a boundary, not only the suspended one', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const promise = renderToStringAsync(
+			<Suspense fallback="loading...">
+				<p>before</p>
+				<Suspender>
+					<b>it works</b>
+				</Suspender>
+				<p>after</p>
+			</Suspense>
+		);
+		suspended.resolve();
+
+		expect(await promise).to.equal(
+			'<!--$s=--><p>before</p><!--$s--><b>it works</b><!--/$s--><p>after</p><!--/$s-->'
+		);
+	});
+
+	it('should never write the pending or the client-only form for a boundary that resolves', async () => {
+		const { Suspender, suspended } = createSuspender();
+		const promise = renderToStringAsync(
+			<Suspense fallback="loading...">
+				<Suspense fallback="inner...">
+					<Suspender />
+				</Suspense>
+			</Suspense>
+		);
+		suspended.resolve();
+		const rendered = await promise;
+
+		expect(rendered).not.to.contain('$s?');
+		expect(rendered).not.to.contain('$s!');
+		expect(rendered).not.to.contain('loading...');
+		expect(rendered).not.to.contain('$PRS');
 	});
 
 	it('should rethrow error thrown after suspending', async () => {
@@ -420,7 +470,9 @@ describe('Async renderToString', () => {
 
 		suspended.resolve();
 		const rendered = await promise;
-		expect(rendered).to.equal('<!--$s--><p>ok</p><!--/$s-->');
+		expect(rendered).to.equal(
+			'<!--$s=--><!--$s--><p>ok</p><!--/$s--><!--/$s-->'
+		);
 	});
 
 	const Id = () => <input id={useId()} />;
@@ -446,13 +498,13 @@ describe('Async renderToString', () => {
 			suspended.resolve();
 			const rendered = await promise;
 
-			expect(rendered.replace(/<!--\/?\$s-->/g, '')).to.equal(
+			expect(rendered.replace(/<!--\/?\$s=?-->/g, '')).to.equal(
 				renderToString(
 					<Suspense fallback={null}>
 						<Id />
 						<Id />
 					</Suspense>
-				)
+				).replace(/<!--\/?\$s=?-->/g, '')
 			);
 		}
 	);
@@ -493,7 +545,7 @@ describe('Async renderToString', () => {
 
 		// Before we get to the actual DOM this suspends twice
 		expect(rendered).to.equal(
-			`<!--$s--><!--$s--><div>2</div><!--/$s--><!--/$s-->`
+			`<!--$s--><!--$s=--><!--$s--><div>2</div><!--/$s--><!--/$s--><!--/$s-->`
 		);
 	});
 
@@ -593,7 +645,7 @@ describe('Async renderToString', () => {
 			suspended.resolve();
 
 			expect(await pending).to.equal(
-				'<div class="wrap"><i>a</i><!--$s--><b>lazy</b><!--/$s--></div>'
+				'<div class="wrap"><i>a</i><!--$s=--><!--$s--><b>lazy</b><!--/$s--><!--/$s--></div>'
 			);
 		});
 
@@ -622,7 +674,7 @@ describe('Async renderToString', () => {
 			first.suspended.resolve();
 
 			expect(await pending).to.equal(
-				'<ul><li><!--$s--><b>one</b><!--/$s--></li><li><!--$s--><b>two</b><!--/$s--></li></ul>'
+				'<ul><li><!--$s=--><!--$s--><b>one</b><!--/$s--><!--/$s--></li><li><!--$s=--><!--$s--><b>two</b><!--/$s--><!--/$s--></li></ul>'
 			);
 		});
 	});

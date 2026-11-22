@@ -37,6 +37,10 @@ const assign = Object.assign;
 const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
+// Opens the range of a Suspense boundary whose content is in the HTML. A
+// boundary that is still to be streamed opens with `$s?id` instead, and one
+// that is left to the client with `$s!`.
+const BEGIN_BOUNDARY = '<!--$s=-->';
 
 /**
  * Wraps a render result with suspense boundary markers, handling all possible
@@ -44,15 +48,14 @@ const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
  * @param {string | Array | Promise} result
  * @returns {string | Array | Promise}
  */
-function wrapWithSuspenseMarkers(result, clientOnly = false) {
-	const start = clientOnly ? '<!--$s!-->' : BEGIN_SUSPENSE_DENOMINATOR;
+function wrapWithSuspenseMarkers(result, start = BEGIN_SUSPENSE_DENOMINATOR) {
 	if (isArray(result)) {
 		result.unshift(start);
 		result.push(END_SUSPENSE_DENOMINATOR);
 		return result;
 	}
 	if (result && typeof result.then === 'function') {
-		return result.then((value) => wrapWithSuspenseMarkers(value, clientOnly));
+		return result.then((value) => wrapWithSuspenseMarkers(value, start));
 	}
 	return start + result + END_SUSPENSE_DENOMINATOR;
 }
@@ -488,6 +491,8 @@ function _renderToString(
 					);
 				} catch (err) {
 					if (isRecoverable(err)) throw err;
+					// A suspension is for the Suspense boundary above to stream
+					if (renderer && err && typeof err.then == 'function') throw err;
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
 					}
@@ -561,9 +566,13 @@ function _renderToString(
 					asyncMode
 						? renderAsyncFallback(renderFallback)
 						: withSkipEffects(renderFallback),
-					true
+					'<!--$s!-->'
 				);
 			});
+
+		// Only Suspense-like classes (compat's Suspense) are boundaries, not
+		// components that set `_childDidSuspend` on the instance (preact-iso).
+		const isBoundary = type.prototype && type.prototype[CHILD_DID_SUSPEND];
 
 		try {
 			// Recurse into children before invoking the after-diff hook
@@ -584,11 +593,22 @@ function _renderToString(
 			if (hooks.unmountHook) hooks.unmountHook(vnode);
 
 			if (asyncMode && recover && typeof str != 'string') {
-				return resolveRenderResult(str).catch(recover);
+				return resolveRenderResult(str).then(
+					isBoundary
+						? (html) => BEGIN_BOUNDARY + html + END_SUSPENSE_DENOMINATOR
+						: undefined,
+					recover
+				);
 			}
 
 			if (vnode._suspended) {
 				return wrapWithSuspenseMarkers(str);
+			}
+
+			// The client hydrates a boundary's range as one unit, so it has to
+			// know where it starts and ends.
+			if (isBoundary) {
+				return wrapWithSuspenseMarkers(str, BEGIN_BOUNDARY);
 			}
 
 			return str;
@@ -598,32 +618,24 @@ function _renderToString(
 				if (!renderer || asyncMode) return recover(error);
 			}
 			if (!asyncMode && renderer && renderer.onError) {
-				const onError = (error) => {
-					return renderer.onError(error, vnode, (child, parent) => {
-						try {
-							return withSkipEffects(() =>
-								_renderToString(
-									child,
-									context,
-									isSvgMode,
-									selectValue,
-									parent,
-									asyncMode,
-									renderer,
-									hooks
-								)
-							);
-						} catch (e) {
-							return onError(e);
-						}
-					});
-				};
-				let res = onError(error);
+				// What suspends or fails while streaming is for the closest
+				// boundary: all it rendered is replaced by its fallback.
+				if (!isBoundary) throw error;
 
-				if (res !== undefined) return res;
-
-				if (hooks.catchError) hooks.catchError(error, vnode);
-				return EMPTY_STR;
+				return renderer.onError(error, vnode, (child, parent) =>
+					withSkipEffects(() =>
+						_renderToString(
+							child,
+							context,
+							isSvgMode,
+							selectValue,
+							parent,
+							asyncMode,
+							renderer,
+							hooks
+						)
+					)
+				);
 			}
 
 			if (!asyncMode) throw error;

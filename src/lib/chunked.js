@@ -1,5 +1,5 @@
 import { renderToString } from '../index.js';
-import { CHILD_DID_SUSPEND, COMPONENT, PARENT } from './constants.js';
+import { COMPONENT, MASK, PARENT } from './constants.js';
 import { Deferred } from './util.js';
 import {
 	createInitScript,
@@ -27,6 +27,7 @@ export async function renderToChunks(
 		onError: handleError,
 		reportError: onError || console.error,
 		suspended: [],
+		id: 0,
 		nonce
 	};
 
@@ -46,18 +47,18 @@ export async function renderToChunks(
 		const len = renderer.suspended.length;
 		if (len > 0) {
 			// When rendering a full HTML document, the shell ends with </body></html>.
-			// Inserting the deferred <div hidden> wrapper after </html> is invalid HTML
-			// and causes browsers to reject the content. Instead, we inject the deferred
-			// content before the closing tags, then emit them last.
+			// Inserting the deferred islands after </html> is invalid HTML and causes
+			// browsers to reject the content. Instead, we inject the deferred content
+			// before the closing tags, then emit them last. There is no wrapper around
+			// them: hydrating a whole document would remove it while the parser
+			// still writes chunks into it.
 			const docSuffixIndex = getDocumentClosingTagsIndex(shell);
 			const initialWrite =
 				docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
 			onWrite(prefix + initialWrite);
-			onWrite('<div hidden>');
 			onWrite(createInitScript(nonce));
 			// We should keep checking all promises
 			await forkPromises(renderer);
-			onWrite('</div>');
 			if (docSuffixIndex !== -1) onWrite(shell.slice(docSuffixIndex));
 		} else {
 			onWrite(prefix + shell);
@@ -75,7 +76,10 @@ export async function renderToChunks(
  * @returns {number}
  */
 function getDocumentClosingTagsIndex(html) {
-	return html.lastIndexOf('</body>');
+	// Only a document that actually ends in </body> (and maybe </html>). A
+	// `</body>` inside the shell, from raw HTML, is not the close tag.
+	const match = /<\/body>\s*(?:<\/html>\s*)?$/i.exec(html);
+	return match ? match.index : -1;
 }
 
 async function forkPromises(renderer) {
@@ -89,44 +93,30 @@ async function forkPromises(renderer) {
 	}
 }
 
-/** @type {RendererErrorHandler} */
+/**
+ * Called from the frame of the Suspense boundary that something suspended or
+ * failed below. All the boundary rendered so far is dropped for its fallback.
+ * @type {RendererErrorHandler}
+ */
 function handleError(error, vnode, renderChild) {
 	const recoverable = isRecoverable(error);
 	const suspended = !recoverable && error && error.then;
 
-	// Recoverables reach this handler at the boundary itself. Promise retries
-	// can reach it from a descendant, just like their initial suspension.
-	if (
-		!recoverable ||
-		!vnode[COMPONENT] ||
-		!vnode[COMPONENT][CHILD_DID_SUSPEND]
-	) {
-		while ((vnode = vnode[PARENT])) {
-			const component = vnode[COMPONENT];
-			if (component && component[CHILD_DID_SUSPEND]) break;
-		}
-	}
-	if (!vnode) throw error;
-
-	const id = vnode.__v;
-	const found = this.suspended.find((x) => x.id === id);
+	// The boundaries that suspended below this one never reach the response,
+	// they render again with this one's content.
+	abandon(this, vnode);
 
 	// An error below a boundary is reported and the boundary is left to the
 	// client, the same goes for anything that suspends after an abort.
-	const aborted = this.abortSignal && this.abortSignal.aborted;
-	if (!suspended || aborted) {
+	if (!suspended || (this.abortSignal && this.abortSignal.aborted)) {
 		if (!recoverable && !suspended) this.reportError(error);
-		abandon(this, vnode);
-		if (found) {
-			if (!aborted) this.onWrite(createClientRenderInstruction(id, this.nonce));
-			return '';
-		}
-		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
+		return `<!--$s!-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s-->`;
 	}
 
 	const completion = new Deferred();
 	const pending = {
-		id,
+		// Numbered per response: the id is written four times per boundary
+		id: (this.id++).toString(36),
 		vnode,
 		renderer: this,
 		renderChild,
@@ -140,41 +130,57 @@ function handleError(error, vnode, renderChild) {
 		this.abortSignal.addEventListener('abort', pending.abort);
 	}
 
-	Promise.resolve(error)
-		.then(retryPending.bind(null, pending), rejectPending.bind(null, pending))
-		.catch(failPending.bind(null, pending))
-		.then(
-			finishPending.bind(null, pending, completion.resolve),
-			finishPending.bind(null, pending, completion.reject)
-		);
+	waitFor(pending, error).then(
+		finishPending.bind(null, pending, completion.resolve),
+		finishPending.bind(null, pending, completion.reject)
+	);
 
-	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
-	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+	// The fallback renders next to the boundary, not below it: a boundary
+	// inside it has its range in the response, whatever this one does next.
+	// The closing marker carries the id too, so the island finds this range's
+	// end without counting the ranges inside it.
+	return `<!--$s?${pending.id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s?${pending.id}-->`;
+}
+
+/** Render the boundary's content once the promise it waits on settles. */
+function waitFor(pending, promise) {
+	return Promise.resolve(promise)
+		.then(retryPending.bind(null, pending), rejectPending.bind(null, pending))
+		.catch(failPending.bind(null, pending));
 }
 
 function retryPending(pending) {
 	const renderer = pending.renderer;
 	if (!renderer) return;
 	const vnode = pending.vnode;
-	const suspendedCount = renderer.suspended.length;
-	const child = pending.renderChild(vnode.props.children, vnode);
-	const suspendedAgain = renderer.suspended
-		.slice(suspendedCount)
-		.some((s) => s.id === pending.id);
-	if (pending.renderer && !suspendedAgain) {
-		renderer.onWrite(createSubtree(pending.id, child));
+	// The retry renders the boundary's children from scratch: restart its
+	// useId counter so ids match a client that renders them in one go.
+	const mask = vnode[COMPONENT] && vnode[COMPONENT][MASK];
+	if (mask) mask[1] = 0;
+	let child;
+	try {
+		child = pending.renderChild(vnode.props.children, vnode);
+	} catch (error) {
+		// The boundaries found in this attempt go with what it rendered
+		abandon(renderer, vnode, pending);
+		if (
+			isRecoverable(error) ||
+			!error ||
+			!error.then ||
+			(renderer.abortSignal && renderer.abortSignal.aborted)
+		) {
+			return rejectPending(pending, error);
+		}
+		// Suspended again: its range is in the response already, so wait
+		return waitFor(pending, error);
 	}
+	renderer.onWrite(createSubtree(pending.id, child));
 }
 
 function rejectPending(pending, error) {
 	if (!pending.renderer) return;
 	if (!isRecoverable(error)) throw error;
-	return handleError.call(
-		pending.renderer,
-		error,
-		pending.vnode,
-		pending.renderChild
-	);
+	clientRender(pending);
 }
 
 /**
@@ -201,15 +207,20 @@ function clientRender(pending) {
 	if (!renderer) return;
 	const id = pending.id;
 	abandon(renderer, pending.vnode);
-	renderer.onWrite(createClientRenderInstruction(id, renderer.nonce));
+	renderer.onWrite(createClientRenderInstruction(id));
 }
 
-/** Complete the pending work at or below a boundary without streaming it. */
-function abandon(renderer, vnode) {
+/**
+ * Complete the pending work at or below a boundary without streaming it.
+ * @param {RendererState} renderer
+ * @param {VNode} vnode
+ * @param {Suspended} [except] The boundary's own work, when it carries on
+ */
+function abandon(renderer, vnode, except) {
 	for (const pending of renderer.suspended) {
 		let parent = pending.vnode;
 		while (parent && parent !== vnode) parent = parent[PARENT];
-		if (parent) finishPending(pending, pending.resolve);
+		if (parent && pending !== except) finishPending(pending, pending.resolve);
 	}
 }
 
