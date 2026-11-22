@@ -49,9 +49,7 @@ export async function renderToChunks(
 			// When rendering a full HTML document, the shell ends with </body></html>.
 			// Inserting the deferred islands after </html> is invalid HTML and causes
 			// browsers to reject the content. Instead, we inject the deferred content
-			// before the closing tags, then emit them last. There is no wrapper around
-			// them: hydrating a whole document would remove it while the parser
-			// still writes chunks into it.
+			// before the closing tags, then emit them last.
 			const docSuffixIndex = getDocumentClosingTagsIndex(shell);
 			const initialWrite =
 				docSuffixIndex !== -1 ? shell.slice(0, docSuffixIndex) : shell;
@@ -76,8 +74,7 @@ export async function renderToChunks(
  * @returns {number}
  */
 function getDocumentClosingTagsIndex(html) {
-	// Only a document that actually ends in </body> (and maybe </html>). A
-	// `</body>` inside the shell, from raw HTML, is not the close tag.
+	// Ignore a `</body>` inside the content
 	const match = /<\/body>\s*(?:<\/html>\s*)?$/i.exec(html);
 	return match ? match.index : -1;
 }
@@ -93,17 +90,12 @@ async function forkPromises(renderer) {
 	}
 }
 
-/**
- * Called from the frame of the Suspense boundary that something suspended or
- * failed below. All the boundary rendered so far is dropped for its fallback.
- * @type {RendererErrorHandler}
- */
+/** @type {RendererErrorHandler} */
 function handleError(error, vnode, renderChild) {
 	const recoverable = isRecoverable(error);
 	const suspended = !recoverable && error && error.then;
 
-	// The boundaries that suspended below this one never reach the response,
-	// they render again with this one's content.
+	// Nested boundaries render again with this one's content
 	abandon(this, vnode);
 
 	// An error below a boundary is reported and the boundary is left to the
@@ -115,7 +107,7 @@ function handleError(error, vnode, renderChild) {
 
 	const completion = new Deferred();
 	const pending = {
-		// Numbered per response: the id is written four times per boundary
+		// Short ids: each is written four times
 		id: (this.id++).toString(36),
 		vnode,
 		renderer: this,
@@ -135,14 +127,12 @@ function handleError(error, vnode, renderChild) {
 		finishPending.bind(null, pending, completion.reject)
 	);
 
-	// The fallback renders next to the boundary, not below it: a boundary
-	// inside it has its range in the response, whatever this one does next.
-	// The closing marker carries the id too, so the island finds this range's
-	// end without counting the ranges inside it.
+	// The closing marker carries the id, so the island finds it without
+	// counting nested ranges
 	return `<!--$s?${pending.id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s?${pending.id}-->`;
 }
 
-/** Render the boundary's content once the promise it waits on settles. */
+/** Retry the boundary once the promise settles */
 function waitFor(pending, promise) {
 	return Promise.resolve(promise)
 		.then(retryPending.bind(null, pending), rejectPending.bind(null, pending))
@@ -153,15 +143,14 @@ function retryPending(pending) {
 	const renderer = pending.renderer;
 	if (!renderer) return;
 	const vnode = pending.vnode;
-	// The retry renders the boundary's children from scratch: restart its
-	// useId counter so ids match a client that renders them in one go.
+	// Restart useId numbering to match the client
 	const mask = vnode[COMPONENT] && vnode[COMPONENT][MASK];
 	if (mask) mask[1] = 0;
 	let child;
 	try {
 		child = pending.renderChild(vnode.props.children, vnode);
 	} catch (error) {
-		// The boundaries found in this attempt go with what it rendered
+		// Drop the boundaries found in this attempt
 		abandon(renderer, vnode, pending);
 		if (
 			isRecoverable(error) ||
@@ -171,7 +160,7 @@ function retryPending(pending) {
 		) {
 			return rejectPending(pending, error);
 		}
-		// Suspended again: its range is in the response already, so wait
+		// Suspended again: wait
 		return waitFor(pending, error);
 	}
 	renderer.onWrite(createSubtree(pending.id, child));
@@ -214,7 +203,7 @@ function clientRender(pending) {
  * Complete the pending work at or below a boundary without streaming it.
  * @param {RendererState} renderer
  * @param {VNode} vnode
- * @param {Suspended} [except] The boundary's own work, when it carries on
+ * @param {Suspended} [except] Work to keep
  */
 function abandon(renderer, vnode, except) {
 	for (const pending of renderer.suspended) {

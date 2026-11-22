@@ -37,9 +37,7 @@ const assign = Object.assign;
 const EMPTY_STR = '';
 const BEGIN_SUSPENSE_DENOMINATOR = '<!--$s-->';
 const END_SUSPENSE_DENOMINATOR = '<!--/$s-->';
-// Opens the range of a Suspense boundary whose content is in the HTML. A
-// boundary that is still to be streamed opens with `$s?id` instead, and one
-// that is left to the client with `$s!`.
+// Opens a boundary's range (`$s?id` while it streams, `$s!` for the client)
 const BEGIN_BOUNDARY = '<!--$s=-->';
 
 /**
@@ -491,7 +489,7 @@ function _renderToString(
 					);
 				} catch (err) {
 					if (isRecoverable(err)) throw err;
-					// A suspension is for the Suspense boundary above to stream
+					// Let the Suspense boundary above stream it
 					if (renderer && err && typeof err.then == 'function') throw err;
 					if (type.getDerivedStateFromError) {
 						component[NEXT_STATE] = type.getDerivedStateFromError(err);
@@ -570,8 +568,7 @@ function _renderToString(
 				);
 			});
 
-		// Only Suspense-like classes (compat's Suspense) are boundaries, not
-		// components that set `_childDidSuspend` on the instance (preact-iso).
+		// Suspense classes only, not instances that set `_childDidSuspend` (preact-iso)
 		const isBoundary = type.prototype && type.prototype[CHILD_DID_SUSPEND];
 
 		try {
@@ -605,8 +602,7 @@ function _renderToString(
 				return wrapWithSuspenseMarkers(str);
 			}
 
-			// The client hydrates a boundary's range as one unit, so it has to
-			// know where it starts and ends.
+			// Mark the range the client hydrates as one unit
 			if (isBoundary) {
 				return wrapWithSuspenseMarkers(str, BEGIN_BOUNDARY);
 			}
@@ -618,8 +614,7 @@ function _renderToString(
 				if (!renderer || asyncMode) return recover(error);
 			}
 			if (!asyncMode && renderer && renderer.onError) {
-				// What suspends or fails while streaming is for the closest
-				// boundary: all it rendered is replaced by its fallback.
+				// Let the closest boundary render its fallback
 				if (!isBoundary) throw error;
 
 				return renderer.onError(error, vnode, (child, parent) =>

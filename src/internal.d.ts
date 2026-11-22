@@ -26,7 +26,7 @@ interface RendererState {
 	reportError: (error: any) => void;
 	nonce?: string;
 	suspended: Suspended[];
-	/** The number of the next streamed boundary in this response */
+	/** Id of the next streamed boundary */
 	id: number;
 	abortSignal?: AbortSignal | undefined;
 	onWrite: (str: string) => void;

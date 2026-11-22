@@ -2,22 +2,18 @@ import { encodeEntities } from './util.js';
 
 /* eslint-disable no-var, key-spacing, object-curly-spacing, prefer-arrow-callback, semi, keyword-spacing */
 
-// // No optional chaining or logical assignment: the script is inlined as written, so its syntax
-// // sets the browser floor.
+// // Inlined as written: no optional chaining or logical assignment
 // ((d) => {
-// 	// a second copy of this script in the document leaves the first in charge
+// 	// only the first copy of this script runs
 // 	if (customElements.get("preact-island")) {
 // 		return;
 // 	}
 // 	let s,
 // 		e,
-// 		// comments by their data ("$s?id" opens a pending range and "/$s?id" closes
-// 		// it), so each patch is a lookup. The first one seen wins for as long as it
-// 		// is in the document: reparsing a namespace recreates the markers of nested
-// 		// boundaries.
+// 		// markers by their data; the first one in the document wins (reparsing a
+// 		// namespace recreates nested markers)
 // 		markers = new Map(),
-// 		// one live iterator over the document's comments: created on the first
-// 		// patch and resumed by every later one, so each comment is visited once
+// 		// one iterator over the document's comments, resumed on each patch
 // 		comments,
 // 		// index the comments that the iterator or walker `w` yields, until `end`
 // 		scan = (w, end, n, m) => {
@@ -28,8 +24,7 @@ import { encodeEntities } from './util.js';
 // 				}
 // 			}
 // 		},
-// 		// The client unmounted a boundary while it was pending and left its
-// 		// markers for us (`__w` is 0): drop them with what is in between.
+// 		// remove a range the client unmounted while pending (`__w` is 0)
 // 		drop = (s, e, n) => {
 // 			while ((n = s.nextSibling) != e) {
 // 				n.remove();
@@ -44,9 +39,7 @@ import { encodeEntities } from './util.js';
 // 			scan((comments = comments || d.createNodeIterator(d, 128)));
 // 			s = markers.get("$s?" + id);
 // 			e = markers.get("/$s?" + id);
-// 			// The range may sit in a subtree the client took out of the document
-// 			// for now. The closing marker has to be a later sibling of the opening
-// 			// one.
+// 			// skip a range that is out of the document (the closer must be a sibling)
 // 			for (n = e && s; n && n != e; n = n.nextSibling);
 // 			if (n) {
 // 				if (s.__w === 0) {
@@ -62,10 +55,8 @@ import { encodeEntities } from './util.js';
 // 						while ((n = c.firstChild)) {
 // 							e.before(n);
 // 						}
-// 						// The island's content parsed as HTML, so reparse each element
-// 						// below svg/math in its parent's namespace. The parser turned
-// 						// every <image> into an <img>, which the svg namespace doesn't
-// 						// know: write it back.
+// 						// reparse content below svg/math in its namespace, restoring the <image>
+// 						// tags the HTML parser turned into <img>
 // 						if (s.parentNode.closest("svg,math")) {
 // 							for (n = s.nextSibling; n != e; n = l) {
 // 								l = n.nextSibling;
@@ -74,10 +65,8 @@ import { encodeEntities } from './util.js';
 // 								}
 // 							}
 // 						}
-// 						// nested boundaries' markers arrive with this one's content,
-// 						// before the iterator's position, so index what is between the
-// 						// markers now (a TreeWalker, unlike a NodeIterator, isn't tracked
-// 						// by the document for the rest of its life)
+// 						// index the nested markers that arrived with the content (a TreeWalker
+// 						// isn't tracked by the document like a NodeIterator)
 // 						n = d.createTreeWalker(d, 128);
 // 						n.currentNode = s;
 // 						scan(n, e);
@@ -96,9 +85,8 @@ import { encodeEntities } from './util.js';
 // 			}
 // 			c.remove();
 // 		};
-// 	// When the response ends, an island that nothing follows was cut off, so
-// 	// its boundary is left to the client ("$s!"), like a boundary still waiting
-// 	// for its chunk. The ranges the client unmounted go.
+// 	// when the response ends, cut-off islands and boundaries still waiting go to
+// 	// the client, and unmounted ranges are removed
 // 	d.addEventListener("DOMContentLoaded", () => {
 // 		d.querySelectorAll("preact-island").forEach((c) => {
 // 			if (!c.nextSibling) {
@@ -119,9 +107,8 @@ import { encodeEntities } from './util.js';
 // 			}
 // 		});
 // 	});
-// 	// Each chunk is <preact-island hidden data-target="id">..</preact-island>
-// 	// followed by an empty comment. The parser connects the island before its
-// 	// content, and the island is complete once a node follows it.
+// 	// each chunk is <preact-island hidden data-target="id">..</preact-island><!---->:
+// 	// the island is complete once a node follows it
 // 	customElements.define(
 // 		"preact-island",
 // 		class extends HTMLElement {
@@ -152,8 +139,7 @@ export function createInitScript(nonce) {
 }
 
 /**
- * The content of a boundary. The island moves it into the range that
- * `<!--$s?id-->` opens once the empty comment after it has arrived.
+ * The island moves this into the `$s?id` range once the comment after it arrives.
  * @param {string} id
  * @param {string} content
  * @returns {string}
