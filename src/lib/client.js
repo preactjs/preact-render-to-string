@@ -8,8 +8,9 @@ import { encodeEntities } from './util.js';
 // 	let s,
 // 		e,
 // 		// comments by their data ("$s?id" opens a pending range and "/$s?id" closes
-// 		// it), so each call is a lookup. The first one seen wins for as long as it is in the document:
-// 		// reparsing a namespace recreates the markers of nested boundaries.
+// 		// it), so each call is a lookup. The first one seen wins for as long as it
+// 		// is in the document: reparsing a namespace recreates the markers of nested
+// 		// boundaries.
 // 		markers = new Map(),
 // 		// one live iterator over the document's comments: created on the first
 // 		// call and resumed by every later one, so each comment is visited once
@@ -24,7 +25,7 @@ import { encodeEntities } from './util.js';
 // 			}
 // 		},
 // 		// The client unmounted a boundary while it was pending and left its
-// 		// markers for us (`__w` is 0): drop them with what streamed in between.
+// 		// markers for us (`__w` is 0): drop them with what is in between.
 // 		drop = (s, e, n) => {
 // 			while ((n = s.nextSibling) != e) {
 // 				n.remove();
