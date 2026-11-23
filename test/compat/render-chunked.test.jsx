@@ -3,6 +3,7 @@ import { expect, describe, it } from 'vitest';
 import { Suspense } from 'preact/compat';
 import { useId } from 'preact/hooks';
 import { renderToChunks } from '../../src/lib/chunked';
+import { renderToString } from '../../src/index';
 import {
 	createSubtree,
 	createInitScript,
@@ -11,6 +12,11 @@ import {
 import { Deferred } from '../../src/lib/util';
 import { createSuspender } from '../utils';
 import { VNODE, PARENT } from '../../src/lib/constants';
+
+// Preact 10 shares one useId counter across the tree ("P0-1"), Preact 11
+// gives each Suspense boundary its own ("PP0-1-0").
+const Id = () => <input id={useId()} />;
+const ids = (html) => Array.from(html.matchAll(/id="([^"]+)"/g), (m) => m[1]);
 
 describe('renderToChunks', () => {
 	it('should render non-suspended JSX in one go', async () => {
@@ -151,13 +157,14 @@ describe('renderToChunks', () => {
 		suspended.resolve();
 		await promise;
 
-		expect(result).to.deep.equal([
+		const expected = (id) => [
 			'<div><p>id: P0-0</p><!--$s:24-->loading...<!--/$s:24--></div>',
 			'<div hidden>',
 			createInitScript(),
-			createSubtree('24', '<p>id: P0-1</p>'),
+			createSubtree('24', `<p>id: ${id}</p>`),
 			'</div>'
-		]);
+		];
+		expect([expected('P0-1'), expected('PP0-1-0')]).to.deep.include(result);
 	});
 
 	it('should support using multiple useId hooks inside multiple suspense boundaries', async () => {
@@ -191,14 +198,18 @@ describe('renderToChunks', () => {
 		suspended2.resolve();
 		await promise;
 
-		expect(result).toEqual([
+		const expected = (id1, id2) => [
 			'<div><p>id: P0-0</p><!--$s:33-->loading...<!--/$s:33--><!--$s:36-->loading...<!--/$s:36--></div>',
 			'<div hidden>',
 			createInitScript(),
-			createSubtree('33', '<p>id: P0-1</p>'),
-			createSubtree('36', '<p>id: P0-2</p>'),
+			createSubtree('33', `<p>id: ${id1}</p>`),
+			createSubtree('36', `<p>id: ${id2}</p>`),
 			'</div>'
-		]);
+		];
+		expect([
+			expected('P0-1', 'P0-2'),
+			expected('PP0-1-0', 'PP0-2-0')
+		]).to.deep.include(result);
 	});
 
 	it('should inject deferred content before </body></html> for full document rendering', async () => {
@@ -503,5 +514,63 @@ describe('createInitScript', () => {
 		const script = createInitScript('a"b&c<d');
 		expect(script.startsWith('<script nonce="a&quot;b&amp;c&lt;d">')).to.be
 			.true;
+	});
+});
+
+describe('scoped useId', () => {
+	it('preserves ids when a partially rendered Suspense boundary retries', async ({
+		skip
+	}) => {
+		const expected = ids(
+			renderToString(
+				<Suspense fallback={null}>
+					<Id />
+					<Id />
+				</Suspense>
+			)
+		);
+		if (!expected[0].startsWith('PP')) skip();
+		const { Suspender, suspended } = createSuspender();
+		const chunks = [];
+		const done = renderToChunks(
+			<Suspense fallback="loading">
+				<Id />
+				<Suspender>
+					<Id />
+				</Suspender>
+			</Suspense>,
+			{ onWrite: (chunk) => chunks.push(chunk) }
+		);
+		expect(chunks.join('')).to.contain('loading');
+		suspended.resolve();
+		await done;
+		expect(ids(chunks.join(''))).to.deep.equal(expected);
+	});
+
+	it("keeps a fallback's ids from moving the ids after its boundary", async ({
+		skip
+	}) => {
+		const Pass = ({ children }) => children;
+		const tree = (Wrapper) => (
+			<div>
+				<Suspense fallback={<Id />}>
+					<Wrapper>
+						<Id />
+					</Wrapper>
+				</Suspense>
+				<Id />
+			</div>
+		);
+		const [inside, after] = ids(renderToString(tree(Pass)));
+		if (!inside.startsWith('PP')) skip();
+		const { Suspender, suspended } = createSuspender();
+		const chunks = [];
+		const done = renderToChunks(tree(Suspender), {
+			onWrite: (chunk) => chunks.push(chunk)
+		});
+		expect(ids(chunks[0]).at(-1)).to.equal(after);
+		suspended.resolve();
+		await done;
+		expect(ids(chunks.slice(1).join(''))).to.deep.equal([inside]);
 	});
 });
