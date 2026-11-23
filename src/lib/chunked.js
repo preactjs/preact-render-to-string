@@ -1,3 +1,4 @@
+import { Fragment } from 'preact';
 import { renderToString } from '../index.js';
 import { CHILD_DID_SUSPEND, COMPONENT, MASK, PARENT } from './constants.js';
 import { Deferred } from './util.js';
@@ -121,7 +122,7 @@ function handleError(error, vnode, renderChild) {
 			if (!aborted) this.onWrite(createClientRenderInstruction(id, this.nonce));
 			return '';
 		}
-		return `<!--$s!:${id}-->${renderChild(vnode.props.fallback, vnode[PARENT])}<!--/$s:${id}-->`;
+		return `<!--$s!:${id}-->${renderFallback(vnode, renderChild)}<!--/$s:${id}-->`;
 	}
 
 	const completion = new Deferred();
@@ -148,8 +149,23 @@ function handleError(error, vnode, renderChild) {
 			finishPending.bind(null, pending, completion.reject)
 		);
 
-	const fallback = renderChild(vnode.props.fallback, vnode[PARENT]);
-	return found ? '' : `<!--$s:${id}-->${fallback}<!--/$s:${id}-->`;
+	if (found) return '';
+	return `<!--$s:${id}-->${renderFallback(vnode, renderChild)}<!--/$s:${id}-->`;
+}
+
+/**
+ * Errors in a fallback belong to the boundary's parent, but like on the client
+ * its ids come from the boundary, so they don't shift the ids after it.
+ * @param {VNode} boundary
+ * @param {(child: any, parent: VNode) => string} renderChild
+ */
+function renderFallback(boundary, renderChild) {
+	const mask = boundary[COMPONENT][MASK];
+	const parent = mask
+		? // h() would shift the ids of later vnodes
+			{ type: Fragment, props: {}, [PARENT]: boundary[PARENT], [MASK]: mask }
+		: boundary[PARENT];
+	return renderChild(boundary.props.fallback, parent);
 }
 
 function retryPending(pending) {
